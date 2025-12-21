@@ -436,8 +436,8 @@ CHOICE_TREE = {"enter_tavern": ["bar", "table", "leave"], ...}
 
 ## 10. References
 
-- **Product Requirements**: `/Users/abhishek/stuff/ai-adventures/pocket-portals/product.md` (Section 9.2)
-- **Current API**: `/Users/abhishek/stuff/ai-adventures/pocket-portals/src/api/main.py`
-- **Narrator Agent**: `/Users/abhishek/stuff/ai-adventures/pocket-portals/src/agents/narrator.py`
+- **Product Requirements**: `product.md` (Section 9.2)
+- **Current API**: `src/api/main.py`
+- **Narrator Agent**: `src/agents/narrator.py`
 - **CrewAI Docs**: https://docs.crewai.com
 - **XP Practices**: Simple Design, YAGNI, TDD
