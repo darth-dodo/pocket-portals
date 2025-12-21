@@ -64,7 +64,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 |-------|------------|
 | Language | Python 3.11+ |
 | Agent Framework | CrewAI |
-| LLM Provider | Anthropic Claude (Sonnet 3.5/Haiku) |
+| LLM Provider | Anthropic Claude (Sonnet for narrative, Haiku for mechanics) |
 | Backend | FastAPI |
 | Frontend | HTMX + Jinja2 Templates |
 | Deployment | Fly.io |
@@ -96,10 +96,10 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR-10 | Core agents: Barkeep, Dungeon Master, Rules Lawyer, Chaos Goblin | P0 — Must Have |
+| FR-10 | Core agents: Innkeeper Theron, Narrator, Keeper, Jester | P0 — Must Have |
 | FR-11 | Dynamic NPC generation with distinct personalities | P0 — Must Have |
 | FR-12 | NPCs remember player actions within session | P0 — Must Have |
-| FR-13 | Agent annotations visible to user (e.g., Chaos Goblin hints) | P1 — Should Have |
+| FR-13 | Agent annotations visible to user (e.g., Jester hints) | P1 — Should Have |
 
 ### 6.4 Combat & Mechanics
 
@@ -107,7 +107,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 |----|-------------|----------|
 | FR-14 | Initiative system with turn order display | P0 — Must Have |
 | FR-15 | Dice rolling with animated results | P0 — Must Have |
-| FR-16 | Rules Lawyer validation and explanation of mechanics | P0 — Must Have |
+| FR-16 | Keeper validation of dice rolls and game state | P0 — Must Have |
 | FR-17 | HP tracking and damage/healing calculations | P0 — Must Have |
 | FR-18 | ASCII battlefield visualization | P2 — Nice to Have |
 
@@ -128,17 +128,17 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 | Agent | Role | Personality |
 |-------|------|-------------|
-| **Barkeep Mordecai** | Quest introduction, NPC broker, session bookends | Ancient, knowing, cryptic. Speaks in implications. |
-| **Dungeon Master** | Narrative generation, world state, scene description | Dramatic, evocative, adaptive to player tone. |
-| **Rules Lawyer** | Stat generation, dice mechanics, combat resolution | Precise, technical, occasionally pedantic (lovably). |
-| **Chaos Goblin** | Complications, foreshadowing, meta-commentary | Gleefully chaotic, fourth-wall adjacent, uses :) unironically. |
+| **Innkeeper Theron** | Quest introduction, NPC broker, session bookends | Weary, direct, speaks from experience. |
+| **Narrator** | Narrative generation, world state, scene description | Sensory, present-tense, adapts to player tone. |
+| **Keeper** | Dice rolls, health tracking, game state | Terse, functional, stays out of the way. |
+| **Jester** | Complications, observations, meta-commentary | Knowing, casual, fourth-wall aware. |
 
 ### 7.2 Agent Interaction Model
 
-1. **Parallel Analysis:** Character Crew (Barkeep + Rules Lawyer + Chaos Goblin) runs concurrently on character input
-2. **Sequential Handoff:** DM receives consolidated character context, generates quest
+1. **Parallel Analysis:** Character Crew (Innkeeper + Keeper + Jester) runs concurrently on character input
+2. **Sequential Handoff:** Narrator receives consolidated character context, generates quest
 3. **Dynamic Spawning:** NPC agents instantiated as needed with inherited world state
-4. **Tool Delegation:** Rules Lawyer owns dice tools; DM owns narrative tools
+4. **Tool Delegation:** Keeper owns dice tools; Narrator owns narrative tools
 
 ---
 
@@ -165,7 +165,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 2. **DESCRIBE:** User inputs character description (free text)
 3. **GENERATE:** Parallel crew analyzes input (visible activity indicators)
 4. **REVIEW:** User accepts/modifies generated character sheet
-5. **HOOK:** Barkeep introduces quest-giver NPC
+5. **HOOK:** Innkeeper introduces quest-giver NPC
 6. **PLAY:** Adventure unfolds with choices, dice, combat
 7. **RESOLVE:** Epilogue generated based on choices
 8. **EXPORT:** Download character sheet and adventure log
@@ -224,7 +224,14 @@ At each narrative branch, user is presented with 3-4 predefined choices plus a c
 - **World State:** Persistent context tracking choices, relationships, and consequences
 - **Human-in-Loop:** Workflow pattern requiring user input at decision points
 
-### 13.2 References
+### 13.2 Related Documents
+
+- **[architecture.md](architecture.md)** - Technical architecture and XP practices
+- **[creative-writing.md](creative-writing.md)** - Agent voices and narrative guidelines
+- **[conversation-engine.md](conversation-engine.md)** - Turn-taking and state management
+- **[crewai.md](crewai.md)** - CrewAI project template
+
+### 13.3 External References
 
 - CrewAI Documentation: https://docs.crewai.com
 - Anthropic Claude API: https://docs.anthropic.com
