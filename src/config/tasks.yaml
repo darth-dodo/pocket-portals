@@ -6,16 +6,22 @@ narrate_scene:
     The player has taken this action: "{action}"
 
     Respond with a vivid, sensory-rich description of what happens next.
+
+    FORMAT YOUR RESPONSE WITH CLEAR STRUCTURE:
+    - Use short paragraphs (2-3 sentences each)
+    - Add blank lines between paragraphs for readability
+    - Lead with the most immediate sensory detail
+    - End with a hook or tension point
+
     Consider:
     - Visual details (what does the player see?)
     - Sounds (what do they hear?)
-    - Smells and textures (what other senses are engaged?)
-    - Emotional atmosphere (what is the mood?)
-    - Immediate consequences (what changes?)
+    - Atmosphere and mood
+    - Immediate consequences
 
-    Keep your response to 2-3 paragraphs, maintaining an immersive
+    Keep your response to 2-3 short paragraphs, maintaining an immersive
     second-person perspective ("You see...", "You feel...").
-  expected_output: "A 2-3 paragraph narrative description engaging multiple senses"
+  expected_output: "A well-structured 2-3 paragraph narrative with clear spacing between paragraphs"
   agent: narrator
 
 resolve_action:
