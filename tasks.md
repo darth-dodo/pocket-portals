@@ -5,7 +5,7 @@
 ## How to Use This File
 
 **Format Guidelines**:
-- Use dates only (YYYY-MM-DD), no timestamps
+- Use dates (YYYY-MM-DD)
 - Mark status with ✅ (complete), 🔄 (in progress), ⏳ (blocked), or blank (pending)
 - Group tasks by logical phase/milestone
 - Keep "Current Work" section at top for active tasks
@@ -17,6 +17,106 @@
 |------|--------|-------|
 | Description | ✅/🔄/⏳ | Optional context |
 ```
+
+---
+
+## XP Programming Flow
+
+This project follows **Extreme Programming (XP)** principles with an **agentic multi-agent workflow** for collaborative development.
+
+### Core XP Principles
+
+**1. Test-Driven Development (TDD)**
+- **Red**: Write failing test first
+- **Green**: Write minimal code to pass
+- **Refactor**: Clean up while keeping tests green
+- Maintain 80%+ test coverage target
+
+**2. Simple Design**
+- Build the simplest solution that works
+- Avoid premature optimization
+- Refactor when patterns emerge
+
+**3. Small Steps**
+- Frequent, incremental commits
+- One logical change per commit
+- Continuous integration mindset
+
+**4. YAGNI (You Aren't Gonna Need It)**
+- No speculative features
+- Build only what's explicitly required
+- Defer decisions until necessary
+
+### Agentic Workflow Phases
+
+**Phase 1: Design (Architect Agent)**
+- Create design document in `docs/design/`
+- Define interfaces, data structures, and patterns
+- Document architectural decisions in ADRs if needed
+- Output: Design doc with clear specifications
+
+**Phase 2: Implementation (Developer Agent)**
+- Follow TDD cycle: Red → Green → Refactor
+- Write tests before implementation
+- Commit frequently with descriptive messages
+- Run linting and tests before each commit
+- Output: Working code with test coverage
+
+**Phase 3: Validation (QA Agent)**
+- Verify test coverage meets targets (80%+)
+- Run full test suite and linting
+- Check code quality and patterns
+- Validate against design specifications
+- Output: Quality report and approval
+
+### Development Workflow Example
+
+```bash
+# 1. Design Phase (Architect)
+# Create design doc
+docs/design/feature-name.md
+
+# 2. Implementation Phase (Developer)
+# Red: Write failing test
+pytest tests/test_feature.py -v  # Should fail
+
+# Green: Implement minimal solution
+# Edit src/feature.py
+
+# Verify test passes
+pytest tests/test_feature.py -v  # Should pass
+
+# Refactor: Clean up code
+# Improve structure while tests stay green
+
+# Commit small change
+git add . && git commit -m "feat: add feature X with tests"
+
+# 3. Validation Phase (QA)
+# Run full quality gates
+pytest --cov=src --cov-report=term-missing
+ruff check .
+mypy src/
+
+# Update tasks.md with completion status
+```
+
+### Quality Gates
+
+All phases must pass these gates:
+- ✅ Tests pass (`pytest`)
+- ✅ Coverage ≥80% (`pytest --cov`)
+- ✅ Linting passes (`ruff check`)
+- ✅ Type checks pass (`mypy`)
+- ✅ Pre-commit hooks pass
+
+### Agent Handoff Protocol
+
+When one agent completes their phase:
+1. Update `tasks.md` with status ✅
+2. Document any blockers or notes
+3. Commit all changes
+4. Next agent reviews previous work before starting
 
 ---
 
@@ -62,6 +162,8 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Add choice system (3 options + free text) | ✅ | FR-07 & FR-08 from product.md |
+| Document XP programming flow | ✅ | Added to tasks.md |
 | Add conversation context passing | ✅ | LLM now receives history for continuity |
 
 ---

@@ -8,7 +8,7 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.agents.narrator import NarratorAgent
 
@@ -17,6 +17,7 @@ load_dotenv()
 # Global state
 narrator: NarratorAgent | None = None
 sessions: dict[str, list[dict[str, str]]] = {}
+session_choices: dict[str, list[str]] = {}  # Store last choices per session
 
 
 def get_session(session_id: str | None) -> tuple[str, list[dict[str, str]]]:
@@ -42,8 +43,16 @@ def build_context(history: list[dict[str, str]]) -> str:
 class ActionRequest(BaseModel):
     """Request model for player actions."""
 
-    action: str
+    action: str | None = Field(default=None)
+    choice_index: int | None = Field(default=None, ge=1, le=3)
     session_id: str | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_action_or_choice(self) -> "ActionRequest":
+        """Ensure either action or choice_index is provided."""
+        if self.action is None and self.choice_index is None:
+            raise ValueError("Either 'action' or 'choice_index' must be provided")
+        return self
 
 
 class NarrativeResponse(BaseModel):
@@ -51,6 +60,7 @@ class NarrativeResponse(BaseModel):
 
     narrative: str
     session_id: str
+    choices: list[str] = Field(default_factory=lambda: ["Look around", "Wait", "Leave"])
 
 
 class HealthResponse(BaseModel):
@@ -99,14 +109,35 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     """Process player action and return narrative response."""
     session_id, history = get_session(request.session_id)
 
+    # Resolve action from choice_index or direct action
+    if request.choice_index is not None:
+        # Use stored choice from previous response
+        choices = session_choices.get(session_id, ["Look around", "Wait", "Leave"])
+        action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
+    else:
+        action = request.action or ""
+
     if narrator is None:
+        choices = ["Look around", "Wait", "Leave"]
+        session_choices[session_id] = choices
         return NarrativeResponse(
             narrative="The narrator is not available. Check ANTHROPIC_API_KEY.",
             session_id=session_id,
+            choices=choices,
         )
 
     context = build_context(history)
-    narrative = narrator.respond(request.action, context)
-    history.append({"action": request.action, "narrative": narrative})
+    narrative = narrator.respond(action, context)
+    history.append({"action": action, "narrative": narrative})
 
-    return NarrativeResponse(narrative=narrative, session_id=session_id)
+    # Generate contextual choices (simple default for now - YAGNI)
+    choices = [
+        "Investigate further",
+        "Talk to someone nearby",
+        "Move to a new location",
+    ]
+    session_choices[session_id] = choices
+
+    return NarrativeResponse(
+        narrative=narrative, session_id=session_id, choices=choices
+    )

@@ -125,3 +125,95 @@ def test_build_context_formats_multiple_turns() -> None:
     assert "You push open the door" in context
     assert "order ale" in context
     assert "The barkeep nods" in context
+
+
+# Choice System Tests
+
+
+def test_action_response_includes_choices(client: TestClient) -> None:
+    """Test that /action response includes exactly 3 suggested choices."""
+    payload = {"action": "look around"}
+    response = client.post("/action", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "choices" in data
+    assert isinstance(data["choices"], list)
+    assert len(data["choices"]) == 3
+
+
+def test_choices_are_strings(client: TestClient) -> None:
+    """Test that each choice is a non-empty string."""
+    payload = {"action": "examine the room"}
+    response = client.post("/action", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    choices = data["choices"]
+
+    # Each choice should be a non-empty string
+    for choice in choices:
+        assert isinstance(choice, str)
+        assert len(choice) > 0
+        assert len(choice.strip()) > 0  # Not just whitespace
+
+
+def test_action_accepts_choice_index(client: TestClient) -> None:
+    """Test that action can be submitted using choice_index (1-3)."""
+    # First request - get choices
+    response1 = client.post("/action", json={"action": "enter the dungeon"})
+    session_id = response1.json()["session_id"]
+    assert len(response1.json()["choices"]) == 3  # Verify choices exist
+
+    # Second request - select a choice by index
+    payload = {"choice_index": 2, "session_id": session_id}
+    response2 = client.post("/action", json=payload)
+
+    assert response2.status_code == 200
+    data = response2.json()
+    assert "narrative" in data
+
+
+def test_action_still_accepts_free_text(client: TestClient) -> None:
+    """Test that free text actions still work alongside choice system."""
+    # First request with session
+    response1 = client.post("/action", json={"action": "enter the forest"})
+    session_id = response1.json()["session_id"]
+
+    # Second request with custom free text (not a choice)
+    custom_action = "do something completely unexpected and creative"
+    payload = {"action": custom_action, "session_id": session_id}
+    response2 = client.post("/action", json=payload)
+
+    assert response2.status_code == 200
+    data = response2.json()
+    assert "narrative" in data
+    assert len(data["narrative"]) > 0
+    # Should still get choices for the next turn
+    assert "choices" in data
+    assert len(data["choices"]) == 3
+
+
+def test_choice_index_validation(client: TestClient) -> None:
+    """Test that choice_index must be between 1 and 3."""
+    # Invalid choice index (0)
+    response1 = client.post("/action", json={"choice_index": 0})
+    assert response1.status_code == 422
+
+    # Invalid choice index (4)
+    response2 = client.post("/action", json={"choice_index": 4})
+    assert response2.status_code == 422
+
+    # Valid choice indices should work
+    response3 = client.post("/action", json={"choice_index": 1})
+    assert response3.status_code == 200
+
+    response4 = client.post("/action", json={"choice_index": 3})
+    assert response4.status_code == 200
+
+
+def test_action_or_choice_index_required(client: TestClient) -> None:
+    """Test that either action or choice_index must be provided (but not necessarily both)."""
+    # Neither action nor choice_index
+    response = client.post("/action", json={"session_id": "some-id"})
+    assert response.status_code == 422
