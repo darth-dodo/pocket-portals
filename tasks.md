@@ -162,6 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Create comprehensive spike crash course | ✅ | `docs/CRASH-COURSE.md` - 1091 lines covering architecture, patterns, lessons learned |
 | Create design system documentation | ✅ | `docs/design/design.md` - colors, typography, spacing, components |
 | Fix Render deployment issues | ✅ | Standard pip install, Python 3.12, README.md for hatchling |
 | Add CHANGELOG.md | ✅ | Keep a Changelog format with all features |
@@ -272,4 +273,5 @@ gantt
 - `product.md` - Product vision and requirements
 - `crewai.md` - CrewAI architecture and agent design
 - `docs/adr/` - Architecture decision records
+- `docs/CRASH-COURSE.md` - Comprehensive spike documentation
 - `src/config/agents.yaml` - Agent configurations
