@@ -1,28 +1,45 @@
 """FastAPI application for Pocket Portals."""
 
 import os
+import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-# Load environment variables
+from src.agents.narrator import NarratorAgent
+
 load_dotenv()
+
+# Global state
+narrator: NarratorAgent | None = None
+sessions: dict[str, list[dict[str, str]]] = {}
+
+
+def get_session(session_id: str | None) -> tuple[str, list[dict[str, str]]]:
+    """Get existing session or create new one."""
+    if session_id and session_id in sessions:
+        return session_id, sessions[session_id]
+    new_id = str(uuid.uuid4())
+    sessions[new_id] = []
+    return new_id, sessions[new_id]
 
 
 class ActionRequest(BaseModel):
     """Request model for player actions."""
 
     action: str
+    session_id: str | None = Field(default=None)
 
 
 class NarrativeResponse(BaseModel):
     """Response model containing narrative text."""
 
     narrative: str
+    session_id: str
 
 
 class HealthResponse(BaseModel):
@@ -34,19 +51,14 @@ class HealthResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """Lifespan context manager for startup/shutdown events."""
-    # Startup: validate required environment variables
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("WARNING: ANTHROPIC_API_KEY not set")
-
+    """Initialize narrator on startup."""
+    global narrator
+    if os.getenv("ANTHROPIC_API_KEY"):
+        narrator = NarratorAgent()
     yield
-
-    # Shutdown: cleanup if needed
-    pass
+    narrator = None
 
 
-# Create FastAPI application
 app = FastAPI(
     title="Pocket Portals API",
     description="Solo D&D adventure generator using multi-agent AI",
@@ -54,12 +66,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS for development
 environment = os.getenv("ENVIRONMENT", "development")
 if environment == "development":
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, restrict to specific origins
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -68,29 +79,22 @@ if environment == "development":
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """Health check endpoint for monitoring."""
-    return HealthResponse(
-        status="healthy",
-        environment=environment,
-    )
+    """Health check endpoint."""
+    return HealthResponse(status="healthy", environment=environment)
 
 
 @app.post("/action", response_model=NarrativeResponse)
 async def process_action(request: ActionRequest) -> NarrativeResponse:
-    """
-    Process player action and return narrative response.
+    """Process player action and return narrative response."""
+    session_id, history = get_session(request.session_id)
 
-    Args:
-        request: ActionRequest containing the player's action
+    if narrator is None:
+        return NarrativeResponse(
+            narrative="The narrator is not available. Check ANTHROPIC_API_KEY.",
+            session_id=session_id,
+        )
 
-    Returns:
-        NarrativeResponse with generated narrative text
-    """
-    # Placeholder response - will be replaced with agent integration
-    narrative = (
-        f"You attempt to '{request.action}'. "
-        "The ancient portal shimmers with ethereal light, "
-        "awaiting your next move..."
-    )
+    narrative = narrator.respond(request.action)
+    history.append({"action": request.action, "narrative": narrative})
 
-    return NarrativeResponse(narrative=narrative)
+    return NarrativeResponse(narrative=narrative, session_id=session_id)
