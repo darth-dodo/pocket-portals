@@ -27,7 +27,7 @@ COPY pyproject.toml ./
 # Using --no-cache-dir to reduce image size
 # Using pip directly since we're installing from pyproject.toml
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -e .
+    pip install --no-cache-dir .
 
 # ============================================================================
 # Stage 2: Runtime - Minimal production image
