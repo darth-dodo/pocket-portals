@@ -49,12 +49,22 @@ class NarratorAgent:
             llm=self.llm,
         )
 
-    def respond(self, action: str) -> str:
-        """Generate narrative response to player action."""
+    def respond(self, action: str, context: str = "") -> str:
+        """Generate narrative response to player action.
+
+        Args:
+            action: The player's action
+            context: Optional conversation history for continuity
+        """
         task_config = load_task_config("narrate_scene")
 
+        # Include context if available
+        description = task_config["description"].format(action=action)
+        if context:
+            description = f"{context}\n\nCurrent action: {description}"
+
         task = Task(
-            description=task_config["description"].format(action=action),
+            description=description,
             expected_output=task_config["expected_output"],
             agent=self.agent,
         )

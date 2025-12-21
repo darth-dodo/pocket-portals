@@ -57,7 +57,12 @@ gantt
 |------|--------|----------|
 | Define remaining CrewAI agents | ⏳ | High |
 | Implement world state management | ⏳ | High |
-| Add conversation history system | ⏳ | Medium |
+
+### Recently Completed
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Add conversation context passing | ✅ | LLM now receives history for continuity |
 
 ---
 

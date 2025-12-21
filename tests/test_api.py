@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app
+from src.api.main import app, build_context
 
 
 @pytest.fixture
@@ -93,3 +93,35 @@ def test_different_sessions_are_isolated(client: TestClient) -> None:
 
     # Sessions should be different
     assert session1 != session2
+
+
+# Context Building Tests
+
+
+def test_build_context_returns_empty_for_empty_history() -> None:
+    """Test that build_context returns empty string for empty history."""
+    context = build_context([])
+    assert context == ""
+
+
+def test_build_context_formats_single_turn() -> None:
+    """Test that build_context formats a single turn correctly."""
+    history = [{"action": "enter tavern", "narrative": "You push open the door."}]
+    context = build_context(history)
+
+    assert "enter tavern" in context
+    assert "You push open the door" in context
+
+
+def test_build_context_formats_multiple_turns() -> None:
+    """Test that build_context formats multiple turns correctly."""
+    history = [
+        {"action": "enter tavern", "narrative": "You push open the door."},
+        {"action": "order ale", "narrative": "The barkeep nods."},
+    ]
+    context = build_context(history)
+
+    assert "enter tavern" in context
+    assert "You push open the door" in context
+    assert "order ale" in context
+    assert "The barkeep nods" in context

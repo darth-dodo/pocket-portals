@@ -28,6 +28,17 @@ def get_session(session_id: str | None) -> tuple[str, list[dict[str, str]]]:
     return new_id, sessions[new_id]
 
 
+def build_context(history: list[dict[str, str]]) -> str:
+    """Format conversation history for LLM context."""
+    if not history:
+        return ""
+    lines = ["Previous conversation:"]
+    for turn in history:
+        lines.append(f"- Player: {turn['action']}")
+        lines.append(f"- Narrator: {turn['narrative']}")
+    return "\n".join(lines)
+
+
 class ActionRequest(BaseModel):
     """Request model for player actions."""
 
@@ -94,7 +105,8 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
             session_id=session_id,
         )
 
-    narrative = narrator.respond(request.action)
+    context = build_context(history)
+    narrative = narrator.respond(request.action, context)
     history.append({"action": request.action, "narrative": narrative})
 
     return NarrativeResponse(narrative=narrative, session_id=session_id)
