@@ -162,6 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Add Docker containerization | ✅ | Dockerfile, docker-compose.yml, Makefile targets |
 | Add starter choices with shuffle | ✅ | `/start` endpoint with pool of 9 adventure hooks |
 | Add retro RPG web UI | ✅ | NES.css styling, Begin Quest button, increased canvas |
 | Update ONBOARDING.md for agent success | ✅ | Added Quick Start, Decision Trees, Pitfalls, Recovery, Metrics |

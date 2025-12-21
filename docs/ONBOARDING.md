@@ -393,6 +393,7 @@ echo "========================"
 - ✅ Choice system (3 options + free text)
 - ✅ Starter choices with shuffle from pool of 9 adventure hooks
 - ✅ Retro RPG web UI with NES.css styling
+- ✅ Docker containerization with multi-stage build
 
 **Next Steps** (check `tasks.md` for current priorities):
 - Add more agents (Keeper, Jester, Theron)
@@ -691,6 +692,11 @@ make install          # Install dependencies with uv
 make dev              # Run FastAPI server (port 8888)
 make dev-reload       # Run with auto-reload
 
+# Docker (alternative approach)
+make docker-build     # Build Docker image
+make docker-run       # Run in container (port 8888)
+make docker-dev       # Run with live code reload
+
 # Testing (TDD workflow)
 make test             # Full test suite with coverage
 make test-fast        # Stop on first failure (TDD cycle)
@@ -717,11 +723,16 @@ open htmlcov/index.html
 |---------|-------------|----------|
 | `make install` | Install dependencies | First time, after dependency changes |
 | `make dev` | Start development server | Testing API locally |
+| `make docker-build` | Build Docker image | Containerized development |
+| `make docker-run` | Run in container | Testing Docker deployment |
+| `make docker-dev` | Docker with live reload | Alternative to `make dev` |
 | `make test` | Run all tests with coverage | Before committing |
 | `make test-fast` | Stop on first failure | During TDD cycle |
 | `make lint` | Check and format code | Before committing |
 | `make check` | Run all quality gates | Final verification |
 | `make clean` | Remove build artifacts | After testing, before commit |
+
+**Note**: Docker provides an alternative development approach with isolated dependencies and consistent environments across machines. Use native `make dev` for faster iteration, Docker for deployment testing.
 
 ---
 

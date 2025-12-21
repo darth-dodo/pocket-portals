@@ -8,6 +8,8 @@ Pocket Portals uses CrewAI agents powered by Anthropic Claude to generate immers
 
 ## Quick Start
 
+### Local Development
+
 ```bash
 # Install dependencies
 make install
@@ -21,6 +23,20 @@ make dev
 
 # Run tests
 make test
+```
+
+### Docker (Alternative)
+
+```bash
+# Set up environment
+cp .env.example .env
+# Add your ANTHROPIC_API_KEY to .env
+
+# Build and run
+make docker-build
+make docker-run
+
+# View at http://localhost:8888
 ```
 
 ## API
@@ -76,6 +92,40 @@ make dev      # Start server (port 8888)
 make test     # Run pytest with coverage
 make lint     # Run ruff check + format
 ```
+
+## Docker
+
+### Build Image
+```bash
+make docker-build
+```
+
+### Run Container
+```bash
+# Production mode
+make docker-run
+
+# Development mode with hot reload
+make docker-dev
+```
+
+### Container Management
+```bash
+# View logs
+make docker-logs
+
+# Stop container
+make docker-stop
+
+# Clean up
+make docker-clean
+```
+
+### Notes
+- Container runs on port 8888 (mapped to host)
+- Environment variables loaded from `.env` file
+- Development mode mounts source code for hot reload
+- Production mode uses optimized multi-stage build
 
 ## Current Phase
 

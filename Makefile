@@ -1,4 +1,4 @@
-.PHONY: help install dev test test-fast test-cov lint format check clean
+.PHONY: help install dev test test-fast test-cov lint format check clean docker-build docker-run docker-stop docker-logs docker-shell docker-dev docker-down docker-clean
 
 # Default target
 help:
@@ -21,6 +21,16 @@ help:
 	@echo "  make lint        Check code style (ruff)"
 	@echo "  make format      Auto-fix code style"
 	@echo "  make check       Run all quality gates"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build    Build Docker image"
+	@echo "  make docker-run      Run container (detached)"
+	@echo "  make docker-stop     Stop container"
+	@echo "  make docker-logs     View container logs"
+	@echo "  make docker-shell    Open shell in running container"
+	@echo "  make docker-dev      Run with docker-compose (hot reload)"
+	@echo "  make docker-down     Stop docker-compose services"
+	@echo "  make docker-clean    Remove images and containers"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean       Remove build artifacts"
@@ -103,6 +113,61 @@ status:
 	@git status
 	@echo ""
 	@git log --oneline -5
+
+# ============================================================
+# Docker
+# ============================================================
+
+# Docker configuration
+IMAGE_NAME = pocket-portals
+CONTAINER_NAME = pocket-portals-app
+DOCKER_PORT = 8888
+
+# Build Docker image
+docker-build:
+	docker build -t $(IMAGE_NAME):latest .
+	@echo "✅ Docker image built: $(IMAGE_NAME):latest"
+
+# Run container (detached)
+docker-run:
+	docker run -d \
+		--name $(CONTAINER_NAME) \
+		-p $(DOCKER_PORT):8888 \
+		$(IMAGE_NAME):latest
+	@echo "✅ Container running: http://localhost:$(DOCKER_PORT)"
+	@echo "   Use 'make docker-logs' to view logs"
+
+# Stop container
+docker-stop:
+	docker stop $(CONTAINER_NAME) 2>/dev/null || true
+	docker rm $(CONTAINER_NAME) 2>/dev/null || true
+	@echo "✅ Container stopped and removed"
+
+# View container logs
+docker-logs:
+	docker logs -f $(CONTAINER_NAME)
+
+# Open shell in running container
+docker-shell:
+	docker exec -it $(CONTAINER_NAME) /bin/bash
+
+# Run with docker-compose for development (hot reload)
+docker-dev:
+	docker-compose up --build
+	@echo "✅ Development environment started"
+
+# Stop docker-compose services
+docker-down:
+	docker-compose down
+	@echo "✅ Docker Compose services stopped"
+
+# Remove images and containers
+docker-clean:
+	docker stop $(CONTAINER_NAME) 2>/dev/null || true
+	docker rm $(CONTAINER_NAME) 2>/dev/null || true
+	docker rmi $(IMAGE_NAME):latest 2>/dev/null || true
+	docker-compose down -v --remove-orphans 2>/dev/null || true
+	@echo "✅ Docker images and containers removed"
 
 # ============================================================
 # Cleanup
