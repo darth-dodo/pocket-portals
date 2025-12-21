@@ -162,6 +162,9 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Create design system documentation | ✅ | `docs/design/design.md` - colors, typography, spacing, components |
+| Fix Render deployment issues | ✅ | Standard pip install, Python 3.12, README.md for hatchling |
+| Add CHANGELOG.md | ✅ | Keep a Changelog format with all features |
 | Improve UI readability and visual design | ✅ | Larger text, message cards, newline rendering, better spacing |
 | Add Docker containerization | ✅ | Dockerfile, docker-compose.yml, Makefile targets |
 | Add starter choices with shuffle | ✅ | `/start` endpoint with pool of 9 adventure hooks |
@@ -254,8 +257,8 @@ gantt
 
 ### Project State
 - **Current Phase**: Foundation complete, ready for multi-agent expansion
-- **Test Coverage**: 73% (target: 80%+)
-- **Deployment**: Configured for Render.com, not yet deployed
+- **Test Coverage**: 78% (target: 80%+)
+- **Deployment**: Render.com (deploying from spike/one-turn branch)
 - **Architecture**: ADR 001 documents agent service pattern
 
 ### Development Workflow
