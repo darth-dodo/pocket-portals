@@ -385,12 +385,14 @@ echo "========================"
 ### Current State
 
 **Completed**:
-- ✅ FastAPI app with `/health` and `/action` endpoints
+- ✅ FastAPI app with `/health`, `/start`, and `/action` endpoints
 - ✅ NarratorAgent using CrewAI + Anthropic Claude
 - ✅ Session management for multi-user support
 - ✅ YAML-based agent configuration
 - ✅ Conversation context passing to LLM
 - ✅ Choice system (3 options + free text)
+- ✅ Starter choices with shuffle from pool of 9 adventure hooks
+- ✅ Retro RPG web UI with NES.css styling
 
 **Next Steps** (check `tasks.md` for current priorities):
 - Add more agents (Keeper, Jester, Theron)
@@ -639,7 +641,13 @@ sequenceDiagram
 # Health check
 curl http://localhost:8888/health
 
-# Generate narrative (new session)
+# Start new adventure with starter choices (recommended)
+curl http://localhost:8888/start
+
+# Start with shuffled choices (randomizes which 3 from pool of 9)
+curl "http://localhost:8888/start?shuffle=true"
+
+# Generate narrative (new session - direct action)
 curl -X POST http://localhost:8888/action \
   -H "Content-Type: application/json" \
   -d '{"action": "I enter the dark tavern"}'

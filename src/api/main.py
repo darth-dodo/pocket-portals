@@ -1,13 +1,14 @@
 """FastAPI application for Pocket Portals."""
 
 import os
+import random
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +22,25 @@ load_dotenv()
 narrator: NarratorAgent | None = None
 sessions: dict[str, list[dict[str, str]]] = {}
 session_choices: dict[str, list[str]] = {}  # Store last choices per session
+
+# Starter choices pool - adventure hooks to begin the journey
+STARTER_CHOICES_POOL = [
+    "Enter the mysterious tavern",
+    "Explore the dark forest path",
+    "Investigate the ancient ruins",
+    "Follow the hooded stranger",
+    "Approach the glowing portal",
+    "Descend into the forgotten dungeon",
+    "Board the departing airship",
+    "Answer the distress signal",
+    "Accept the wizard's quest",
+]
+
+WELCOME_NARRATIVE = (
+    "The mists part before you, revealing crossroads where destiny awaits. "
+    "Three paths shimmer with possibility, each promising adventure, danger, "
+    "and glory. Choose wisely, brave soul, for your legend begins with a single step..."
+)
 
 
 def get_session(session_id: str | None) -> tuple[str, list[dict[str, str]]]:
@@ -107,6 +127,35 @@ async def health_check() -> HealthResponse:
     return HealthResponse(status="healthy", environment=environment)
 
 
+@app.get("/start", response_model=NarrativeResponse)
+async def start_adventure(
+    shuffle: bool = Query(default=False, description="Shuffle the starter choices"),
+) -> NarrativeResponse:
+    """Start a new adventure with starter choices.
+
+    Returns 3 starter choices from the pool to begin the adventure.
+    Use shuffle=true to randomize which choices are presented.
+    """
+    # Create new session
+    session_id, _ = get_session(None)
+
+    # Select 3 choices from the pool
+    if shuffle:
+        choices = random.sample(STARTER_CHOICES_POOL, 3)
+    else:
+        # Default: first 3 choices for consistency
+        choices = STARTER_CHOICES_POOL[:3]
+
+    # Store choices for this session
+    session_choices[session_id] = choices
+
+    return NarrativeResponse(
+        narrative=WELCOME_NARRATIVE,
+        session_id=session_id,
+        choices=choices,
+    )
+
+
 @app.post("/action", response_model=NarrativeResponse)
 async def process_action(request: ActionRequest) -> NarrativeResponse:
     """Process player action and return narrative response."""
@@ -150,6 +199,7 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
 # Get the project root directory (pocket-portals/)
 project_root = Path(__file__).parent.parent.parent
 static_dir = project_root / "static"
+
 
 # Serve index.html at root path
 @app.get("/")

@@ -71,12 +71,14 @@
             background-color: #212529;
         }
 
-        /* Story area */
+        /* Story area - increased canvas for better readability */
         .story-box {
-            max-height: 350px;
+            min-height: 300px;
+            max-height: 500px;
             overflow-y: auto;
             margin-bottom: 0;
             background: #212529 !important;
+            padding: 16px;
         }
 
         .story-box::-webkit-scrollbar {
@@ -129,8 +131,9 @@
         }
 
         .message-text {
-            font-size: 0.65rem;
-            line-height: 1.8;
+            font-size: 0.7rem;
+            line-height: 2;
+            letter-spacing: 0.02em;
         }
 
         /* Welcome message */
@@ -149,6 +152,13 @@
         .welcome p {
             font-size: 0.55rem;
             line-height: 2;
+            margin-bottom: 20px;
+        }
+
+        .welcome .begin-btn {
+            font-size: 0.6rem !important;
+            padding: 16px 32px !important;
+            animation: pulse 2s ease-in-out infinite;
         }
 
         .welcome i {
@@ -360,7 +370,10 @@
                 <div class="welcome">
                     <i class="ra ra-scroll-unfurled"></i>
                     <h2>Welcome, Adventurer!</h2>
-                    <p>Your quest awaits. Type an action below to begin your journey through the realms of fantasy and danger.</p>
+                    <p>Your quest awaits. Choose your starting path or type your own action below.</p>
+                    <button class="nes-btn is-primary begin-btn" id="begin-btn">
+                        <i class="ra ra-player-lift"></i> Begin Quest
+                    </button>
                 </div>
             </div>
 
@@ -568,6 +581,38 @@
             if (action) sendAction(action);
         }
 
+        async function startNewAdventure(shuffle = true) {
+            setLoading(true);
+            errorDiv.classList.remove('visible');
+
+            try {
+                const response = await fetch(`/start?shuffle=${shuffle}`);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update session
+                sessionId = data.session_id;
+                sessionDisplay.textContent = `Quest: ${sessionId.substring(0, 8)}...`;
+
+                // Clear story and show welcome
+                storyBox.innerHTML = '';
+                addMessage(data.narrative, 'narrator');
+
+                // Show starter choices
+                updateChoices(data.choices);
+
+            } catch (err) {
+                console.error('Error:', err);
+                showError(`Failed to start adventure: ${err.message}`);
+            } finally {
+                setLoading(false);
+                actionInput.focus();
+            }
+        }
+
         function newGame() {
             sessionId = null;
             currentChoices = [];
@@ -577,7 +622,10 @@
                 <div class="welcome">
                     <i class="ra ra-scroll-unfurled"></i>
                     <h2>Welcome, Adventurer!</h2>
-                    <p>Your quest awaits. Type an action below to begin your journey through the realms of fantasy and danger.</p>
+                    <p>Your quest awaits. Choose your starting path or type your own action below.</p>
+                    <button class="nes-btn is-primary begin-btn" id="begin-btn">
+                        <i class="ra ra-player-lift"></i> Begin Quest
+                    </button>
                 </div>
             `;
             actionInput.value = '';
@@ -590,6 +638,19 @@
             if (e.key === 'Enter') submitAction();
         });
         newGameBtn.addEventListener('click', newGame);
+
+        // Begin Quest button (if present in initial state)
+        const beginBtn = document.getElementById('begin-btn');
+        if (beginBtn) {
+            beginBtn.addEventListener('click', () => startNewAdventure(true));
+        }
+
+        // Also handle dynamically added begin buttons after newGame
+        storyBox.addEventListener('click', (e) => {
+            if (e.target.id === 'begin-btn' || e.target.closest('#begin-btn')) {
+                startNewAdventure(true);
+            }
+        });
 
         // Focus on load
         actionInput.focus();

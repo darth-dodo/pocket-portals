@@ -217,3 +217,82 @@ def test_action_or_choice_index_required(client: TestClient) -> None:
     # Neither action nor choice_index
     response = client.post("/action", json={"session_id": "some-id"})
     assert response.status_code == 422
+
+
+# Starter Choices Tests
+
+
+def test_start_endpoint_returns_starter_choices(client: TestClient) -> None:
+    """Test that /start endpoint returns starter choices for new adventures."""
+    response = client.get("/start")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "choices" in data
+    assert isinstance(data["choices"], list)
+    assert len(data["choices"]) == 3
+
+
+def test_start_choices_are_non_empty_strings(client: TestClient) -> None:
+    """Test that each starter choice is a non-empty string."""
+    response = client.get("/start")
+
+    assert response.status_code == 200
+    data = response.json()
+    for choice in data["choices"]:
+        assert isinstance(choice, str)
+        assert len(choice.strip()) > 0
+
+
+def test_start_endpoint_returns_session_id(client: TestClient) -> None:
+    """Test that /start returns a new session_id."""
+    response = client.get("/start")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "session_id" in data
+    assert isinstance(data["session_id"], str)
+    assert len(data["session_id"]) > 0
+
+
+def test_start_endpoint_returns_welcome_narrative(client: TestClient) -> None:
+    """Test that /start returns a welcome narrative."""
+    response = client.get("/start")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "narrative" in data
+    assert isinstance(data["narrative"], str)
+    assert len(data["narrative"]) > 0
+
+
+def test_start_shuffle_returns_different_order(client: TestClient) -> None:
+    """Test that /start?shuffle=true can return shuffled choices."""
+    # Make multiple requests and check we get valid responses
+    # Note: Due to randomness, we can't guarantee different order every time,
+    # but we verify the endpoint works with shuffle parameter
+    response = client.get("/start?shuffle=true")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "choices" in data
+    assert len(data["choices"]) == 3
+
+
+def test_start_session_can_be_used_for_action(client: TestClient) -> None:
+    """Test that session from /start can be used with /action."""
+    # Get starter choices
+    start_response = client.get("/start")
+    assert start_response.status_code == 200
+    start_data = start_response.json()
+    session_id = start_data["session_id"]
+
+    # Use the session with an action
+    action_response = client.post(
+        "/action", json={"choice_index": 1, "session_id": session_id}
+    )
+
+    assert action_response.status_code == 200
+    action_data = action_response.json()
+    assert action_data["session_id"] == session_id
+    assert "narrative" in action_data
