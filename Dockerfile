@@ -21,7 +21,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
 # Copy dependency specifications first (cache optimization)
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 
 # Install dependencies
 # Using --no-cache-dir to reduce image size
