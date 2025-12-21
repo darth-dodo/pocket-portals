@@ -33,3 +33,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Static file mounting to use `/static` path instead of overriding API routes
 - Path obfuscation in documentation for security
+- Render deployment configuration: standard pip install (Python 3.12)

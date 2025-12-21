@@ -398,7 +398,8 @@ echo "========================"
 
 **Next Steps** (check `tasks.md` for current priorities):
 - Add more agents (Keeper, Jester, Theron)
-- Deploy to Render.com
+
+**Deployment**: Project includes `render.yaml` for deployment to Render.com (Python 3.12, standard pip install)
 
 ---
 

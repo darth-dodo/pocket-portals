@@ -127,6 +127,19 @@ make docker-clean
 - Development mode mounts source code for hot reload
 - Production mode uses optimized multi-stage build
 
+## Deployment
+
+### Render
+
+The project includes a `render.yaml` blueprint for easy deployment to Render.com:
+
+- **Platform**: Render Web Service
+- **Runtime**: Python 3.12
+- **Build**: Standard pip installation
+- **Start**: Uvicorn ASGI server on port 8888
+
+Set `ANTHROPIC_API_KEY` in Render environment variables before deploying.
+
 ## Current Phase
 
 **Spike/One-Turn** - Proving the concept with a single Narrator agent.
