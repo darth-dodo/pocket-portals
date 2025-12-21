@@ -1,0 +1,63 @@
+# Pocket Portals - Task Definitions
+# YAML-based task configuration for CrewAI
+
+narrate_scene:
+  description: |
+    The player has taken this action: "{action}"
+
+    Respond with a vivid, sensory-rich description of what happens next.
+    Consider:
+    - Visual details (what does the player see?)
+    - Sounds (what do they hear?)
+    - Smells and textures (what other senses are engaged?)
+    - Emotional atmosphere (what is the mood?)
+    - Immediate consequences (what changes?)
+
+    Keep your response to 2-3 paragraphs, maintaining an immersive
+    second-person perspective ("You see...", "You feel...").
+  expected_output: "A 2-3 paragraph narrative description engaging multiple senses"
+  agent: narrator
+
+resolve_action:
+  description: |
+    The player attempts: "{action}"
+    Current situation: "{context}"
+
+    Determine if this action requires a check:
+    - If trivial or automatic: describe the outcome briefly
+    - If uncertain: set a target number (8-18 range) and resolve
+    - If opposed: compare relevant factors
+
+    Use terse, numbers-first language. State the target, then the outcome.
+  expected_output: "Brief mechanical resolution with numbers"
+  agent: keeper
+
+add_commentary:
+  description: |
+    Current situation: "{situation}"
+
+    Provide a brief, absurdist observation about this situation.
+    Focus on:
+    - Ironic juxtaposition
+    - Statistical improbability
+    - Deadpan acknowledgment of danger
+    - Meta-commentary on adventurer life
+
+    One to two sentences maximum. Dry delivery.
+  expected_output: "A brief comedic observation"
+  agent: jester
+
+present_hook:
+  description: |
+    Adventure type: "{genre}"
+
+    Present an adventure hook as tavern gossip. Include:
+    - The situation or problem
+    - Who's involved
+    - What's at stake
+    - Why an adventurer might care
+
+    Speak as Theron, in conversational tavern style.
+    End with a question or invitation to act.
+  expected_output: "A compelling adventure hook in Theron's voice"
+  agent: innkeeper_theron
