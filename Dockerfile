@@ -34,8 +34,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # ============================================================================
 FROM python:3.12-slim AS runtime
 
-# Security: Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Security: Create non-root user with home directory for CrewAI storage
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
