@@ -162,6 +162,8 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Update ONBOARDING.md for agent success | ✅ | Added Quick Start, Decision Trees, Pitfalls, Recovery, Metrics |
+| Create Insomnia collection | ✅ | docs/insomnia-collection.json for API testing |
 | Add choice system (3 options + free text) | ✅ | FR-07 & FR-08 from product.md |
 | Document XP programming flow | ✅ | Added to tasks.md |
 | Add conversation context passing | ✅ | LLM now receives history for continuity |

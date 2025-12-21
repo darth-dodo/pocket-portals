@@ -2,17 +2,367 @@
 
 **Purpose**: Get AI agents productive quickly on Pocket Portals with clear workflows, quality standards, and task tracking.
 
-**Quick Start**: Read → Verify → Track
-1. Read `tasks.md` for current state
-2. Run `make test` to verify environment
-3. Update `tasks.md` with your work
+---
+
+## 🚀 Quick Start Checklist
+
+**Do these 5 things first, in order**:
+
+```bash
+# 1. Verify environment (30 seconds)
+make test
+
+# 2. Read current state (2 minutes)
+cat tasks.md
+
+# 3. Check git status (10 seconds)
+git status && git branch
+
+# 4. Create feature branch (10 seconds)
+git checkout -b feature/your-feature-name
+
+# 5. Run server to verify API works (optional, 30 seconds)
+make dev  # Then check http://localhost:8888/docs
+```
+
+**If any step fails, STOP and fix it before proceeding.**
+
+| Step | Expected Result | If It Fails |
+|------|-----------------|-------------|
+| `make test` | All tests pass, coverage shown | Check `.env` has `ANTHROPIC_API_KEY` |
+| `cat tasks.md` | See current tasks and status | File should exist in project root |
+| `git status` | Clean working tree or known changes | Commit or stash pending changes |
+| `git checkout -b` | New branch created | Already on branch? That's fine |
+| `make dev` | Server starts on port 8888 | Check for port conflicts |
+
+---
+
+## 🧭 Decision Trees
+
+### Which Approach Should I Use?
+
+```
+Start here: What are you doing?
+│
+├─► Adding a new feature?
+│   └─► Use Architect → Developer → QA workflow
+│       └─► See "Agent Workflow" section
+│
+├─► Fixing a bug?
+│   └─► Is it obvious what's wrong?
+│       ├─► YES → Direct fix with TDD
+│       │   1. Write test that reproduces bug
+│       │   2. Fix code
+│       │   3. Verify test passes
+│       └─► NO → Investigate first
+│           1. Read related tests
+│           2. Add debug logging
+│           3. Write reproduction test
+│           4. Fix with TDD
+│
+├─► Understanding the codebase?
+│   └─► Read in this order:
+│       1. tasks.md (current state)
+│       2. docs/xp.md (development philosophy)
+│       3. src/api/main.py (API structure)
+│       4. tests/test_api.py (behavior specs)
+│
+├─► Continuing previous work?
+│   └─► See "Session Recovery" section below
+│
+└─► Not sure what to do?
+    └─► Read tasks.md → Pick a task → Ask if unclear
+```
+
+### TDD or BDD?
+
+```
+What are you implementing?
+│
+├─► User-facing behavior (user stories)?
+│   └─► BDD: Write Gherkin scenarios first
+│       Given/When/Then → Implementation
+│
+├─► Internal logic (functions, algorithms)?
+│   └─► TDD: Write unit tests first
+│       test_function_does_x() → Implementation
+│
+├─► API endpoint?
+│   └─► Both: BDD for user scenarios, TDD for logic
+│       1. BDD: Given API call, When X, Then Y
+│       2. TDD: test_validation_rejects_invalid()
+│
+└─► Not sure?
+    └─► Start with TDD (simpler, faster)
+        Add BDD later if user behavior matters
+```
+
+### Which Agent Role Am I?
+
+```
+What phase is the task in?
+│
+├─► Just starting? No design doc exists?
+│   └─► You are the ARCHITECT
+│       - Create docs/design/{feature}.md
+│       - Define interfaces and data structures
+│       - Plan implementation steps
+│
+├─► Design exists? Need to write code?
+│   └─► You are the DEVELOPER
+│       - Follow TDD: Red → Green → Refactor
+│       - Commit after each working increment
+│       - Update tasks.md as you go
+│
+└─► Code complete? Need validation?
+    └─► You are the QA AGENT
+        - Run full test suite
+        - Check coverage meets target
+        - Verify design requirements met
+```
+
+---
+
+## ⚠️ Common Pitfalls
+
+**These mistakes will slow you down. Avoid them.**
+
+### ❌ DON'T: Jump straight to coding
+
+```python
+# BAD: Writing implementation without a test
+def new_feature():
+    # implementation...
+```
+
+```python
+# GOOD: Write the test first
+def test_new_feature_does_x():
+    result = new_feature()
+    assert result == expected
+```
+
+### ❌ DON'T: Skip reading tasks.md
+
+```bash
+# BAD: Start working without context
+git checkout -b feature/something
+
+# GOOD: Read tasks.md first
+cat tasks.md
+# Then understand what's done and what's next
+```
+
+### ❌ DON'T: Work on main/master branch
+
+```bash
+# BAD: Commit directly to main
+git add . && git commit -m "changes"
+
+# GOOD: Always create a feature branch
+git checkout -b feature/descriptive-name
+git add . && git commit -m "feat: specific change"
+```
+
+### ❌ DON'T: Make giant commits
+
+```bash
+# BAD: One commit with everything
+git commit -m "implement entire feature"
+
+# GOOD: Small, frequent commits
+git commit -m "feat: add request model"
+git commit -m "feat: add response model"
+git commit -m "feat: add endpoint handler"
+git commit -m "test: add endpoint tests"
+```
+
+### ❌ DON'T: Ignore failing tests
+
+```bash
+# BAD: "I'll fix it later"
+# Tests failing, but proceeding anyway
+
+# GOOD: Stop and fix immediately
+# Red → Green → Refactor (never skip Green)
+```
+
+### ❌ DON'T: Over-engineer
+
+```python
+# BAD: Adding features "just in case"
+class AbstractSessionManagerFactory:
+    def create_manager(self, strategy: Strategy) -> Manager:
+        ...
+
+# GOOD: Simplest thing that works (YAGNI)
+sessions: dict[str, list] = {}
+```
+
+### ❌ DON'T: Forget to update tasks.md
+
+```markdown
+# BAD: Complete work but don't record it
+# Next agent has no idea what happened
+
+# GOOD: Update tasks.md with every completion
+| Add choice system | ✅ | FR-07 & FR-08 from product.md |
+```
+
+### ❌ DON'T: Skip quality gates before commit
+
+```bash
+# BAD: Commit without testing
+git add . && git commit
+
+# GOOD: Always run quality gates
+make test && make lint
+git add . && git commit
+```
+
+---
+
+## 🔄 Session Recovery
+
+**Resuming work after interruption or handoff to another agent.**
+
+### Step 1: Understand Current State
+
+```bash
+# What's the git status?
+git status && git branch
+
+# What was last committed?
+git log --oneline -5
+
+# Are there uncommitted changes?
+git diff --stat
+```
+
+### Step 2: Read Project Memory
+
+```bash
+# Current task state
+cat tasks.md
+
+# Look for "In Progress" or "Recently Completed"
+grep -A 5 "In Progress\|🔄" tasks.md
+```
+
+### Step 3: Verify Environment Still Works
+
+```bash
+# Run tests to confirm nothing is broken
+make test
+
+# If tests fail, check last changes
+git diff HEAD~1
+```
+
+### Step 4: Resume Work
+
+**If tests pass**: Continue from where you left off
+```bash
+# Check what needs to be done next
+cat tasks.md | grep "⏳\|pending"
+```
+
+**If tests fail**: Fix before continuing
+```bash
+# See what broke
+uv run pytest -x  # Stop on first failure
+# Fix the issue, then continue
+```
+
+### Step 5: Document Your Session
+
+Before ending your session:
+```bash
+# Update tasks.md with progress
+# Commit with clear message
+git add . && git commit -m "checkpoint: description of progress"
+```
+
+### Recovery Checklist
+
+| Check | Command | Expected |
+|-------|---------|----------|
+| Git clean? | `git status` | Working tree clean OR known changes |
+| Tests pass? | `make test` | All green, coverage shown |
+| On feature branch? | `git branch` | Not on main/master |
+| tasks.md updated? | `cat tasks.md` | Recent work documented |
+
+---
+
+## 📊 Success Metrics
+
+**How do you know you're doing well?**
+
+### Code Quality Metrics
+
+| Metric | Target | Check Command |
+|--------|--------|---------------|
+| Test Coverage | ≥70% | `make test` (shows coverage) |
+| All Tests Pass | 100% | `uv run pytest` |
+| Lint Errors | 0 | `make lint` |
+| Type Errors | 0 | `uv run mypy src/` (if configured) |
+
+### Process Metrics
+
+| Metric | Target | How to Verify |
+|--------|--------|---------------|
+| Commit Frequency | Every working increment | `git log --oneline` |
+| Task Updates | Every 30 minutes | Check timestamps in tasks.md |
+| TDD Compliance | Tests before code | Review commit history |
+| Small Commits | <50 lines changed | `git log --stat` |
+
+### Session Success Indicators
+
+**✅ Good Session**:
+- Started by reading tasks.md
+- Created feature branch
+- Wrote tests before code
+- Committed frequently (3+ commits per feature)
+- Updated tasks.md at end
+- All tests passing before push
+
+**⚠️ Needs Improvement**:
+- Skipped reading tasks.md
+- Worked on main branch
+- Large commits (>100 lines)
+- Tests written after code
+- Forgot to update tasks.md
+
+**❌ Problem Session**:
+- Left tests failing
+- No commits
+- tasks.md not updated
+- Broke existing functionality
+
+### Quality Gate Scorecard
+
+Run this before ending your session:
+
+```bash
+# Create a quick scorecard
+echo "=== Session Scorecard ==="
+echo -n "Tests: " && (make test > /dev/null 2>&1 && echo "✅ PASS" || echo "❌ FAIL")
+echo -n "Lint:  " && (make lint > /dev/null 2>&1 && echo "✅ PASS" || echo "❌ FAIL")
+echo -n "Git:   " && (git branch | grep -v main > /dev/null && echo "✅ Feature branch" || echo "⚠️ On main")
+echo "========================"
+```
 
 ---
 
 ## Table of Contents
 
+- [Quick Start Checklist](#-quick-start-checklist)
+- [Decision Trees](#-decision-trees)
+- [Common Pitfalls](#️-common-pitfalls)
+- [Session Recovery](#-session-recovery)
+- [Success Metrics](#-success-metrics)
 - [Project Context](#project-context)
-- [XP Principles (Core Philosophy)](#xp-principles-core-philosophy)
+- [XP Principles](#xp-principles-core-philosophy)
 - [Agent Workflow](#agent-workflow)
 - [Session Lifecycle](#session-lifecycle)
 - [API Request Flow](#api-request-flow)
@@ -39,10 +389,11 @@
 - ✅ NarratorAgent using CrewAI + Anthropic Claude
 - ✅ Session management for multi-user support
 - ✅ YAML-based agent configuration
+- ✅ Conversation context passing to LLM
+- ✅ Choice system (3 options + free text)
 
 **Next Steps** (check `tasks.md` for current priorities):
 - Add more agents (Keeper, Jester, Theron)
-- Implement conversation context passing to LLM
 - Deploy to Render.com
 
 ---
@@ -50,6 +401,8 @@
 ## XP Principles (Core Philosophy)
 
 **Follow these principles in all work**:
+
+For comprehensive XP documentation, see **`docs/xp.md`**.
 
 ### Test-Driven Development (TDD)
 ```
@@ -256,10 +609,12 @@ sequenceDiagram
     participant CrewAI
     participant LLM as Anthropic Claude
 
-    Client->>FastAPI: POST /action<br/>{action, session_id?}
+    Client->>FastAPI: POST /action<br/>{action, session_id?, choice_index?}
 
     FastAPI->>SessionMgr: get_or_create_session(session_id)
-    SessionMgr-->>FastAPI: session_id, context
+    SessionMgr-->>FastAPI: session_id, history
+
+    FastAPI->>FastAPI: build_context(history)
 
     FastAPI->>Agent: respond(action, context)
 
@@ -271,9 +626,9 @@ sequenceDiagram
 
     Agent-->>FastAPI: narrative text
 
-    FastAPI->>SessionMgr: update_context(session_id, narrative)
+    FastAPI->>SessionMgr: update_history(session_id, action, narrative)
 
-    FastAPI-->>Client: {narrative, session_id}
+    FastAPI-->>Client: {narrative, session_id, choices}
 
     Note over Client,LLM: Future: Multi-agent coordination<br/>Narrator → Keeper → Jester → Theron
 ```
@@ -293,6 +648,11 @@ curl -X POST http://localhost:8888/action \
 curl -X POST http://localhost:8888/action \
   -H "Content-Type: application/json" \
   -d '{"action": "I order an ale", "session_id": "abc123"}'
+
+# Select a choice (1-3)
+curl -X POST http://localhost:8888/action \
+  -H "Content-Type: application/json" \
+  -d '{"choice_index": 2, "session_id": "abc123"}'
 ```
 
 ### Response Format
@@ -300,7 +660,12 @@ curl -X POST http://localhost:8888/action \
 ```json
 {
   "narrative": "The tavern keeper nods...",
-  "session_id": "abc123-def456-ghi789"
+  "session_id": "abc123-def456-ghi789",
+  "choices": [
+    "Investigate further",
+    "Talk to someone nearby",
+    "Move to a new location"
+  ]
 }
 ```
 
@@ -316,15 +681,22 @@ make install          # Install dependencies with uv
 
 # Development
 make dev              # Run FastAPI server (port 8888)
-make test             # Run pytest with coverage
-make lint             # Run ruff check + format
+make dev-reload       # Run with auto-reload
+
+# Testing (TDD workflow)
+make test             # Full test suite with coverage
+make test-fast        # Stop on first failure (TDD cycle)
+make test-cov         # Generate HTML coverage report
+
+# Quality
+make lint             # Check code style (ruff)
+make format           # Auto-fix code style
+make check            # Run all quality gates
 
 # Quick checks
 uv run pytest -x      # Stop on first failure
 uv run pytest -v      # Verbose output
 uv run pytest tests/test_api.py::test_name  # Run specific test
-uv run ruff check .   # Lint only
-uv run ruff format .  # Format only
 
 # Coverage
 uv run pytest --cov=src --cov-report=html
@@ -338,7 +710,9 @@ open htmlcov/index.html
 | `make install` | Install dependencies | First time, after dependency changes |
 | `make dev` | Start development server | Testing API locally |
 | `make test` | Run all tests with coverage | Before committing |
+| `make test-fast` | Stop on first failure | During TDD cycle |
 | `make lint` | Check and format code | Before committing |
+| `make check` | Run all quality gates | Final verification |
 | `make clean` | Remove build artifacts | After testing, before commit |
 
 ---
@@ -365,6 +739,7 @@ open htmlcov/index.html
 
 - ✅ **Done** - Task completed and verified
 - 🔄 **In Progress** - Currently working on this
+- ⏳ **Pending** - Not started yet
 - ❌ **Blocked** - Cannot proceed, needs attention
 
 ### Update Frequency
@@ -416,6 +791,31 @@ async def endpoint_name(request: RequestModel) -> ResponseModel:
     """
     # Implementation
     return ResponseModel(...)
+```
+
+### Request/Response Models
+
+```python
+from pydantic import BaseModel, Field, model_validator
+
+class ActionRequest(BaseModel):
+    """Request model for player actions."""
+    action: str | None = Field(default=None)
+    choice_index: int | None = Field(default=None, ge=1, le=3)
+    session_id: str | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_action_or_choice(self) -> "ActionRequest":
+        """Ensure either action or choice_index is provided."""
+        if self.action is None and self.choice_index is None:
+            raise ValueError("Either 'action' or 'choice_index' must be provided")
+        return self
+
+class NarrativeResponse(BaseModel):
+    """Response model containing narrative text."""
+    narrative: str
+    session_id: str
+    choices: list[str] = Field(default_factory=lambda: ["Look around", "Wait", "Leave"])
 ```
 
 ### Agents
@@ -524,7 +924,7 @@ Before committing, verify all gates pass:
    uv run pytest
    ```
    - All tests pass
-   - Coverage ≥70% (current: 73%)
+   - Coverage ≥70% (current: 75%)
 
 6. **Performance** ⚡
    ```bash
@@ -629,18 +1029,19 @@ git commit -m "fix"
 
 ## Resources
 
+### Project Documentation
+
+- **`tasks.md`** - Project task log (read first!)
+- **`docs/xp.md`** - Comprehensive XP guide with TDD/BDD
+- **`docs/adr/`** - Architecture decision records
+- **`README.md`** - Project overview and setup
+
 ### Framework Documentation
 
 - **`.agentic-framework/README.md`** - Framework overview
 - **`.agentic-framework/workflows/feature-development.md`** - Feature workflow (Architect → Developer → QA)
 - **`.agentic-framework/workflows/bug-fix.md`** - Bug fix workflow
 - **`.agentic-framework/quality-gates/examples/python.md`** - Python quality gates
-
-### Project Documentation
-
-- **`tasks.md`** - Project task log (read first!)
-- **`docs/adr/`** - Architecture decision records
-- **`README.md`** - Project overview and setup
 
 ### Technology References
 
@@ -668,18 +1069,32 @@ open htmlcov/index.html           # After running make test
 **Read these in order**:
 
 1. **`tasks.md`** - What's been done, what's next
-2. **`.agentic-framework/README.md`** - Framework concepts
-3. **`.agentic-framework/workflows/`** - Detailed workflows
-4. **`docs/adr/`** - Architecture decisions
+2. **`docs/xp.md`** - Development philosophy and practices
+3. **`.agentic-framework/README.md`** - Framework concepts
+4. **`.agentic-framework/workflows/`** - Detailed workflows
+5. **`docs/adr/`** - Architecture decisions
 
 **Still stuck?** Document the question in `tasks.md` and mark it ❌ blocked.
 
 ---
 
-**Remember**:
-- ✅ Follow XP principles (TDD, Simple Design, Small Steps, YAGNI)
-- ✅ Update `tasks.md` religiously
-- ✅ Run `make test && make lint` before committing
-- ✅ Use `.agentic-framework/` workflows for structure
+## TL;DR Checklist
+
+**Before starting**:
+- [ ] `make test` passes
+- [ ] Read `tasks.md`
+- [ ] On feature branch (not main)
+
+**While working**:
+- [ ] Tests before code (TDD)
+- [ ] Commit every working increment
+- [ ] Update tasks.md every 30 min
+
+**Before ending**:
+- [ ] `make test && make lint` passes
+- [ ] tasks.md updated
+- [ ] Final commit with good message
+
+**Remember**: ✅ Follow XP → 📋 Update tasks.md → 🧪 Test first → 📦 Commit often
 
 **Happy coding! 🚀**

@@ -1,0 +1,360 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-12-21T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_pocket_portals",
+      "parentId": null,
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Pocket Portals API",
+      "description": "Solo D&D adventure generator - API collection for testing endpoints",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_pocket_portals",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8888",
+        "session_id": ""
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "session_id"]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1734739200000,
+      "_type": "environment"
+    },
+    {
+      "_id": "env_production",
+      "parentId": "env_base",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Production",
+      "data": {
+        "base_url": "https://pocket-portals.onrender.com"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url"]
+      },
+      "color": "#10b981",
+      "isPrivate": false,
+      "metaSortKey": 1734739200001,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_health",
+      "parentId": "wrk_pocket_portals",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Health",
+      "description": "Health check endpoint",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1734739200000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_actions",
+      "parentId": "wrk_pocket_portals",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Actions",
+      "description": "Player action endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1734739100000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_workflow",
+      "parentId": "wrk_pocket_portals",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "name": "Workflow Examples",
+      "description": "Example workflows demonstrating session continuity",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1734739000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_health_check",
+      "parentId": "fld_health",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/health",
+      "name": "Health Check",
+      "description": "Check if the API server is running and healthy",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1734739200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_new_session",
+      "parentId": "fld_actions",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "1. Start New Session",
+      "description": "Begin a new adventure session with a free-text action. The response will include a session_id to use for subsequent requests.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"I enter the dark tavern and look around carefully\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_continue_session",
+      "parentId": "fld_actions",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "2. Continue Session (Free Text)",
+      "description": "Continue an existing session with a free-text action. Copy the session_id from a previous response.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"I order a mug of ale and ask the barkeep about local rumors\",\n  \"session_id\": \"{{ _.session_id }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_choice_1",
+      "parentId": "fld_actions",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "3a. Select Choice 1",
+      "description": "Select the first suggested choice from the previous response. Choices are indexed 1-3.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"choice_index\": 1,\n  \"session_id\": \"{{ _.session_id }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_choice_2",
+      "parentId": "fld_actions",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "3b. Select Choice 2",
+      "description": "Select the second suggested choice from the previous response.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"choice_index\": 2,\n  \"session_id\": \"{{ _.session_id }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734738900000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_choice_3",
+      "parentId": "fld_actions",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "3c. Select Choice 3",
+      "description": "Select the third suggested choice from the previous response.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"choice_index\": 3,\n  \"session_id\": \"{{ _.session_id }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734738800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_workflow_tavern",
+      "parentId": "fld_workflow",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "Tavern Adventure - Start",
+      "description": "Example: Start a tavern adventure. Copy the session_id from the response to continue.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"I push open the heavy wooden door of the Rusty Anchor tavern and step inside, my eyes adjusting to the dim candlelight\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_workflow_dungeon",
+      "parentId": "fld_workflow",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "Dungeon Crawl - Start",
+      "description": "Example: Start a dungeon exploration. Copy the session_id from the response to continue.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"I descend the stone staircase into the ancient crypt, my torch casting flickering shadows on the moss-covered walls\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_workflow_forest",
+      "parentId": "fld_workflow",
+      "modified": 1734739200000,
+      "created": 1734739200000,
+      "url": "{{ _.base_url }}/action",
+      "name": "Forest Quest - Start",
+      "description": "Example: Start a forest adventure. Copy the session_id from the response to continue.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"I follow the overgrown path deeper into the Whispering Woods, listening carefully for any signs of the creature the villagers spoke of\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1734739000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}
