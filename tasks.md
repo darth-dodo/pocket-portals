@@ -162,6 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Improve UI readability and visual design | ✅ | Larger text, message cards, newline rendering, better spacing |
 | Add Docker containerization | ✅ | Dockerfile, docker-compose.yml, Makefile targets |
 | Add starter choices with shuffle | ✅ | `/start` endpoint with pool of 9 adventure hooks |
 | Add retro RPG web UI | ✅ | NES.css styling, Begin Quest button, increased canvas |

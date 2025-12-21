@@ -390,10 +390,11 @@ echo "========================"
 - ✅ Session management for multi-user support
 - ✅ YAML-based agent configuration
 - ✅ Conversation context passing to LLM
-- ✅ Choice system (3 options + free text)
+- ✅ Choice system (3 options + free text input)
 - ✅ Starter choices with shuffle from pool of 9 adventure hooks
 - ✅ Retro RPG web UI with NES.css styling
 - ✅ Docker containerization with multi-stage build
+- ✅ Improved UI readability with proper newline rendering
 
 **Next Steps** (check `tasks.md` for current priorities):
 - Add more agents (Keeper, Jester, Theron)
