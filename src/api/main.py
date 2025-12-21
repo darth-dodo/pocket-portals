@@ -201,13 +201,13 @@ project_root = Path(__file__).parent.parent.parent
 static_dir = project_root / "static"
 
 
-# Serve index.html at root path
 @app.get("/")
 async def read_root() -> FileResponse:
     """Serve the index.html file."""
     return FileResponse(static_dir / "index.html")
 
 
-# Mount static files for all other static assets
+# Mount static files at /static for CSS, JS, images, etc.
+# Note: We don't mount at "/" because it would override API routes like /start
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
