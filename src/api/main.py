@@ -3,11 +3,14 @@
 import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
 from src.agents.narrator import NarratorAgent
@@ -141,3 +144,20 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     return NarrativeResponse(
         narrative=narrative, session_id=session_id, choices=choices
     )
+
+
+# Static file serving
+# Get the project root directory (pocket-portals/)
+project_root = Path(__file__).parent.parent.parent
+static_dir = project_root / "static"
+
+# Serve index.html at root path
+@app.get("/")
+async def read_root() -> FileResponse:
+    """Serve the index.html file."""
+    return FileResponse(static_dir / "index.html")
+
+
+# Mount static files for all other static assets
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
