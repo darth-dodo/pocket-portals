@@ -2,7 +2,6 @@
 
 **Version**: 1.0
 **Last Updated**: 2025-12-21
-**Design Lead**: Head of Design
 
 ---
 

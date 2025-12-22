@@ -5,6 +5,24 @@
 
 ---
 
+## Table of Contents
+
+- [1. Executive Summary](#1-executive-summary)
+- [2. Problem Statement](#2-problem-statement)
+- [3. Target Audience](#3-target-audience)
+- [4. Product Vision](#4-product-vision)
+- [5. Technology Stack](#5-technology-stack)
+- [6. Functional Requirements](#6-functional-requirements)
+- [7. Agent Architecture](#7-agent-architecture)
+- [8. Product Architecture](#8-product-architecture)
+- [9. User Experience Flow](#9-user-experience-flow)
+- [10. Dependencies & Constraints](#10-dependencies--constraints)
+- [11. Risks & Mitigations](#11-risks--mitigations)
+- [12. Open Questions](#12-open-questions)
+- [13. Appendix](#13-appendix)
+
+---
+
 ## 1. Executive Summary
 
 Pocket Portals is a web application that generates personalized one-shot D&D adventures using multi-agent AI. Users enter a magical tavern, describe their character in plain English, and receive a complete adventure run by a crew of AI agents — complete with dice rolls, NPC interactions, combat, and branching narrative outcomes. Built on CrewAI and Anthropic Claude.
@@ -94,7 +112,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 | Frontend | Vanilla HTML/CSS/JavaScript with NES.css | ✅ |
 | Styling | NES.css (retro RPG theme) + Press Start 2P font | ✅ |
 | Containerization | Docker + Docker Compose | ✅ |
-| Deployment | Fly.io | Planned |
+| Deployment | Render.com | ✅ |
 
 ---
 
@@ -254,7 +272,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 - **Anthropic Claude API:** Rate limits, token costs, model availability
 - **CrewAI Framework:** Version stability, breaking changes
-- **Fly.io:** Platform availability, pricing changes
+- **Render.com:** Platform availability, pricing changes
 
 ### 10.2 Technical Constraints
 
@@ -298,10 +316,10 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 ### 13.2 Related Documents
 
-- **[architecture.md](architecture.md)** - Technical architecture and XP practices
-- **[creative-writing.md](creative-writing.md)** - Agent voices and narrative guidelines
-- **[conversation-engine.md](conversation-engine.md)** - Turn-taking and state management
-- **[crewai.md](crewai.md)** - CrewAI project template
+- **[Architecture](reference/architecture.md)** - Technical architecture and XP practices
+- **[Creative Writing](reference/creative-writing.md)** - Agent voices and narrative guidelines
+- **[Conversation Engine](reference/conversation-engine.md)** - Turn-taking and state management
+- **[CrewAI Guide](reference/crewai.md)** - CrewAI project template
 
 ### 13.3 External References
 
@@ -309,7 +327,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 - Anthropic Claude API: https://docs.anthropic.com
 - FastAPI: https://fastapi.tiangolo.com
 - NES.css: https://nostalgic-css.github.io/NES.css/
-- Fly.io: https://fly.io/docs
+- Render.com: https://render.com/docs
 
 ### 13.4 Implementation Achievements
 

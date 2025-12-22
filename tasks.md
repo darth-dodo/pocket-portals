@@ -2,6 +2,18 @@
 
 > **Source of Truth**: This file is the single source of truth for project state, task history, and progress tracking. All agents and developers should update this file when completing work.
 
+## Table of Contents
+
+- [How to Use This File](#how-to-use-this-file)
+- [XP Programming Flow](#xp-programming-flow)
+- [Project Timeline](#project-timeline)
+- [Current Work](#current-work)
+- [Completed Phases](#completed-phases)
+- [Task History Archive](#task-history-archive)
+- [Notes for Future Agents](#notes-for-future-agents)
+
+---
+
 ## How to Use This File
 
 **Format Guidelines**:
@@ -270,8 +282,9 @@ gantt
 5. Document key decisions and blockers
 
 ### Key Files to Review
-- `product.md` - Product vision and requirements
-- `crewai.md` - CrewAI architecture and agent design
+- `docs/product.md` - Product vision and requirements
+- `docs/reference/crewai.md` - CrewAI architecture and agent design
 - `docs/adr/` - Architecture decision records
-- `docs/CRASH-COURSE.md` - Comprehensive spike documentation
+- `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
+- `docs/guides/ONBOARDING.md` - Developer onboarding guide
 - `src/config/agents.yaml` - Agent configurations

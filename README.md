@@ -2,6 +2,27 @@
 
 Solo D&D adventure generator using multi-agent AI.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+  - [Local Development](#local-development)
+  - [Docker (Alternative)](#docker-alternative)
+- [API](#api)
+  - [Health Check](#health-check)
+  - [Generate Narrative](#generate-narrative)
+  - [Response Format](#response-format)
+- [Stack](#stack)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Docker](#docker)
+- [Deployment](#deployment)
+- [Current Phase](#current-phase)
+- [Documentation](#documentation)
+- [License](#license)
+
+---
+
 ## Overview
 
 Pocket Portals uses CrewAI agents powered by Anthropic Claude to generate immersive, dynamic D&D narratives. Each agent plays a specialized role in crafting the adventure experience.
@@ -144,7 +165,17 @@ Set `ANTHROPIC_API_KEY` in Render environment variables before deploying.
 
 **Spike/One-Turn** - Proving the concept with a single Narrator agent.
 
-See `tasks.md` for current progress and `docs/ONBOARDING.md` for detailed development guide.
+See `tasks.md` for current progress and `docs/guides/ONBOARDING.md` for detailed development guide.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Crash Course](docs/guides/CRASH-COURSE.md) | Comprehensive spike documentation |
+| [Onboarding Guide](docs/guides/ONBOARDING.md) | Getting started for developers |
+| [Product Requirements](docs/product.md) | PRD and feature specifications |
+| [Architecture](docs/reference/architecture.md) | Technical architecture and XP practices |
+| [Design System](docs/design/design.md) | UI design system and components |
 
 ## License
 
