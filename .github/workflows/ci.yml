@@ -52,8 +52,6 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
-
-      - name: Check coverage threshold
-        run: |
-          uv run pytest --cov=src --cov-fail-under=70 -q
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=70
+        env:
+          ANTHROPIC_API_KEY: test-key-for-ci
