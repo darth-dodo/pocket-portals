@@ -162,7 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| No active tasks | - | Multi-agent crew complete |
+| No active tasks | - | Ready for next feature |
 
 ### Up Next
 
@@ -170,13 +170,19 @@ gantt
 |------|--------|----------|
 | Implement world state management | ⏳ | High |
 | Add conversation engine | ⏳ | High |
-| Integrate agents into API endpoints | ⏳ | Medium |
+| Character creation system | ⏳ | Medium |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Add multi-agent crew (Innkeeper, Keeper, Jester) | ✅ | TDD implementation, 84% coverage, all 29 tests passing |
+| Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
+| Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
+| Add testing mocks reference guide | ✅ | `docs/reference/testing-mocks.md` |
+| Fix CI/CD workflow | ✅ | Mocked LLM calls, proper env vars |
+| Set up pre-commit hooks | ✅ | ruff, mypy, trailing whitespace, etc. |
+| Add GitHub Actions CI/CD | ✅ | Lint + test jobs with 70% coverage gate |
+| Add multi-agent crew (Innkeeper, Keeper, Jester) | ✅ | TDD implementation, 79% coverage, 36 tests |
 | Create multi-agent design document | ✅ | `docs/design/2025-12-22-multi-agent-crew.md` |
 | Update YAML configs for all agents | ✅ | Enhanced personalities per creative-writing.md |
 | Create comprehensive spike crash course | ✅ | `docs/CRASH-COURSE.md` - 1091 lines covering architecture, patterns, lessons learned |
@@ -260,7 +266,13 @@ gantt
 | Implement KeeperAgent with TDD | ✅ | Game mechanics, terse/numbers-first |
 | Implement JesterAgent with TDD | ✅ | Meta-commentary, fourth-wall aware |
 | Update YAML configs | ✅ | Enhanced per creative-writing.md |
-| Run quality gates | ✅ | 29 tests passing, 84% coverage |
+| Add API endpoints for agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
+| Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
+| Add GitHub Actions CI/CD | ✅ | Lint + test jobs with coverage gate |
+| Set up pre-commit hooks | ✅ | ruff, mypy, formatting checks |
+| Mock LLM calls for CI | ✅ | Tests work without real API key |
+| Add testing mocks documentation | ✅ | `docs/reference/testing-mocks.md` |
+| Run quality gates | ✅ | 36 tests passing, 79% coverage |
 
 **Implementation Details**:
 - All agents follow NarratorAgent pattern exactly
@@ -268,15 +280,28 @@ gantt
 - YAML-based configuration for personality and voice
 - TDD cycle: Red → Green → Refactor for each agent
 - Parallel sub-agent development workflow
+- Pydantic models for type-safe config loading
+- Mocked Task.execute_sync() for CI compatibility
 
 **Files Created**:
 - `src/agents/innkeeper.py` - InnkeeperAgent class
 - `src/agents/keeper.py` - KeeperAgent class
 - `src/agents/jester.py` - JesterAgent class
+- `src/config/loader.py` - Pydantic config models
 - `tests/test_innkeeper.py` - 3 tests
 - `tests/test_keeper.py` - 2 tests
 - `tests/test_jester.py` - 2 tests
+- `tests/test_api.py` - 7 new endpoint tests
 - `docs/design/2025-12-22-multi-agent-crew.md` - Design doc
+- `docs/reference/testing-mocks.md` - Mocking guide
+- `.github/workflows/ci.yml` - CI/CD workflow
+
+**API Endpoints Added**:
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/innkeeper/quest?character=...` | GET | Quest introductions |
+| `/keeper/resolve` | POST | Mechanical action resolution |
+| `/jester/complicate` | POST | Meta-commentary |
 
 **LLM Configuration per Agent**:
 | Agent | Temperature | Max Tokens | Rationale |
@@ -313,9 +338,11 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Foundation complete, ready for multi-agent expansion
-- **Test Coverage**: 78% (target: 80%+)
-- **Deployment**: Render.com (deploying from spike/one-turn branch)
+- **Current Phase**: Multi-agent crew complete, ready for world state
+- **Test Coverage**: 79% (36 tests passing)
+- **CI/CD**: GitHub Actions with lint + test jobs
+- **Pre-commit**: ruff, mypy, formatting hooks installed
+- **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
 
 ### Development Workflow
@@ -324,11 +351,16 @@ gantt
 3. Mark ✅ when complete, add notes if needed
 4. Move completed phases to "Completed Phases" section
 5. Document key decisions and blockers
+6. Run `uv run pre-commit install` to set up hooks
+7. **Update documentation after every feature** - Update tasks.md, design docs, and README to prevent documentation drift
 
 ### Key Files to Review
 - `docs/product.md` - Product vision and requirements
 - `docs/reference/crewai.md` - CrewAI architecture and agent design
+- `docs/reference/testing-mocks.md` - How to mock LLM calls in tests
 - `docs/adr/` - Architecture decision records
 - `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
 - `docs/guides/ONBOARDING.md` - Developer onboarding guide
 - `src/config/agents.yaml` - Agent configurations
+- `src/config/loader.py` - Pydantic config models
+- `.github/workflows/ci.yml` - CI/CD workflow

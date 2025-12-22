@@ -3,7 +3,7 @@
 **Feature**: Add Innkeeper, Keeper, and Jester agents to the Tavern Crew
 **Author**: Architect Agent
 **Date**: 2025-12-22
-**Status**: Design Phase
+**Status**: ✅ Implemented
 
 ---
 
@@ -350,42 +350,61 @@ def test_keeper_response_is_brief() -> None:
 
 ---
 
-## API Integration (Future)
+## API Integration ✅
 
-For this phase, agents are implemented but NOT integrated into API endpoints.
-Future integration will add:
+All agents are integrated into API endpoints:
 
-```python
-# New endpoints (not in this phase)
-@app.get("/innkeeper/quest")
-async def get_quest(character: str) -> dict: ...
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/innkeeper/quest?character={description}` | GET | Quest introductions |
+| `/keeper/resolve` | POST | Mechanical action resolution with difficulty |
+| `/jester/complicate` | POST | Meta-commentary and complications |
 
-@app.post("/keeper/resolve")
-async def resolve(action: str, difficulty: int) -> dict: ...
-
-@app.post("/jester/complicate")
-async def complicate(situation: str) -> dict: ...
-```
+All endpoints support optional `session_id` for context continuity.
 
 ---
 
 ## Implementation Order
 
-1. **Innkeeper Agent** - Quest introduction patterns
-2. **Keeper Agent** - Mechanical resolution patterns
-3. **Jester Agent** - Meta-commentary patterns
+1. **Innkeeper Agent** - Quest introduction patterns ✅
+2. **Keeper Agent** - Mechanical resolution patterns ✅
+3. **Jester Agent** - Meta-commentary patterns ✅
+4. **API Integration** - All endpoints implemented ✅
+5. **CI/CD Setup** - GitHub Actions with tests ✅
 
-Each follows TDD: Red → Green → Refactor → Commit
+Each followed TDD: Red → Green → Refactor → Commit
 
 ---
 
 ## Success Criteria
 
-- [ ] All 3 agents implemented with tests
-- [ ] YAML configs added for all agents
-- [ ] Test coverage remains ≥70%
-- [ ] All quality gates pass (`make check`)
-- [ ] tasks.md updated with completion status
+- [x] All 3 agents implemented with tests
+- [x] YAML configs added for all agents
+- [x] Test coverage remains ≥70% (currently 79%)
+- [x] All quality gates pass (ruff, mypy, pytest)
+- [x] API endpoints for all agents
+- [x] Mocked tests for CI compatibility
+- [x] tasks.md updated with completion status
+
+---
+
+## Additional Implementation Notes
+
+### Config Loader Refactoring
+Created `src/config/loader.py` with Pydantic models:
+- `AgentConfig` - Typed agent configuration
+- `TaskConfig` - Typed task configuration
+- All agents use shared loader for consistency
+
+### Testing Strategy
+- Mocked `Task.execute_sync()` to avoid real API calls in CI
+- See `docs/reference/testing-mocks.md` for details
+
+### CI/CD
+- GitHub Actions workflow in `.github/workflows/ci.yml`
+- Lint job: ruff check + format verification
+- Test job: pytest with 70% coverage threshold
+- Pre-commit hooks: ruff, mypy, formatting
 
 ---
 
@@ -393,5 +412,7 @@ Each follows TDD: Red → Green → Refactor → Commit
 
 - `docs/product.md` - Agent roles and personalities (Section 7)
 - `docs/reference/creative-writing.md` - Voice guidelines
+- `docs/reference/testing-mocks.md` - Mocking strategy for tests
 - `docs/reference/conversation-engine.md` - Future orchestration patterns
 - `src/agents/narrator.py` - Reference implementation
+- `src/config/loader.py` - Pydantic config models
