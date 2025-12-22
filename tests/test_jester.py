@@ -26,7 +26,9 @@ def test_jester_add_complication_returns_string(mock_task: MagicMock) -> None:
     """Test that add_complication returns a non-empty string."""
     # Mock the task execution
     mock_task_instance = MagicMock()
-    mock_task_instance.execute_sync.return_value = "Did anyone check if the parrot speaks Common?"
+    mock_task_instance.execute_sync.return_value = (
+        "Did anyone check if the parrot speaks Common?"
+    )
     mock_task.return_value = mock_task_instance
 
     jester = JesterAgent()

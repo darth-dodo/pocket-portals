@@ -23,11 +23,15 @@ class TestInnkeeperAgent:
         assert innkeeper.agent.role == "Innkeeper Theron"
 
     @patch("src.agents.innkeeper.Task")
-    def test_innkeeper_introduce_quest_returns_string(self, mock_task: MagicMock) -> None:
+    def test_innkeeper_introduce_quest_returns_string(
+        self, mock_task: MagicMock
+    ) -> None:
         """Test that introduce_quest method returns a non-empty string."""
         # Mock the task execution
         mock_task_instance = MagicMock()
-        mock_task_instance.execute_sync.return_value = "Storm's breaking. Roads'll be mud by morning."
+        mock_task_instance.execute_sync.return_value = (
+            "Storm's breaking. Roads'll be mud by morning."
+        )
         mock_task.return_value = mock_task_instance
 
         innkeeper = InnkeeperAgent()
@@ -46,7 +50,9 @@ class TestInnkeeperAgent:
         """Test that introduce_quest works with optional context parameter."""
         # Mock the task execution
         mock_task_instance = MagicMock()
-        mock_task_instance.execute_sync.return_value = "Quiet week. Could use some help with a problem."
+        mock_task_instance.execute_sync.return_value = (
+            "Quiet week. Could use some help with a problem."
+        )
         mock_task.return_value = mock_task_instance
 
         innkeeper = InnkeeperAgent()

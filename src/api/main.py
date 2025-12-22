@@ -242,7 +242,9 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
 
 @app.get("/innkeeper/quest", response_model=QuestResponse)
 async def get_quest(
-    character: str = Query(..., description="Character description for quest introduction"),
+    character: str = Query(
+        ..., description="Character description for quest introduction"
+    ),
 ) -> QuestResponse:
     """Get a quest introduction from the innkeeper.
 
@@ -277,9 +279,7 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
         context = build_context(history)
 
     result = keeper.resolve_action(
-        action=request.action,
-        context=context,
-        difficulty=request.difficulty
+        action=request.action, context=context, difficulty=request.difficulty
     )
     return ResolveResponse(result=result)
 
@@ -302,10 +302,7 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
         _, history = get_session(request.session_id)
         context = build_context(history)
 
-    complication = jester.add_complication(
-        situation=request.situation,
-        context=context
-    )
+    complication = jester.add_complication(situation=request.situation, context=context)
     return ComplicateResponse(complication=complication)
 
 

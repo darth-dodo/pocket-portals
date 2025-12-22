@@ -1,28 +1,9 @@
 """Narrator agent - describes scenes with rich sensory detail."""
 
-from pathlib import Path
-
-import yaml
 from crewai import LLM, Agent, Task
 
+from src.config.loader import load_agent_config, load_task_config
 from src.settings import settings
-
-# Load agent config from YAML
-CONFIG_DIR = Path(__file__).parent.parent / "config"
-
-
-def load_agent_config(agent_name: str) -> dict:
-    """Load agent configuration from agents.yaml."""
-    with open(CONFIG_DIR / "agents.yaml") as f:
-        agents = yaml.safe_load(f)
-    return agents[agent_name]
-
-
-def load_task_config(task_name: str) -> dict:
-    """Load task configuration from tasks.yaml."""
-    with open(CONFIG_DIR / "tasks.yaml") as f:
-        tasks = yaml.safe_load(f)
-    return tasks[task_name]
 
 
 class NarratorAgent:
@@ -41,11 +22,11 @@ class NarratorAgent:
         )
 
         self.agent = Agent(
-            role=config["role"],
-            goal=config["goal"],
-            backstory=config["backstory"],
-            verbose=config.get("verbose", True),
-            allow_delegation=config.get("allow_delegation", False),
+            role=config.role,
+            goal=config.goal,
+            backstory=config.backstory,
+            verbose=config.verbose,
+            allow_delegation=config.allow_delegation,
             llm=self.llm,
         )
 
@@ -55,17 +36,20 @@ class NarratorAgent:
         Args:
             action: The player's action
             context: Optional conversation history for continuity
+
+        Returns:
+            Narrative description of what happens
         """
         task_config = load_task_config("narrate_scene")
 
-        # Include context if available
-        description = task_config["description"].format(action=action)
+        description = task_config.description.format(action=action)
+
         if context:
             description = f"{context}\n\nCurrent action: {description}"
 
         task = Task(
             description=description,
-            expected_output=task_config["expected_output"],
+            expected_output=task_config.expected_output,
             agent=self.agent,
         )
 

@@ -27,15 +27,13 @@ narrate_scene:
 resolve_action:
   description: |
     The player attempts: "{action}"
-    Current situation: "{context}"
+    Difficulty: {difficulty} or higher to succeed
 
-    Determine if this action requires a check:
-    - If trivial or automatic: describe the outcome briefly
-    - If uncertain: set a target number (8-18 range) and resolve
-    - If opposed: compare relevant factors
+    Determine if a roll is needed. If yes, state the target number.
+    Report the outcome briefly.
 
     Use terse, numbers-first language. State the target, then the outcome.
-  expected_output: "Brief mechanical resolution with numbers"
+  expected_output: "Brief mechanical resolution with numbers (under 10 words)"
   agent: keeper
 
 add_commentary:
