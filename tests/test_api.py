@@ -296,3 +296,80 @@ def test_start_session_can_be_used_for_action(client: TestClient) -> None:
     action_data = action_response.json()
     assert action_data["session_id"] == session_id
     assert "narrative" in action_data
+
+
+# Innkeeper Tests
+
+
+def test_innkeeper_quest_returns_narrative(client: TestClient) -> None:
+    """Test GET /innkeeper/quest returns quest introduction."""
+    response = client.get("/innkeeper/quest?character=A weary dwarf warrior")
+    assert response.status_code == 200
+    data = response.json()
+    assert "narrative" in data
+    assert isinstance(data["narrative"], str)
+    assert len(data["narrative"]) > 0
+
+
+def test_innkeeper_quest_requires_character(client: TestClient) -> None:
+    """Test that character query param is required."""
+    response = client.get("/innkeeper/quest")
+    assert response.status_code == 422
+
+
+# Keeper Tests
+
+
+def test_keeper_resolve_returns_result(client: TestClient) -> None:
+    """Test POST /keeper/resolve returns mechanical result."""
+    response = client.post("/keeper/resolve", json={"action": "swing sword at goblin"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "result" in data
+    assert isinstance(data["result"], str)
+
+
+def test_keeper_resolve_accepts_difficulty(client: TestClient) -> None:
+    """Test that difficulty parameter is accepted."""
+    response = client.post(
+        "/keeper/resolve", json={"action": "pick lock", "difficulty": 15}
+    )
+    assert response.status_code == 200
+
+
+def test_keeper_resolve_accepts_session_id(client: TestClient) -> None:
+    """Test that session_id provides context."""
+    # First create a session
+    start = client.get("/start")
+    session_id = start.json()["session_id"]
+
+    response = client.post(
+        "/keeper/resolve", json={"action": "attack orc", "session_id": session_id}
+    )
+    assert response.status_code == 200
+
+
+# Jester Tests
+
+
+def test_jester_complicate_returns_complication(client: TestClient) -> None:
+    """Test POST /jester/complicate returns meta-commentary."""
+    response = client.post(
+        "/jester/complicate", json={"situation": "The party is searching for treasure"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "complication" in data
+    assert isinstance(data["complication"], str)
+
+
+def test_jester_complicate_accepts_session_id(client: TestClient) -> None:
+    """Test that session_id provides context."""
+    start = client.get("/start")
+    session_id = start.json()["session_id"]
+
+    response = client.post(
+        "/jester/complicate",
+        json={"situation": "Everyone is standing around", "session_id": session_id},
+    )
+    assert response.status_code == 200

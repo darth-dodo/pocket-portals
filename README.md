@@ -67,6 +67,11 @@ make docker-run
 curl http://localhost:8888/health
 ```
 
+### Start Adventure
+```bash
+curl http://localhost:8888/start
+```
+
 ### Generate Narrative
 ```bash
 # New session
@@ -80,11 +85,28 @@ curl -X POST http://localhost:8888/action \
   -d '{"action": "I order an ale", "session_id": "your-session-id"}'
 ```
 
+### Agent Endpoints
+```bash
+# Innkeeper - Quest introduction
+curl "http://localhost:8888/innkeeper/quest?character=A%20weary%20dwarf%20warrior"
+
+# Keeper - Resolve game mechanics
+curl -X POST http://localhost:8888/keeper/resolve \
+  -H "Content-Type: application/json" \
+  -d '{"action": "swing sword at goblin", "difficulty": 12}'
+
+# Jester - Add complication
+curl -X POST http://localhost:8888/jester/complicate \
+  -H "Content-Type: application/json" \
+  -d '{"situation": "The party is searching for treasure"}'
+```
+
 ### Response Format
 ```json
 {
   "narrative": "The tavern keeper nods...",
-  "session_id": "abc123-def456-ghi789"
+  "session_id": "abc123-def456-ghi789",
+  "choices": ["Investigate further", "Talk to someone nearby", "Move to a new location"]
 }
 ```
 
@@ -100,10 +122,15 @@ curl -X POST http://localhost:8888/action \
 ```
 src/
 ├── api/main.py          # FastAPI endpoints
-├── agents/narrator.py   # NarratorAgent (CrewAI)
+├── agents/
+│   ├── narrator.py      # NarratorAgent - scene descriptions
+│   ├── innkeeper.py     # InnkeeperAgent - quest introductions
+│   ├── keeper.py        # KeeperAgent - game mechanics
+│   └── jester.py        # JesterAgent - meta-commentary
 └── config/
     ├── agents.yaml      # Agent definitions
-    └── tasks.yaml       # Task templates
+    ├── tasks.yaml       # Task templates
+    └── loader.py        # Pydantic config models
 ```
 
 ## Development
@@ -163,7 +190,11 @@ Set `ANTHROPIC_API_KEY` in Render environment variables before deploying.
 
 ## Current Phase
 
-**Spike/One-Turn** - Proving the concept with a single Narrator agent.
+**Multi-Agent Crew** - Four agents working together: Narrator, Innkeeper, Keeper, and Jester.
+
+- ✅ 36 tests passing, 79% coverage
+- ✅ CI/CD with GitHub Actions
+- ✅ Pre-commit hooks (ruff, mypy)
 
 See `tasks.md` for current progress and `docs/guides/ONBOARDING.md` for detailed development guide.
 

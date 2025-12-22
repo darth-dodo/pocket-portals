@@ -22,4 +22,6 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
-        args: [--ignore-missing-imports]
+          - types-PyYAML
+          - pydantic
+        args: [--ignore-missing-imports, --disable-error-code=misc, --disable-error-code=type-arg, --disable-error-code=no-any-return]

@@ -14,12 +14,18 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
+from src.agents.innkeeper import InnkeeperAgent
+from src.agents.jester import JesterAgent
+from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
 
 load_dotenv()
 
 # Global state
 narrator: NarratorAgent | None = None
+innkeeper: InnkeeperAgent | None = None
+keeper: KeeperAgent | None = None
+jester: JesterAgent | None = None
 sessions: dict[str, list[dict[str, str]]] = {}
 session_choices: dict[str, list[str]] = {}  # Store last choices per session
 
@@ -93,14 +99,53 @@ class HealthResponse(BaseModel):
     environment: str
 
 
+class QuestResponse(BaseModel):
+    """Response model for innkeeper quest introduction."""
+
+    narrative: str
+
+
+class ResolveRequest(BaseModel):
+    """Request model for keeper action resolution."""
+
+    action: str
+    difficulty: int = Field(default=12, ge=1, le=30)
+    session_id: str | None = Field(default=None)
+
+
+class ResolveResponse(BaseModel):
+    """Response model for keeper action resolution."""
+
+    result: str
+
+
+class ComplicateRequest(BaseModel):
+    """Request model for jester complication."""
+
+    situation: str
+    session_id: str | None = Field(default=None)
+
+
+class ComplicateResponse(BaseModel):
+    """Response model for jester complication."""
+
+    complication: str
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """Initialize narrator on startup."""
-    global narrator
+    """Initialize agents on startup."""
+    global narrator, innkeeper, keeper, jester
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
+        innkeeper = InnkeeperAgent()
+        keeper = KeeperAgent()
+        jester = JesterAgent()
     yield
     narrator = None
+    innkeeper = None
+    keeper = None
+    jester = None
 
 
 app = FastAPI(
@@ -193,6 +238,72 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     return NarrativeResponse(
         narrative=narrative, session_id=session_id, choices=choices
     )
+
+
+@app.get("/innkeeper/quest", response_model=QuestResponse)
+async def get_quest(
+    character: str = Query(
+        ..., description="Character description for quest introduction"
+    ),
+) -> QuestResponse:
+    """Get a quest introduction from the innkeeper.
+
+    Args:
+        character: Description of the adventurer receiving the quest
+    """
+    if innkeeper is None:
+        return QuestResponse(
+            narrative="The innkeeper is not available. Check ANTHROPIC_API_KEY."
+        )
+
+    narrative = innkeeper.introduce_quest(character_description=character)
+    return QuestResponse(narrative=narrative)
+
+
+@app.post("/keeper/resolve", response_model=ResolveResponse)
+async def resolve_action(request: ResolveRequest) -> ResolveResponse:
+    """Resolve game mechanics for a player action.
+
+    Args:
+        request: Action resolution request with action, difficulty, and optional session_id
+    """
+    if keeper is None:
+        return ResolveResponse(
+            result="The keeper is not available. Check ANTHROPIC_API_KEY."
+        )
+
+    # Build context from session if provided
+    context = ""
+    if request.session_id:
+        _, history = get_session(request.session_id)
+        context = build_context(history)
+
+    result = keeper.resolve_action(
+        action=request.action, context=context, difficulty=request.difficulty
+    )
+    return ResolveResponse(result=result)
+
+
+@app.post("/jester/complicate", response_model=ComplicateResponse)
+async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
+    """Add a complication or meta-commentary to a situation.
+
+    Args:
+        request: Complication request with situation and optional session_id
+    """
+    if jester is None:
+        return ComplicateResponse(
+            complication="The jester is not available. Check ANTHROPIC_API_KEY."
+        )
+
+    # Build context from session if provided
+    context = ""
+    if request.session_id:
+        _, history = get_session(request.session_id)
+        context = build_context(history)
+
+    complication = jester.add_complication(situation=request.situation, context=context)
+    return ComplicateResponse(complication=complication)
 
 
 # Static file serving
