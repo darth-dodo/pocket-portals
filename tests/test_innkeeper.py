@@ -1,6 +1,7 @@
 """Tests for InnkeeperAgent."""
 
 import os
+from unittest.mock import MagicMock, patch
 
 from src.agents.innkeeper import InnkeeperAgent
 
@@ -21,8 +22,14 @@ class TestInnkeeperAgent:
         assert innkeeper.agent is not None
         assert innkeeper.agent.role == "Innkeeper Theron"
 
-    def test_innkeeper_introduce_quest_returns_string(self) -> None:
+    @patch("src.agents.innkeeper.Task")
+    def test_innkeeper_introduce_quest_returns_string(self, mock_task: MagicMock) -> None:
         """Test that introduce_quest method returns a non-empty string."""
+        # Mock the task execution
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = "Storm's breaking. Roads'll be mud by morning."
+        mock_task.return_value = mock_task_instance
+
         innkeeper = InnkeeperAgent()
 
         # Test with basic character description
@@ -34,8 +41,14 @@ class TestInnkeeperAgent:
         assert len(result) > 0
         assert result.strip() != ""
 
-    def test_innkeeper_introduce_quest_with_context(self) -> None:
+    @patch("src.agents.innkeeper.Task")
+    def test_innkeeper_introduce_quest_with_context(self, mock_task: MagicMock) -> None:
         """Test that introduce_quest works with optional context parameter."""
+        # Mock the task execution
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = "Quiet week. Could use some help with a problem."
+        mock_task.return_value = mock_task_instance
+
         innkeeper = InnkeeperAgent()
 
         character_desc = "A skilled rogue looking for work"
