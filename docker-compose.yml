@@ -1,0 +1,100 @@
+# Docker Compose configuration for Pocket Portals local development
+# Provides hot-reload, environment configuration, and health monitoring
+
+services:
+  # ============================================================================
+  # API Service - FastAPI application with hot reload for development
+  # ============================================================================
+  api:
+    # Build configuration
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime  # Use runtime stage from multi-stage Dockerfile
+
+    # Container name for easy reference
+    container_name: pocket-portals-api
+
+    # Port mapping: expose container port 8888 to host port 8888
+    # Format: HOST:CONTAINER
+    ports:
+      - "8888:8888"
+
+    # Environment variables
+    # Load from .env file in project root
+    env_file:
+      - .env
+
+    # Additional environment variables for development
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8888
+      - HOST=0.0.0.0
+      # Enable hot reload for development
+      - UVICORN_RELOAD=true
+
+    # Volume mounts for hot reload
+    # Mount source code so changes are reflected immediately without rebuild
+    volumes:
+      # Mount source code directory
+      - ./src:/app/src:ro  # :ro = read-only for security
+      # Mount static files directory
+      - ./static:/app/static:ro
+      # Mount .env file for live environment updates
+      - ./.env:/app/.env:ro
+
+    # Override CMD to enable hot reload in development
+    # This overrides the production CMD from Dockerfile
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8888 --reload
+
+    # Health check configuration
+    # Verifies the API is responding correctly
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')"]
+      interval: 30s          # Check every 30 seconds
+      timeout: 3s            # Timeout after 3 seconds
+      retries: 3             # Retry 3 times before marking unhealthy
+      start_period: 10s      # Wait 10 seconds before first check (startup time)
+
+    # Restart policy
+    # Restart container automatically if it crashes (useful for development)
+    restart: unless-stopped
+
+    # Network configuration
+    # Creates isolated network for potential future services (database, redis, etc.)
+    networks:
+      - pocket-portals-network
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  pocket-portals-network:
+    driver: bridge
+    name: pocket-portals-net
+
+# ============================================================================
+# Usage Instructions
+# ============================================================================
+# Start development environment:
+#   docker-compose up
+#
+# Start in detached mode (background):
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f api
+#
+# Rebuild after dependency changes:
+#   docker-compose up --build
+#
+# Stop services:
+#   docker-compose down
+#
+# Stop and remove volumes:
+#   docker-compose down -v
+#
+# Access API:
+#   http://localhost:8888
+#   Health check: http://localhost:8888/health
+#   API docs: http://localhost:8888/docs

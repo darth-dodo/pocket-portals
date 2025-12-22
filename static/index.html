@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Portals - Solo D&D Adventure</title>
+
+    <!-- NES.css for retro RPG styling -->
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <!-- Press Start 2P font for authentic 8-bit look -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- RPG Awesome icons -->
+    <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'Press Start 2P', cursive;
+            background: #212529;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-image:
+                radial-gradient(ellipse at top, #1a1a2e 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, #16213e 0%, transparent 50%),
+                linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(26,26,46,0.8) 0%, transparent 100%);
+            border-radius: 8px;
+        }
+
+        .title {
+            color: #f7d354;
+            font-size: 1.8rem;
+            text-shadow:
+                4px 4px 0 #c9a227,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #92cc41;
+            font-size: 0.65rem;
+            letter-spacing: 1px;
+        }
+
+        /* Game container */
+        .game-container {
+            background: #212529;
+            border-width: 6px !important;
+        }
+
+        .nes-container.is-dark {
+            background-color: #212529;
+        }
+
+        /* Story area */
+        .story-box {
+            min-height: 350px;
+            max-height: 450px;
+            overflow-y: auto;
+            margin-bottom: 0;
+            background: linear-gradient(180deg, #1a1a2e 0%, #212529 100%) !important;
+            padding: 24px;
+            border-radius: 4px;
+        }
+
+        .story-box::-webkit-scrollbar {
+            width: 14px;
+        }
+
+        .story-box::-webkit-scrollbar-track {
+            background: #1a1a2e;
+            border: 3px solid #444;
+            border-radius: 4px;
+        }
+
+        .story-box::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #92cc41 0%, #6b9e32 100%);
+            border: 3px solid #444;
+            border-radius: 4px;
+        }
+
+        /* Messages */
+        .message {
+            margin-bottom: 24px;
+            animation: fadeIn 0.4s ease-out;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-narrator {
+            color: #e8e8e8;
+            background: rgba(15, 52, 96, 0.3);
+            border-left: 4px solid #f7d354;
+        }
+
+        .message-player {
+            color: #92cc41;
+            background: rgba(146, 204, 65, 0.1);
+            border-left: 4px solid #92cc41;
+        }
+
+        .message-label {
+            font-size: 0.55rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .message-narrator .message-label {
+            color: #f7d354;
+        }
+
+        .message-player .message-label {
+            color: #92cc41;
+        }
+
+        .message-text {
+            font-size: 0.75rem;
+            line-height: 2.2;
+            letter-spacing: 0.03em;
+        }
+
+        .message-text p {
+            margin: 0 0 1.2em 0;
+        }
+
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Welcome message */
+        .welcome {
+            text-align: center;
+            padding: 40px 30px;
+            color: #adafbc;
+        }
+
+        .welcome h2 {
+            color: #f7d354;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 0 #c9a227;
+        }
+
+        .welcome p {
+            font-size: 0.6rem;
+            line-height: 2.2;
+            margin-bottom: 28px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .welcome .begin-btn {
+            font-size: 0.7rem !important;
+            padding: 20px 40px !important;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 4px 0 #1e6c28;
+        }
+
+        .welcome .begin-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #1e6c28;
+        }
+
+        .welcome i {
+            font-size: 4rem;
+            color: #f7d354;
+            margin-bottom: 20px;
+            display: block;
+            text-shadow: 3px 3px 0 #c9a227;
+        }
+
+        /* Choices section */
+        .choices-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 8px;
+            border: 2px dashed #444;
+        }
+
+        .choices-label {
+            color: #f7d354;
+            font-size: 0.55rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .choices-label i {
+            font-size: 1rem;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+            text-align: left;
+            font-size: 0.6rem !important;
+            padding: 16px 20px !important;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+        }
+
+        .choice-btn:last-child {
+            margin-bottom: 0;
+        }
+
+        .choice-btn:hover {
+            transform: translateX(8px);
+            box-shadow: -4px 0 0 #f7d354;
+        }
+
+        .choice-btn i {
+            margin-right: 12px;
+            color: #f7d354;
+        }
+
+        /* Input section */
+        .input-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(32, 156, 238, 0.1);
+            border-radius: 8px;
+            border: 2px dashed #444;
+        }
+
+        .input-label {
+            color: #209cee;
+            font-size: 0.55rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-label i {
+            font-size: 1rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-row .nes-input {
+            flex: 1;
+            font-size: 0.6rem !important;
+            padding: 12px !important;
+        }
+
+        .input-row .nes-btn {
+            font-size: 0.55rem !important;
+            white-space: nowrap;
+            padding: 12px 20px !important;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            color: #f7d354;
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+
+        .loading.visible {
+            display: block;
+        }
+
+        .loading-text {
+            font-size: 0.55rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: bounce 0.6s ease-in-out infinite;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        /* Error */
+        .error-box {
+            display: none;
+            margin: 16px 0;
+            font-size: 0.55rem;
+        }
+
+        .error-box.visible {
+            display: block;
+        }
+
+        /* Session bar */
+        .session-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            margin-top: 20px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border: 4px solid #444;
+            border-radius: 8px;
+        }
+
+        .session-info {
+            color: #adafbc;
+            font-size: 0.45rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-info i {
+            color: #92cc41;
+            font-size: 0.8rem;
+        }
+
+        .new-game-btn {
+            font-size: 0.45rem !important;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 24px;
+            padding: 16px;
+            color: #adafbc;
+            font-size: 0.45rem;
+        }
+
+        footer a {
+            color: #209cee;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: #92cc41;
+        }
+
+        footer i {
+            font-size: 1.5rem;
+            display: block;
+            margin-top: 12px;
+            opacity: 0.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .title {
+                font-size: 1.2rem;
+            }
+
+            .subtitle {
+                font-size: 0.5rem;
+            }
+
+            .story-box {
+                min-height: 280px;
+                max-height: 320px;
+                padding: 16px;
+            }
+
+            .message {
+                padding: 12px;
+                margin-bottom: 16px;
+            }
+
+            .message-text {
+                font-size: 0.65rem;
+                line-height: 2;
+            }
+
+            .welcome {
+                padding: 24px 16px;
+            }
+
+            .welcome i {
+                font-size: 2.5rem;
+            }
+
+            .welcome h2 {
+                font-size: 0.8rem;
+            }
+
+            .choices-section,
+            .input-section {
+                padding: 16px;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            .input-row .nes-btn {
+                width: 100%;
+            }
+
+            .session-bar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+
+        /* Hide choices initially */
+        .choices-section.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title"><i class="ra ra-door-open"></i> Pocket Portals</h1>
+            <p class="subtitle"><i class="ra ra-crossed-swords"></i> Solo D&D Adventure <i class="ra ra-crossed-swords"></i></p>
+        </header>
+
+        <section class="nes-container is-dark game-container">
+            <!-- Story Display -->
+            <div class="story-box" id="story">
+                <div class="welcome">
+                    <i class="ra ra-scroll-unfurled"></i>
+                    <h2>Welcome, Adventurer!</h2>
+                    <p>Your quest awaits. Choose your starting path or type your own action below.</p>
+                    <button class="nes-btn is-primary begin-btn" id="begin-btn">
+                        <i class="ra ra-player-lift"></i> Begin Quest
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <i class="ra ra-crystal-ball"></i>
+                <span class="loading-text">The narrator consults the fates...</span>
+            </div>
+
+            <!-- Error -->
+            <div class="nes-container is-rounded is-error error-box" id="error"></div>
+
+            <!-- Choices -->
+            <div class="choices-section hidden" id="choices-section">
+                <div class="choices-label">
+                    <i class="ra ra-forging"></i>
+                    <span>Choose Your Path</span>
+                </div>
+                <div id="choices"></div>
+            </div>
+
+            <!-- Input -->
+            <div class="input-section">
+                <div class="input-label">
+                    <i class="ra ra-quill-ink"></i>
+                    <span>Or Write Your Own Destiny</span>
+                </div>
+                <div class="input-row">
+                    <input
+                        type="text"
+                        id="action-input"
+                        class="nes-input is-dark"
+                        placeholder="What do you do?"
+                        autocomplete="off"
+                    >
+                    <button class="nes-btn is-success" id="submit-btn">
+                        <i class="ra ra-lightning-bolt"></i> Act
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Session Bar -->
+        <div class="session-bar">
+            <span class="session-info">
+                <i class="ra ra-player"></i>
+                <span id="session-display">New Adventure</span>
+            </span>
+            <button class="nes-btn is-error new-game-btn" id="new-game-btn">
+                <i class="ra ra-cycle"></i> New Game
+            </button>
+        </div>
+
+        <footer>
+            <p>
+                Powered by
+                <a href="https://docs.crewai.com" target="_blank">CrewAI</a> &
+                <a href="https://anthropic.com" target="_blank">Claude</a>
+                <br><br>
+                <i class="ra ra-dragon"></i>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // ===== State =====
+        let sessionId = null;
+        let currentChoices = [];
+        let isLoading = false;
+
+        // ===== DOM Elements =====
+        const storyBox = document.getElementById('story');
+        const choicesSection = document.getElementById('choices-section');
+        const choicesDiv = document.getElementById('choices');
+        const actionInput = document.getElementById('action-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const sessionDisplay = document.getElementById('session-display');
+        const newGameBtn = document.getElementById('new-game-btn');
+
+        // ===== Helpers =====
+        function addMessage(text, type) {
+            // Remove welcome if present
+            const welcome = storyBox.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            const div = document.createElement('div');
+            div.className = `message message-${type}`;
+
+            const label = type === 'narrator' ? '⚔️ Narrator' : '🧙 You';
+            const icon = type === 'narrator' ? 'ra-scroll-unfurled' : 'ra-player';
+
+            // Convert newlines to <br> for proper rendering
+            const formattedText = text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+
+            div.innerHTML = `
+                <div class="message-label"><i class="ra ${icon}"></i> ${label}</div>
+                <div class="message-text"><p>${formattedText}</p></div>
+            `;
+
+            storyBox.appendChild(div);
+            storyBox.scrollTop = storyBox.scrollHeight;
+        }
+
+        function updateChoices(choices) {
+            currentChoices = choices || [];
+
+            if (currentChoices.length > 0) {
+                choicesSection.classList.remove('hidden');
+                choicesDiv.innerHTML = '';
+
+                const icons = ['ra-axe', 'ra-speech-bubble', 'ra-boot-stomp'];
+
+                currentChoices.forEach((choice, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nes-btn choice-btn';
+                    btn.innerHTML = `<i class="ra ${icons[i] || 'ra-hand'}"></i> ${choice}`;
+                    btn.onclick = () => selectChoice(i + 1);
+                    choicesDiv.appendChild(btn);
+                });
+            } else {
+                choicesSection.classList.add('hidden');
+            }
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            loadingDiv.classList.toggle('visible', loading);
+            submitBtn.disabled = loading;
+            actionInput.disabled = loading;
+
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = loading;
+            });
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('visible');
+            setTimeout(() => errorDiv.classList.remove('visible'), 5000);
+        }
+
+        // ===== API =====
+        async function sendAction(action, choiceIndex = null) {
+            if (isLoading) return;
+
+            setLoading(true);
+            errorDiv.classList.remove('visible');
+
+            // Show player action
+            const playerAction = choiceIndex ? currentChoices[choiceIndex - 1] : action;
+            addMessage(playerAction, 'player');
+
+            try {
+                const payload = {};
+
+                if (choiceIndex) {
+                    payload.choice_index = choiceIndex;
+                } else {
+                    payload.action = action;
+                }
+
+                if (sessionId) {
+                    payload.session_id = sessionId;
+                }
+
+                const response = await fetch('/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update session
+                sessionId = data.session_id;
+                sessionDisplay.textContent = `Quest: ${sessionId.substring(0, 8)}...`;
+
+                // Show narrator response
+                addMessage(data.narrative, 'narrator');
+
+                // Update choices
+                updateChoices(data.choices);
+
+                // Clear input
+                actionInput.value = '';
+
+            } catch (err) {
+                console.error('Error:', err);
+                showError(`Quest failed: ${err.message}`);
+            } finally {
+                setLoading(false);
+                actionInput.focus();
+            }
+        }
+
+        function selectChoice(index) {
+            sendAction(null, index);
+        }
+
+        function submitAction() {
+            const action = actionInput.value.trim();
+            if (action) sendAction(action);
+        }
+
+        async function startNewAdventure(shuffle = true) {
+            setLoading(true);
+            errorDiv.classList.remove('visible');
+
+            try {
+                const response = await fetch(`/start?shuffle=${shuffle}`);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update session
+                sessionId = data.session_id;
+                sessionDisplay.textContent = `Quest: ${sessionId.substring(0, 8)}...`;
+
+                // Clear story and show welcome
+                storyBox.innerHTML = '';
+                addMessage(data.narrative, 'narrator');
+
+                // Show starter choices
+                updateChoices(data.choices);
+
+            } catch (err) {
+                console.error('Error:', err);
+                showError(`Failed to start adventure: ${err.message}`);
+            } finally {
+                setLoading(false);
+                actionInput.focus();
+            }
+        }
+
+        function newGame() {
+            sessionId = null;
+            currentChoices = [];
+            sessionDisplay.textContent = 'New Adventure';
+            choicesSection.classList.add('hidden');
+            storyBox.innerHTML = `
+                <div class="welcome">
+                    <i class="ra ra-scroll-unfurled"></i>
+                    <h2>Welcome, Adventurer!</h2>
+                    <p>Your quest awaits. Choose your starting path or type your own action below.</p>
+                    <button class="nes-btn is-primary begin-btn" id="begin-btn">
+                        <i class="ra ra-player-lift"></i> Begin Quest
+                    </button>
+                </div>
+            `;
+            actionInput.value = '';
+            actionInput.focus();
+        }
+
+        // ===== Event Listeners =====
+        submitBtn.addEventListener('click', submitAction);
+        actionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitAction();
+        });
+        newGameBtn.addEventListener('click', newGame);
+
+        // Begin Quest button (if present in initial state)
+        const beginBtn = document.getElementById('begin-btn');
+        if (beginBtn) {
+            beginBtn.addEventListener('click', () => startNewAdventure(true));
+        }
+
+        // Also handle dynamically added begin buttons after newGame
+        storyBox.addEventListener('click', (e) => {
+            if (e.target.id === 'begin-btn' || e.target.closest('#begin-btn')) {
+                startNewAdventure(true);
+            }
+        });
+
+        // Focus on load
+        actionInput.focus();
+    </script>
+</body>
+</html>
