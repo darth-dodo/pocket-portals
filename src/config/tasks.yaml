@@ -67,3 +67,20 @@ present_hook:
     End with a question or invitation to act.
   expected_output: "A compelling adventure hook in Theron's voice"
   agent: innkeeper_theron
+
+introduce_quest:
+  description: |
+    A new adventurer has arrived at your tavern. Based on their description,
+    introduce yourself briefly and present a quest hook that would interest them.
+
+    Adventurer description: "{character_description}"
+
+    Remember:
+    - Open with an observation about the weather or tavern
+    - Present ONE specific quest with concrete details
+    - Include a price or reward
+    - End with their choice, not a command
+  expected_output: |
+    A brief introduction from Innkeeper Theron (2-4 sentences) presenting
+    a single quest hook with specific details (location, payment, danger).
+  agent: innkeeper_theron

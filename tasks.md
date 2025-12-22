@@ -143,13 +143,14 @@ gantt
     Narrator Agent Integration      :done, narrator, 2025-12-21, 1d
     YAML Config System             :done, yaml, 2025-12-21, 1d
     section Core Features
-    Multi-Agent System             :active, agents, 2025-12-22, 3d
-    World State Management         :world, after agents, 2d
-    Conversation System            :conv, after world, 2d
+    Multi-Agent Crew (3 agents)    :done, agents, 2025-12-22, 1d
+    World State Management         :world, 2025-12-23, 2d
+    Conversation Engine            :conv, after world, 2d
     section Enhancement
-    Advanced Prompting             :prompt, after conv, 2d
-    Testing & Quality              :test, after prompt, 2d
+    Character Creation             :char, after conv, 2d
+    Combat Mechanics               :combat, after char, 2d
     section Deployment
+    Testing & Polish               :test, after combat, 1d
     Production Deployment          :deploy, after test, 1d
 ```
 
@@ -161,19 +162,23 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| No active tasks | - | Ready for next phase |
+| No active tasks | - | Multi-agent crew complete |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Define remaining CrewAI agents | ⏳ | High |
 | Implement world state management | ⏳ | High |
+| Add conversation engine | ⏳ | High |
+| Integrate agents into API endpoints | ⏳ | Medium |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Add multi-agent crew (Innkeeper, Keeper, Jester) | ✅ | TDD implementation, 84% coverage, all 29 tests passing |
+| Create multi-agent design document | ✅ | `docs/design/2025-12-22-multi-agent-crew.md` |
+| Update YAML configs for all agents | ✅ | Enhanced personalities per creative-writing.md |
 | Create comprehensive spike crash course | ✅ | `docs/CRASH-COURSE.md` - 1091 lines covering architecture, patterns, lessons learned |
 | Create design system documentation | ✅ | `docs/design/design.md` - colors, typography, spacing, components |
 | Fix Render deployment issues | ✅ | Standard pip install, Python 3.12, README.md for hatchling |
@@ -241,6 +246,45 @@ gantt
 - `src/config/tasks.yaml` - Task templates for agent workflows
 - Using CrewAI's native `LLM` class (no langchain dependency)
 - Simplified configuration management for multiple agents
+
+---
+
+### Phase 2: Multi-Agent Crew (2025-12-22)
+
+#### Agent Implementation
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Create design document | ✅ | `docs/design/2025-12-22-multi-agent-crew.md` |
+| Implement InnkeeperAgent with TDD | ✅ | Quest introduction, world-weary voice |
+| Implement KeeperAgent with TDD | ✅ | Game mechanics, terse/numbers-first |
+| Implement JesterAgent with TDD | ✅ | Meta-commentary, fourth-wall aware |
+| Update YAML configs | ✅ | Enhanced per creative-writing.md |
+| Run quality gates | ✅ | 29 tests passing, 84% coverage |
+
+**Implementation Details**:
+- All agents follow NarratorAgent pattern exactly
+- Each agent has distinct LLM config (temperature, max_tokens)
+- YAML-based configuration for personality and voice
+- TDD cycle: Red → Green → Refactor for each agent
+- Parallel sub-agent development workflow
+
+**Files Created**:
+- `src/agents/innkeeper.py` - InnkeeperAgent class
+- `src/agents/keeper.py` - KeeperAgent class
+- `src/agents/jester.py` - JesterAgent class
+- `tests/test_innkeeper.py` - 3 tests
+- `tests/test_keeper.py` - 2 tests
+- `tests/test_jester.py` - 2 tests
+- `docs/design/2025-12-22-multi-agent-crew.md` - Design doc
+
+**LLM Configuration per Agent**:
+| Agent | Temperature | Max Tokens | Rationale |
+|-------|-------------|------------|-----------|
+| Narrator | 0.7 | 1024 | Creative, descriptive |
+| Innkeeper | 0.6 | 512 | Direct, consistent |
+| Keeper | 0.3 | 256 | Mechanical, precise |
+| Jester | 0.8 | 256 | Playful, surprising |
 
 ---
 
