@@ -168,7 +168,6 @@ gantt
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Implement world state management | ⏳ | High |
 | Add conversation engine | ⏳ | High |
 | Character creation system | ⏳ | Medium |
 
@@ -176,6 +175,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Implement world state management | ✅ | GameState Pydantic model, SessionManager CRUD, API integration, 17 tests, 82% coverage |
 | Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
 | Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
 | Add testing mocks reference guide | ✅ | `docs/reference/testing-mocks.md` |
@@ -361,6 +361,9 @@ gantt
 - `docs/adr/` - Architecture decision records
 - `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
 - `docs/guides/ONBOARDING.md` - Developer onboarding guide
+- `docs/design/2025-12-22-world-state-management.md` - World state design document
 - `src/config/agents.yaml` - Agent configurations
 - `src/config/loader.py` - Pydantic config models
+- `src/state/models.py` - GameState Pydantic model
+- `src/state/session_manager.py` - Session CRUD operations
 - `.github/workflows/ci.yml` - CI/CD workflow

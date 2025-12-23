@@ -2,7 +2,6 @@
 
 import os
 import random
-import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -18,6 +17,7 @@ from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
+from src.state import GameState, SessionManager
 
 load_dotenv()
 
@@ -26,8 +26,7 @@ narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
-sessions: dict[str, list[dict[str, str]]] = {}
-session_choices: dict[str, list[str]] = {}  # Store last choices per session
+session_manager = SessionManager()
 
 # Starter choices pool - adventure hooks to begin the journey
 STARTER_CHOICES_POOL = [
@@ -49,13 +48,9 @@ WELCOME_NARRATIVE = (
 )
 
 
-def get_session(session_id: str | None) -> tuple[str, list[dict[str, str]]]:
+def get_session(session_id: str | None) -> GameState:
     """Get existing session or create new one."""
-    if session_id and session_id in sessions:
-        return session_id, sessions[session_id]
-    new_id = str(uuid.uuid4())
-    sessions[new_id] = []
-    return new_id, sessions[new_id]
+    return session_manager.get_or_create_session(session_id)
 
 
 def build_context(history: list[dict[str, str]]) -> str:
@@ -175,14 +170,18 @@ async def health_check() -> HealthResponse:
 @app.get("/start", response_model=NarrativeResponse)
 async def start_adventure(
     shuffle: bool = Query(default=False, description="Shuffle the starter choices"),
+    character: str = Query(
+        default="", description="Optional character description for personalization"
+    ),
 ) -> NarrativeResponse:
     """Start a new adventure with starter choices.
 
     Returns 3 starter choices from the pool to begin the adventure.
     Use shuffle=true to randomize which choices are presented.
+    Optionally provide a character description for personalized narrative.
     """
     # Create new session
-    session_id, _ = get_session(None)
+    state = get_session(None)
 
     # Select 3 choices from the pool
     if shuffle:
@@ -191,12 +190,14 @@ async def start_adventure(
         # Default: first 3 choices for consistency
         choices = STARTER_CHOICES_POOL[:3]
 
-    # Store choices for this session
-    session_choices[session_id] = choices
+    # Store choices and character description in session state
+    session_manager.set_choices(state.session_id, choices)
+    if character:
+        session_manager.set_character_description(state.session_id, character)
 
     return NarrativeResponse(
         narrative=WELCOME_NARRATIVE,
-        session_id=session_id,
+        session_id=state.session_id,
         choices=choices,
     )
 
@@ -204,28 +205,30 @@ async def start_adventure(
 @app.post("/action", response_model=NarrativeResponse)
 async def process_action(request: ActionRequest) -> NarrativeResponse:
     """Process player action and return narrative response."""
-    session_id, history = get_session(request.session_id)
+    state = get_session(request.session_id)
 
     # Resolve action from choice_index or direct action
     if request.choice_index is not None:
-        # Use stored choice from previous response
-        choices = session_choices.get(session_id, ["Look around", "Wait", "Leave"])
+        # Use stored choice from session state
+        choices = state.current_choices or ["Look around", "Wait", "Leave"]
         action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
     else:
         action = request.action or ""
 
     if narrator is None:
         choices = ["Look around", "Wait", "Leave"]
-        session_choices[session_id] = choices
+        session_manager.set_choices(state.session_id, choices)
         return NarrativeResponse(
             narrative="The narrator is not available. Check ANTHROPIC_API_KEY.",
-            session_id=session_id,
+            session_id=state.session_id,
             choices=choices,
         )
 
-    context = build_context(history)
+    context = build_context(state.conversation_history)
     narrative = narrator.respond(action, context)
-    history.append({"action": action, "narrative": narrative})
+
+    # Store exchange in session (auto-limits to 20)
+    session_manager.add_exchange(state.session_id, action, narrative)
 
     # Generate contextual choices (simple default for now - YAGNI)
     choices = [
@@ -233,10 +236,10 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
         "Talk to someone nearby",
         "Move to a new location",
     ]
-    session_choices[session_id] = choices
+    session_manager.set_choices(state.session_id, choices)
 
     return NarrativeResponse(
-        narrative=narrative, session_id=session_id, choices=choices
+        narrative=narrative, session_id=state.session_id, choices=choices
     )
 
 
@@ -275,8 +278,8 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
     # Build context from session if provided
     context = ""
     if request.session_id:
-        _, history = get_session(request.session_id)
-        context = build_context(history)
+        state = get_session(request.session_id)
+        context = build_context(state.conversation_history)
 
     result = keeper.resolve_action(
         action=request.action, context=context, difficulty=request.difficulty
@@ -299,8 +302,8 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
     # Build context from session if provided
     context = ""
     if request.session_id:
-        _, history = get_session(request.session_id)
-        context = build_context(history)
+        state = get_session(request.session_id)
+        context = build_context(state.conversation_history)
 
     complication = jester.add_complication(situation=request.situation, context=context)
     return ComplicateResponse(complication=complication)
