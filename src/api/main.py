@@ -17,6 +17,7 @@ from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
+from src.engine import AgentRouter, TurnExecutor
 from src.state import GameState, SessionManager
 
 load_dotenv()
@@ -27,6 +28,8 @@ innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 session_manager = SessionManager()
+agent_router = AgentRouter()
+turn_executor: TurnExecutor | None = None
 
 # Starter choices pool - adventure hooks to begin the journey
 STARTER_CHOICES_POOL = [
@@ -130,17 +133,23 @@ class ComplicateResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Initialize agents on startup."""
-    global narrator, innkeeper, keeper, jester
+    global narrator, innkeeper, keeper, jester, turn_executor
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
         keeper = KeeperAgent()
         jester = JesterAgent()
+        turn_executor = TurnExecutor(
+            narrator=narrator,
+            keeper=keeper,
+            jester=jester,
+        )
     yield
     narrator = None
     innkeeper = None
     keeper = None
     jester = None
+    turn_executor = None
 
 
 app = FastAPI(
@@ -215,7 +224,7 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     else:
         action = request.action or ""
 
-    if narrator is None:
+    if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
         session_manager.set_choices(state.session_id, choices)
         return NarrativeResponse(
@@ -224,22 +233,32 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
             choices=choices,
         )
 
+    # Route to appropriate agents based on phase and action
+    routing = agent_router.route(
+        action=action,
+        phase=state.phase,
+        recent_agents=state.recent_agents,
+    )
+
+    # Execute agents and get aggregated result
     context = build_context(state.conversation_history)
-    narrative = narrator.respond(action, context)
+    result = turn_executor.execute(
+        action=action,
+        routing=routing,
+        context=context,
+    )
 
     # Store exchange in session (auto-limits to 20)
-    session_manager.add_exchange(state.session_id, action, narrative)
+    session_manager.add_exchange(state.session_id, action, result.narrative)
 
-    # Generate contextual choices (simple default for now - YAGNI)
-    choices = [
-        "Investigate further",
-        "Talk to someone nearby",
-        "Move to a new location",
-    ]
-    session_manager.set_choices(state.session_id, choices)
+    # Update recent agents for Jester cooldown tracking
+    session_manager.update_recent_agents(state.session_id, routing.agents)
+
+    # Use choices from turn result
+    session_manager.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
-        narrative=narrative, session_id=state.session_id, choices=choices
+        narrative=result.narrative, session_id=state.session_id, choices=result.choices
     )
 
 

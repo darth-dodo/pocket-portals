@@ -100,3 +100,22 @@ class SessionManager:
         state = self._sessions.get(session_id)
         if state:
             state.current_choices = choices
+
+    def update_recent_agents(self, session_id: str, agents: list[str]) -> None:
+        """Update recent agents list, keeping last 5.
+
+        Args:
+            session_id: Session identifier
+            agents: List of agent names used in current turn
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            state.recent_agents.extend(agents)
+            # Keep only the last 5 agents for cooldown tracking
+            if len(state.recent_agents) > 5:
+                state.recent_agents = state.recent_agents[-5:]
+            # Track Jester appearances
+            if "jester" in agents:
+                state.turns_since_jester = 0
+            else:
+                state.turns_since_jester += 1

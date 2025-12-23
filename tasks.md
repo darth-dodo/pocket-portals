@@ -168,13 +168,14 @@ gantt
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Add conversation engine | ⏳ | High |
 | Character creation system | ⏳ | Medium |
+| Combat mechanics | ⏳ | Medium |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Add conversation engine | ✅ | AgentRouter, TurnExecutor, API integration, 71 tests, 83% coverage |
 | Implement world state management | ✅ | GameState Pydantic model, SessionManager CRUD, API integration, 17 tests, 82% coverage |
 | Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
 | Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
@@ -313,6 +314,42 @@ gantt
 
 ---
 
+### Phase 3: Conversation Engine (2025-12-23)
+
+#### Multi-Agent Orchestration
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Create design document | ✅ | `docs/design/2025-12-23-conversation-engine.md` |
+| Implement AgentRouter | ✅ | Phase-based routing, mechanical keywords, Jester probability |
+| Implement TurnExecutor | ✅ | Sequential execution, response aggregation |
+| Add API integration | ✅ | `/action` endpoint uses router and executor |
+| Update GameState model | ✅ | Added phase, recent_agents, turns_since_jester |
+| Update SessionManager | ✅ | Added update_recent_agents method |
+| Run quality gates | ✅ | 71 tests passing, 83% coverage |
+
+**Implementation Details**:
+- AgentRouter routes to agents based on GamePhase and action keywords
+- TurnExecutor executes agents sequentially and aggregates responses
+- Jester has 15% probability in exploration with 3-turn cooldown
+- Mechanical keywords (attack, fight, roll, etc.) trigger Keeper inclusion
+- API endpoint updated to use multi-agent orchestration
+
+**Files Created**:
+- `src/engine/__init__.py` - Package exports
+- `src/engine/router.py` - AgentRouter class
+- `src/engine/executor.py` - TurnExecutor class
+- `tests/test_router.py` - 10 tests
+- `tests/test_executor.py` - 8 tests
+- `docs/design/2025-12-23-conversation-engine.md` - Design doc
+
+**Files Modified**:
+- `src/state/models.py` - Added GamePhase enum and new GameState fields
+- `src/state/session_manager.py` - Added update_recent_agents method
+- `src/api/main.py` - Updated /action endpoint for multi-agent orchestration
+
+---
+
 ## Task History Archive
 
 ### Session Log: 2025-12-21
@@ -338,8 +375,8 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Multi-agent crew complete, ready for world state
-- **Test Coverage**: 79% (36 tests passing)
+- **Current Phase**: Conversation engine complete, ready for character creation
+- **Test Coverage**: 83% (71 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
@@ -362,8 +399,11 @@ gantt
 - `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
 - `docs/guides/ONBOARDING.md` - Developer onboarding guide
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
+- `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
 - `src/config/agents.yaml` - Agent configurations
 - `src/config/loader.py` - Pydantic config models
-- `src/state/models.py` - GameState Pydantic model
+- `src/state/models.py` - GameState Pydantic model with GamePhase enum
 - `src/state/session_manager.py` - Session CRUD operations
+- `src/engine/router.py` - AgentRouter for multi-agent routing
+- `src/engine/executor.py` - TurnExecutor for agent orchestration
 - `.github/workflows/ci.yml` - CI/CD workflow

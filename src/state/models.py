@@ -1,6 +1,22 @@
 """Game state models for Pocket Portals."""
 
+from enum import Enum
+
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class GamePhase(str, Enum):
+    """Enumeration of game phases for routing decisions.
+
+    Attributes:
+        EXPLORATION: General exploration and navigation phase
+        COMBAT: Active combat encounters requiring mechanical resolution
+        DIALOGUE: Conversation and social interaction phase
+    """
+
+    EXPLORATION = "exploration"
+    COMBAT = "combat"
+    DIALOGUE = "dialogue"
 
 
 class GameState(BaseModel):
@@ -13,6 +29,9 @@ class GameState(BaseModel):
         character_description: Text description of the player's character
         health_current: Current health points
         health_max: Maximum health points
+        phase: Current game phase for routing decisions
+        recent_agents: List of recently used agents for Jester cooldown
+        turns_since_jester: Number of turns since last Jester appearance
     """
 
     session_id: str
@@ -21,6 +40,9 @@ class GameState(BaseModel):
     character_description: str = ""
     health_current: int = 20
     health_max: int = 20
+    phase: GamePhase = GamePhase.EXPLORATION
+    recent_agents: list[str] = Field(default_factory=list)
+    turns_since_jester: int = 0
 
     @field_validator("health_current")
     @classmethod
