@@ -162,19 +162,23 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| No active tasks | - | Ready for next feature |
+| Character creation system | 🔄 | FR-01, FR-02, FR-03 - Design phase starting |
+| Integrate Innkeeper into flow | ⏳ | Currently standalone, needs `/start` and dialogue integration |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Character creation system | ⏳ | Medium |
 | Combat mechanics | ⏳ | Medium |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Update frontend for SSE streaming | ✅ | Real-time agent indicators, per-agent message styling (Narrator/Keeper/Jester) |
+| Add SSE streaming endpoint | ✅ | `/action/stream` with real-time agent responses, context accumulation |
+| Add CrewAI Flows integration | ✅ | ConversationFlow with @start/@listen/@router decorators |
+| Create Crews and Flows documentation | ✅ | `docs/guides/CREWS-AND-FLOWS.md` comprehensive guide |
 | Add conversation engine | ✅ | AgentRouter, TurnExecutor, API integration, 71 tests, 83% coverage |
 | Implement world state management | ✅ | GameState Pydantic model, SessionManager CRUD, API integration, 17 tests, 82% coverage |
 | Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
@@ -375,12 +379,20 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Conversation engine complete, ready for character creation
-- **Test Coverage**: 83% (71 tests passing)
+- **Current Phase**: SSE streaming complete, character creation next
+- **Test Coverage**: 73% (78 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
+
+### Agent Integration Status
+| Agent | In Conversation Flow | Standalone Endpoint | Notes |
+|-------|---------------------|---------------------|-------|
+| Narrator | ✅ Always | - | Base agent for all turns |
+| Keeper | ✅ Mechanical/Combat | `/keeper/resolve` | Triggered by action keywords |
+| Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
+| Innkeeper | ❌ Not integrated | `/innkeeper/quest` | Needs `/start` + dialogue integration |
 
 ### Development Workflow
 1. Check this file for current task status
@@ -398,6 +410,7 @@ gantt
 - `docs/adr/` - Architecture decision records
 - `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
 - `docs/guides/ONBOARDING.md` - Developer onboarding guide
+- `docs/guides/CREWS-AND-FLOWS.md` - CrewAI Crews vs Flows patterns
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
 - `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
 - `src/config/agents.yaml` - Agent configurations
@@ -406,4 +419,7 @@ gantt
 - `src/state/session_manager.py` - Session CRUD operations
 - `src/engine/router.py` - AgentRouter for multi-agent routing
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
+- `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
+- `src/api/main.py` - API endpoints including `/action/stream` SSE
+- `static/index.html` - Frontend with SSE streaming support
 - `.github/workflows/ci.yml` - CI/CD workflow

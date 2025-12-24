@@ -123,6 +123,18 @@
             border-left: 4px solid #f7d354;
         }
 
+        .message-keeper {
+            color: #e8e8e8;
+            background: rgba(32, 156, 238, 0.2);
+            border-left: 4px solid #209cee;
+        }
+
+        .message-jester {
+            color: #e8e8e8;
+            background: rgba(242, 113, 28, 0.2);
+            border-left: 4px solid #f2711c;
+        }
+
         .message-player {
             color: #92cc41;
             background: rgba(146, 204, 65, 0.1);
@@ -139,6 +151,14 @@
 
         .message-narrator .message-label {
             color: #f7d354;
+        }
+
+        .message-keeper .message-label {
+            color: #209cee;
+        }
+
+        .message-jester .message-label {
+            color: #f2711c;
         }
 
         .message-player .message-label {
@@ -325,6 +345,41 @@
             50% { transform: translateY(-12px); }
         }
 
+        /* Agent indicator */
+        .agent-indicator {
+            display: none;
+            text-align: center;
+            padding: 16px;
+            margin-top: 16px;
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 8px;
+            border: 2px solid #444;
+        }
+
+        .agent-indicator.visible {
+            display: block;
+        }
+
+        .agent-indicator-text {
+            font-size: 0.55rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .agent-indicator.narrator { border-color: #f7d354; }
+        .agent-indicator.narrator .agent-indicator-text { color: #f7d354; }
+
+        .agent-indicator.keeper { border-color: #209cee; }
+        .agent-indicator.keeper .agent-indicator-text { color: #209cee; }
+
+        .agent-indicator.jester { border-color: #f2711c; }
+        .agent-indicator.jester .agent-indicator-text { color: #f2711c; }
+
+        .agent-indicator i {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
         /* Error */
         .error-box {
             display: none;
@@ -485,6 +540,12 @@
                 <span class="loading-text">The narrator consults the fates...</span>
             </div>
 
+            <!-- Agent Indicator -->
+            <div class="agent-indicator" id="agent-indicator">
+                <i class="ra ra-scroll-unfurled"></i>
+                <span class="agent-indicator-text" id="agent-indicator-text">Narrator is speaking...</span>
+            </div>
+
             <!-- Error -->
             <div class="nes-container is-rounded is-error error-box" id="error"></div>
 
@@ -553,11 +614,20 @@
         const actionInput = document.getElementById('action-input');
         const submitBtn = document.getElementById('submit-btn');
         const loadingDiv = document.getElementById('loading');
+        const agentIndicator = document.getElementById('agent-indicator');
+        const agentIndicatorText = document.getElementById('agent-indicator-text');
         const errorDiv = document.getElementById('error');
         const sessionDisplay = document.getElementById('session-display');
         const newGameBtn = document.getElementById('new-game-btn');
 
         // ===== Helpers =====
+        const agentConfig = {
+            narrator: { label: '⚔️ Narrator', icon: 'ra-scroll-unfurled' },
+            keeper: { label: '🎲 Keeper', icon: 'ra-dice' },
+            jester: { label: '🎭 Jester', icon: 'ra-mask' },
+            player: { label: '🧙 You', icon: 'ra-player' }
+        };
+
         function addMessage(text, type) {
             // Remove welcome if present
             const welcome = storyBox.querySelector('.welcome');
@@ -566,14 +636,13 @@
             const div = document.createElement('div');
             div.className = `message message-${type}`;
 
-            const label = type === 'narrator' ? '⚔️ Narrator' : '🧙 You';
-            const icon = type === 'narrator' ? 'ra-scroll-unfurled' : 'ra-player';
+            const config = agentConfig[type] || agentConfig.narrator;
 
             // Convert newlines to <br> for proper rendering
             const formattedText = text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
 
             div.innerHTML = `
-                <div class="message-label"><i class="ra ${icon}"></i> ${label}</div>
+                <div class="message-label"><i class="ra ${config.icon}"></i> ${config.label}</div>
                 <div class="message-text"><p>${formattedText}</p></div>
             `;
 
@@ -613,6 +682,21 @@
             });
         }
 
+        function showAgentIndicator(agent) {
+            const agentNames = {
+                narrator: 'Narrator is speaking...',
+                keeper: 'Keeper is rolling the dice...',
+                jester: 'Jester is intervening...'
+            };
+
+            agentIndicator.className = `agent-indicator ${agent} visible`;
+            agentIndicatorText.textContent = agentNames[agent] || 'Agent is responding...';
+        }
+
+        function hideAgentIndicator() {
+            agentIndicator.classList.remove('visible');
+        }
+
         function showError(message) {
             errorDiv.textContent = message;
             errorDiv.classList.add('visible');
@@ -643,7 +727,8 @@
                     payload.session_id = sessionId;
                 }
 
-                const response = await fetch('/action', {
+                // Use Server-Sent Events for streaming responses
+                const response = await fetch('/action/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -653,17 +738,48 @@
                     throw new Error(`Server error: ${response.status}`);
                 }
 
-                const data = await response.json();
+                // Parse SSE stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let currentEventType = '';
 
-                // Update session
-                sessionId = data.session_id;
-                sessionDisplay.textContent = `Quest: ${sessionId.substring(0, 8)}...`;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                // Show narrator response
-                addMessage(data.narrative, 'narrator');
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-                // Update choices
-                updateChoices(data.choices);
+                    for (const line of lines) {
+                        if (line.startsWith('event:')) {
+                            currentEventType = line.substring(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            const data = JSON.parse(line.substring(5).trim());
+
+                            // Handle different event types
+                            if (currentEventType === 'routing') {
+                                console.log('Routing:', data);
+                            } else if (currentEventType === 'agent_start') {
+                                showAgentIndicator(data.agent);
+                            } else if (currentEventType === 'agent_response') {
+                                hideAgentIndicator();
+                                addMessage(data.content, data.agent);
+                            } else if (currentEventType === 'choices') {
+                                updateChoices(data.choices);
+                            } else if (currentEventType === 'complete') {
+                                sessionId = data.session_id;
+                                sessionDisplay.textContent = `Quest: ${sessionId.substring(0, 8)}...`;
+                            } else if (currentEventType === 'error') {
+                                throw new Error(data.message);
+                            }
+
+                            // Reset after processing
+                            currentEventType = '';
+                        }
+                    }
+                }
 
                 // Clear input
                 actionInput.value = '';
@@ -672,6 +788,7 @@
                 console.error('Error:', err);
                 showError(`Quest failed: ${err.message}`);
             } finally {
+                hideAgentIndicator();
                 setLoading(false);
                 actionInput.focus();
             }

@@ -31,23 +31,28 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 
 **✅ Completed Features:**
 - FastAPI backend with health, start, and action endpoints
-- NarratorAgent using CrewAI + Anthropic Claude Sonnet 4
+- Multi-agent system: Narrator, Keeper, Jester (all integrated in conversation flow)
+- InnkeeperAgent (standalone `/innkeeper/quest` endpoint)
+- SSE streaming endpoint `/action/stream` with real-time agent responses
+- CrewAI Flows integration for conversation orchestration
+- AgentRouter with phase-based routing and mechanical keyword detection
+- TurnExecutor with context accumulation across agents
 - Session management for multi-user support
 - YAML-based agent configuration (agents.yaml, tasks.yaml)
 - Conversation context passing to LLM for continuity
 - Choice system with 3 predefined options + free text input
 - Starter choices with shuffle feature (9 adventure hooks pool)
-- Retro RPG web UI with NES.css styling
+- Retro RPG web UI with NES.css styling and SSE streaming support
+- Real-time agent indicators showing which agent is responding
 - Docker containerization with multi-stage build
-- Improved UI readability with proper newline rendering
+- 78 tests passing, 73% coverage
 - CORS middleware for development environment
 
 **🚧 In Progress:**
-- Character creation and personalization system
-- Additional core agents (Innkeeper, Keeper, Jester)
+- Character creation and personalization system (FR-01, FR-02, FR-03)
+- Innkeeper integration into conversation flow
 
 **📋 Planned:**
-- Full multi-agent crew orchestration
 - Combat mechanics and dice rolling system
 - Character sheet generation
 - Adventure epilogue and export features
@@ -141,7 +146,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| FR-10 | Core agents: Innkeeper Theron, Narrator, Keeper, Jester | P0 — Must Have | ✅ (Narrator) / Planned (Others) |
+| FR-10 | Core agents: Innkeeper Theron, Narrator, Keeper, Jester | P0 — Must Have | ✅ All implemented (Innkeeper needs flow integration) |
 | FR-11 | Dynamic NPC generation with distinct personalities | P0 — Must Have | Planned |
 | FR-12 | NPCs remember player actions within session | P0 — Must Have | ✅ |
 | FR-13 | Agent annotations visible to user (e.g., Jester hints) | P1 — Should Have | Planned |
@@ -205,11 +210,10 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 - CORS enabled for development environment
 
 **Pending Implementation:**
-- Additional agents (Innkeeper, Keeper, Jester)
-- Parallel agent execution with CrewAI crews
-- Dynamic NPC spawning
-- Character sheet generation
+- Innkeeper integration into conversation flow (currently standalone)
+- Character creation system with sheet generation
 - Combat mechanics and dice rolling tools
+- Dynamic NPC spawning
 
 ---
 
