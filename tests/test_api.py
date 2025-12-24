@@ -1,5 +1,7 @@
 """Tests for FastAPI endpoints."""
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -48,7 +50,7 @@ def test_action_endpoint_returns_narrative(client: TestClient) -> None:
 def test_action_endpoint_validates_request_schema(client: TestClient) -> None:
     """Test that /action endpoint validates request schema."""
     # Missing required 'action' field
-    payload = {}
+    payload: dict[str, Any] = {}
     response = client.post("/action", json=payload)
 
     assert response.status_code == 422  # Unprocessable Entity
@@ -373,3 +375,114 @@ def test_jester_complicate_accepts_session_id(client: TestClient) -> None:
         json={"situation": "Everyone is standing around", "session_id": session_id},
     )
     assert response.status_code == 200
+
+
+# Character Creation Flow Tests
+
+
+def test_start_begins_in_character_creation_phase(client: TestClient) -> None:
+    """Test that /start creates session in CHARACTER_CREATION phase."""
+    from src.api.main import session_manager
+    from src.state import GamePhase
+
+    response = client.get("/start")
+    assert response.status_code == 200
+
+    session_id = response.json()["session_id"]
+    phase = session_manager.get_phase(session_id)
+
+    assert phase == GamePhase.CHARACTER_CREATION
+
+
+def test_start_returns_innkeeper_greeting(client: TestClient) -> None:
+    """Test that /start narrative is from innkeeper for character creation."""
+    response = client.get("/start")
+    assert response.status_code == 200
+
+    data = response.json()
+    # Should contain innkeeper-style greeting, not generic adventure narrative
+    # The narrative should invite character description
+    assert "narrative" in data
+    assert len(data["narrative"]) > 0
+
+
+def test_action_during_character_creation_continues_interview(
+    client: TestClient,
+) -> None:
+    """Test that /action during CHARACTER_CREATION phase continues interview."""
+    # Start session (in CHARACTER_CREATION phase)
+    start_response = client.get("/start")
+    session_id = start_response.json()["session_id"]
+
+    # Respond with character concept
+    action_response = client.post(
+        "/action",
+        json={"action": "I am Thorin, a dwarven blacksmith", "session_id": session_id},
+    )
+
+    assert action_response.status_code == 200
+    data = action_response.json()
+    assert "narrative" in data
+    assert "choices" in data
+
+
+def test_session_tracks_creation_turn_count(client: TestClient) -> None:
+    """Test that session tracks character creation turn count."""
+    from src.api.main import session_manager
+
+    start_response = client.get("/start")
+    session_id = start_response.json()["session_id"]
+
+    # After /start, should be turn 1
+    turn = session_manager.get_creation_turn(session_id)
+    assert turn == 1
+
+    # After first response, should be turn 2
+    client.post(
+        "/action",
+        json={"action": "I'm a dwarven fighter", "session_id": session_id},
+    )
+
+    turn = session_manager.get_creation_turn(session_id)
+    assert turn == 2
+
+
+def test_character_creation_completes_after_5_turns(client: TestClient) -> None:
+    """Test that character creation transitions after 5 turns."""
+    from src.api.main import session_manager
+    from src.state import GamePhase
+
+    start_response = client.get("/start")
+    session_id = start_response.json()["session_id"]
+
+    # Complete 5 turns of character creation
+    for i in range(5):
+        client.post(
+            "/action",
+            json={"action": f"Answer {i + 1}", "session_id": session_id},
+        )
+
+    # After 5 turns, should transition to EXPLORATION
+    phase = session_manager.get_phase(session_id)
+    assert phase == GamePhase.EXPLORATION
+    # Should have character sheet
+    sheet = session_manager.get_character_sheet(session_id)
+    assert sheet is not None
+
+
+def test_skip_character_creation_with_query_param(client: TestClient) -> None:
+    """Test that skip_creation=true skips character creation."""
+    from src.api.main import session_manager
+    from src.state import GamePhase
+
+    response = client.get("/start?skip_creation=true")
+    assert response.status_code == 200
+
+    session_id = response.json()["session_id"]
+
+    # Should be in EXPLORATION phase with default character
+    phase = session_manager.get_phase(session_id)
+    assert phase == GamePhase.EXPLORATION
+    sheet = session_manager.get_character_sheet(session_id)
+    assert sheet is not None
+    assert sheet.name == "Adventurer"

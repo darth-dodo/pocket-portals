@@ -53,6 +53,7 @@ class GameState(BaseModel):
     health_current: int = 20
     health_max: int = 20
     phase: GamePhase = GamePhase.CHARACTER_CREATION
+    creation_turn: int = Field(default=0, ge=0, le=5)
     recent_agents: list[str] = Field(default_factory=list)
     turns_since_jester: int = 0
 
