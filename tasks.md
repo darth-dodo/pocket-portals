@@ -163,18 +163,21 @@ gantt
 | Task | Status | Notes |
 |------|--------|-------|
 | Combat mechanics | ⏳ | Medium priority |
+| Add character sheet display to UI | ⏳ | Show character info in frontend |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| LLM-powered character generation | ⏳ | Use InnkeeperAgent to generate character sheets |
-| Add character sheet display to UI | ⏳ | Show character info in frontend |
+| Enhanced quest personalization | ⏳ | Use character context in quest generation |
+| Character stat influence on outcomes | ⏳ | Keeper uses stats for mechanical resolution |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Dynamic character creation with CharacterInterviewerAgent | ✅ | 148 tests, LLM-powered interview with 5-turn flow |
+| Content safety filtering system | ✅ | Pattern-based filter with safe redirects, blocks inappropriate content |
 | Integrate character creation into /start and /action | ✅ | 136 tests, 74% coverage, `/start` begins CHARACTER_CREATION phase |
 | Add CharacterSheet model with TDD | ✅ | 36 tests, CharacterStats, CharacterClass, CharacterRace, full validation |
 | Integrate CharacterSheet with GameState | ✅ | CHARACTER_CREATION phase, has_character property, SessionManager methods |
@@ -358,7 +361,95 @@ gantt
 
 ---
 
+### Phase 4: Character Creation Enhancement (2025-12-24)
+
+#### Dynamic Character Interviewer Agent
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Create CharacterInterviewerAgent | ✅ | Dynamic LLM-powered interview agent |
+| Implement generate_starter_choices | ✅ | JSON response parsing with fallbacks |
+| Implement interview_turn method | ✅ | 5-turn interview flow with context |
+| Add content safety filtering | ✅ | Pattern-based filter with safe redirects |
+| Integrate into /start endpoint | ✅ | CHARACTER_CREATION phase initialization |
+| Add fallback mechanisms | ✅ | Graceful degradation for LLM failures |
+| Run quality gates | ✅ | 148 tests passing, 74% coverage maintained |
+
+**Implementation Details**:
+- CharacterInterviewerAgent uses Claude Sonnet 4 (temperature 0.8 for creativity)
+- Dynamic JSON response parsing with regex fallbacks
+- Turn-based interview system (1-5 turns) with conversation context
+- Content safety filtering blocks inappropriate patterns (self-harm, sexual, violence, hate speech)
+- Safe redirect message: "take a deep breath and focus on the adventure ahead"
+- Fallback narratives and choices ensure robustness against LLM failures
+
+**Files Created**:
+- `src/agents/character_interviewer.py` - CharacterInterviewerAgent class
+- `tests/test_character_interviewer.py` - Unit tests for interview agent
+
+**Files Modified**:
+- `src/config/agents.yaml` - Added character_interviewer agent config
+- `src/config/tasks.yaml` - Added interview_character and generate_starter_choices tasks
+- `src/api/main.py` - Added content safety filtering, integrated CharacterInterviewerAgent
+- `tests/test_api.py` - Added tests for character creation flow
+
+**Content Safety Implementation**:
+| Category | Blocked Patterns | Safe Redirect |
+|----------|------------------|---------------|
+| Self-harm | hurt myself, kill myself, suicide, self-harm, etc. | "take a deep breath and focus on the adventure ahead" |
+| Sexual | sex, seduce, kiss, romance, naked, sexual, erotic, etc. | Same redirect |
+| Violence | torture, mutilate, rape, abuse, molest | Same redirect |
+| Hate speech | slur, racist, nazi | Same redirect |
+
+**LLM Configuration**:
+| Agent | Model | Temperature | Max Tokens | Rationale |
+|-------|-------|-------------|------------|-----------|
+| CharacterInterviewer | Claude Sonnet 4 | 0.8 | 512 | Creative character concept generation |
+
+**Quality Metrics**:
+- Interview flow completion rate: Designed for 100% with fallbacks
+- JSON parsing success: Multiple fallback layers ensure robustness
+- Content safety: Pattern matching covers major inappropriate categories
+- Test coverage: Maintained at 74% with 148 passing tests
+
+---
+
 ## Task History Archive
+
+### Session Log: 2025-12-24
+
+**Session Focus**: Character creation enhancement with dynamic LLM agent and content safety
+
+**Key Decisions**:
+1. Created CharacterInterviewerAgent for dynamic character creation (not InnkeeperAgent)
+2. Implemented pattern-based content safety filtering for player inputs
+3. Added fallback mechanisms for robust LLM response handling
+4. Used Claude Sonnet 4 with temperature 0.8 for creative character concepts
+5. Maintained 5-turn interview flow with conversation context
+
+**Blockers Resolved**:
+- LLM response parsing: Added regex fallbacks and graceful degradation
+- Content safety: Pattern-based filtering covers major inappropriate categories
+- Interview robustness: Multiple fallback layers ensure 100% completion rate
+
+**Artifacts Created**:
+- `src/agents/character_interviewer.py` - Dynamic character interview agent
+- `tests/test_character_interviewer.py` - Comprehensive unit tests
+- Content safety filtering in `src/api/main.py` (BLOCKED_PATTERNS, filter_content)
+- Updated YAML configs for character_interviewer agent and tasks
+
+**Quality Gates Passed**:
+- 148 tests passing (increased from 136)
+- 74% test coverage maintained
+- Pre-commit hooks passing
+- Content safety filtering tested and working
+
+**Next Steps**:
+- Add character sheet display to frontend UI
+- Implement character context in quest personalization
+- Use character stats in mechanical resolution (Keeper integration)
+
+---
 
 ### Session Log: 2025-12-21
 
@@ -383,12 +474,13 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Character creation complete - MVP flow working
-- **Test Coverage**: 74% (136 tests passing)
+- **Current Phase**: Character creation complete with dynamic agent - MVP flow working
+- **Test Coverage**: 74% (148 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
+- **Content Safety**: Pattern-based filtering with safe redirects
 
 ### Agent Integration Status
 | Agent | In Conversation Flow | Standalone Endpoint | Notes |
@@ -396,14 +488,16 @@ gantt
 | Narrator | ✅ Always | - | Base agent for all turns |
 | Keeper | ✅ Mechanical/Combat | `/keeper/resolve` | Triggered by action keywords |
 | Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
-| Innkeeper | 🔄 Partial | `/innkeeper/quest` | Integrated in CHARACTER_CREATION phase (static prompts) |
+| Innkeeper | ✅ Quest Introduction | `/innkeeper/quest` | Integrated for quest hooks |
+| CharacterInterviewer | ✅ Character Creation | - | Dynamic 5-turn interview with LLM |
 
 ### Character Creation Flow
-- `/start` begins in CHARACTER_CREATION phase with innkeeper greeting
-- `/action` during CHARACTER_CREATION uses static interview prompts (5 turns)
-- After 5 turns, generates CharacterSheet from conversation keywords
+- `/start` begins in CHARACTER_CREATION phase with CharacterInterviewer
+- CharacterInterviewerAgent conducts dynamic 5-turn LLM-powered interview
+- Generates starter choices dynamically or uses fallback options
+- After 5 turns, generates CharacterSheet from conversation analysis
+- Content safety filtering applied to all player inputs
 - `skip_creation=true` query param skips to EXPLORATION with default character
-- Future: InnkeeperAgent LLM integration for dynamic interviews
 
 ### Development Workflow
 1. Check this file for current task status
@@ -425,14 +519,16 @@ gantt
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
 - `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
 - `docs/design/2025-12-24-character-creation.md` - Character creation design document
-- `src/config/agents.yaml` - Agent configurations
+- `src/config/agents.yaml` - Agent configurations (includes character_interviewer)
+- `src/config/tasks.yaml` - Task configurations (includes interview_character, generate_starter_choices)
 - `src/config/loader.py` - Pydantic config models
 - `src/state/character.py` - CharacterSheet, CharacterStats, enums
 - `src/state/models.py` - GameState Pydantic model with GamePhase enum
 - `src/state/session_manager.py` - Session CRUD operations + character methods
+- `src/agents/character_interviewer.py` - CharacterInterviewerAgent with dynamic LLM interviews
 - `src/engine/router.py` - AgentRouter for multi-agent routing
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
 - `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
-- `src/api/main.py` - API endpoints including `/action/stream` SSE
+- `src/api/main.py` - API endpoints with content safety filtering and character creation
 - `static/index.html` - Frontend with SSE streaming support
 - `.github/workflows/ci.yml` - CI/CD workflow

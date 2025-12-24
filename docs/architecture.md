@@ -59,9 +59,13 @@ Behavior-Driven Development ensures we build what users actually need:
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    TAVERN CREW                           │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │   │
-│  │  │Innkeeper │ │ Narrator │ │Keeper│ │  Jester  │  │   │
+│  │  │Innkeeper │ │ Narrator │ │  Keeper  │ │  Jester  │  │   │
 │  │  │  Theron  │ │          │ │          │ │          │  │   │
 │  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │   │
+│  │  ┌──────────────────────────┐                          │   │
+│  │  │  Character Interviewer   │                          │   │
+│  │  │   (Character Creation)   │                          │   │
+│  │  └──────────────────────────┘                          │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                          │                                      │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -129,13 +133,14 @@ User Input → FastAPI → Single Agent (Narrator) → Streaming Response → UI
 ### Iteration 1: Character Creation (Week 2)
 
 ```
-User Input → Character Crew (parallel) → Character Sheet → UI Review
+User Input → Character Interviewer Agent → Character Sheet → UI Review
 ```
 
 **Add:**
-- Keeper agent (stats generation)
+- Character Interviewer agent (interactive character creation)
 - Character sheet Pydantic model
 - Accept/modify UI flow
+- Session state integration for character data
 
 ### Iteration 2: Quest Generation (Week 3)
 
@@ -590,9 +595,10 @@ Each agent's behavior maps to specific Gherkin scenarios:
 
 | Agent | Primary Features | Key Scenarios |
 |-------|-----------------|---------------|
+| Character Interviewer | character_creation.feature | Interactive character creation, backstory elicitation |
 | Innkeeper | quest_generation.feature | Quest hooks, NPC introductions |
 | Narrator | gameplay_loop.feature, epilogue.feature | Scene generation, choices, endings |
-| Keeper | character_creation.feature, combat.feature | Stats, dice, mechanics |
+| Keeper | combat.feature | Dice rolls, mechanics validation |
 | Jester | gameplay_loop.feature | Complications, foreshadowing |
 
 ---
@@ -947,10 +953,11 @@ pocket-portals/
 │   │
 │   ├── agents/
 │   │   ├── __init__.py
+│   │   ├── character_interviewer.py  # Character creation
 │   │   ├── innkeeper.py          # Quest introduction
-│   │   ├── narrator.py               # Narrative generation
-│   │   ├── chronicler.py       # Mechanics validation
-│   │   └── jester.py     # Complications
+│   │   ├── narrator.py           # Narrative generation
+│   │   ├── keeper.py             # Mechanics validation
+│   │   └── jester.py             # Complications
 │   │
 │   ├── crews/
 │   │   ├── __init__.py
@@ -1077,6 +1084,34 @@ pocket-portals/
 
 ## 14. The Tavern Crew: Agent Personalities
 
+### Character Interviewer
+
+**Role:** Interactive character creation, backstory elicitation
+
+**Personality:** Friendly, curious, encouraging. A skilled conversationalist who draws out character details naturally.
+
+**Responsibilities:**
+- Guide players through character creation via conversation
+- Ask targeted questions to elicit character backstory, personality, and goals
+- Generate complete D&D 5e character sheets from conversational input
+- Ensure character details are internally consistent and campaign-ready
+- Integrate with session management to store character data
+
+**Character Creation Flow:**
+1. Greet player and explain the character creation process
+2. Ask about character concept (race, class, general idea)
+3. Elicit backstory through targeted questions
+4. Clarify personality traits, ideals, bonds, and flaws
+5. Generate complete character sheet with D&D 5e stats
+6. Present character for review and refinement
+7. Store finalized character in session state
+
+**Integration with Session Management:**
+- Character data stored in session state for access by other agents
+- Character backstory hooks passed to Innkeeper for quest personalization
+- Character stats and abilities available to Keeper for mechanics validation
+- Character personality traits inform Narrator's tone and scene adaptation
+
 ### Innkeeper Theron
 
 **Role:** Quest introduction, NPC broker, session bookends
@@ -1085,7 +1120,7 @@ pocket-portals/
 
 **Responsibilities:**
 - Welcome adventurers to the tavern
-- Sense character backstory hooks
+- Sense character backstory hooks from Character Interviewer's output
 - Introduce quest-giver NPCs
 - Deliver epilogue reflections
 
@@ -1098,7 +1133,7 @@ pocket-portals/
 **Responsibilities:**
 - Generate immersive scene descriptions
 - Maintain world state consistency
-- Adapt narrative tone to player choices
+- Adapt narrative tone to player choices and character personality
 - Orchestrate story pacing
 
 ### Keeper
@@ -1109,7 +1144,7 @@ pocket-portals/
 
 **Responsibilities:**
 - Handle dice rolls when needed
-- Track health and resources
+- Track health and resources using character data from session
 - Report results without slowing the story
 - Keep the game honest
 
@@ -1127,7 +1162,170 @@ pocket-portals/
 
 ---
 
-## 15. Success Metrics (XP: Feedback)
+## 15. Character Creation Flow
+
+### Overview
+
+The Character Interviewer agent manages the entire character creation process through a conversational interface. This approach aligns with the XP value of simplicity - players describe their character naturally instead of filling out complex forms.
+
+### Flow Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    CHARACTER CREATION FLOW                    │
+└──────────────────────────────────────────────────────────────┘
+
+User arrives at tavern
+        │
+        ▼
+┌─────────────────────┐
+│ Character           │ → "Welcome! Tell me about your character..."
+│ Interviewer greets  │
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Ask about character │ → "What kind of hero are you imagining?"
+│ concept (race/class)│ ← User: "A grumpy dwarf fighter"
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Elicit backstory    │ → "What drives this dwarf? What's their story?"
+│ through questions   │ ← User: "Lost his clan to orcs"
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Clarify personality │ → "How does your dwarf approach challenges?"
+│ traits & motivations│ ← User describes personality
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Generate complete   │ → Creates D&D 5e character sheet
+│ character sheet     │    - Stats (STR, DEX, CON, etc.)
+└─────────────────────┘    - Race/class features
+        │                  - Equipment
+        ▼                  - Backstory summary
+┌─────────────────────┐
+│ Present for review  │ → Shows character sheet to player
+│                     │ ← User: Accept / Modify / Regenerate
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Store in session    │ → Character data → Session State
+│                     │    - Available to all agents
+└─────────────────────┘    - Persists for adventure
+        │
+        ▼
+┌─────────────────────┐
+│ Hand off to         │ → Innkeeper uses backstory for quest
+│ Innkeeper           │    Narrator uses personality for tone
+└─────────────────────┘    Keeper uses stats for mechanics
+```
+
+### Session State Integration
+
+The Character Interviewer integrates tightly with the session management system:
+
+**During Character Creation:**
+```python
+# Session state structure during character creation
+session_state = {
+    "session_id": "uuid-v4",
+    "phase": "character_creation",
+    "character": {
+        "name": None,              # Populated during conversation
+        "race": None,              # Extracted from user input
+        "class": None,             # Extracted from user input
+        "backstory": "",           # Built up through questions
+        "personality": {},         # Traits, ideals, bonds, flaws
+        "stats": {},               # Generated at end
+        "equipment": [],           # Class-appropriate starting gear
+        "status": "in_progress"    # in_progress | review | complete
+    },
+    "conversation_history": [],    # Full dialogue for context
+    "creation_step": 1             # Track progress through flow
+}
+```
+
+**After Character Finalized:**
+```python
+# Character data becomes available to other agents
+session_state = {
+    "session_id": "uuid-v4",
+    "phase": "quest_hook",         # Advanced to next phase
+    "character": {
+        "name": "Grimlock Stonefist",
+        "race": "Dwarf",
+        "class": "Fighter",
+        "level": 1,
+        "backstory": "Lost his clan to an orc raid. Seeks revenge and redemption.",
+        "personality": {
+            "traits": ["Grumpy but loyal", "Suspicious of strangers"],
+            "ideals": "Honor and clan loyalty",
+            "bonds": "Will protect the innocent",
+            "flaws": "Quick to anger when orcs are mentioned"
+        },
+        "stats": {
+            "strength": 16,
+            "dexterity": 12,
+            "constitution": 15,
+            "intelligence": 10,
+            "wisdom": 13,
+            "charisma": 8
+        },
+        "hp": 12,
+        "ac": 16,
+        "equipment": ["Battleaxe", "Shield", "Chain mail"],
+        "status": "complete"
+    }
+}
+```
+
+### Agent Handoffs
+
+The Character Interviewer's output feeds directly into other agents:
+
+**To Innkeeper (Quest Generation):**
+- Backstory hooks: "Lost his clan to an orc raid"
+- Personality traits: Guide quest tone and NPC interactions
+- Character goals: Inform quest objectives
+
+**To Narrator (Scene Description):**
+- Personality traits: Adapt narrative tone
+- Character background: Reference in descriptions
+- Roleplaying cues: How character might react
+
+**To Keeper (Mechanics):**
+- Stats and modifiers: Used for dice rolls
+- HP and AC: Combat tracking
+- Equipment: Available actions and abilities
+
+**To Jester (Complications):**
+- Character flaws: Opportunities for complications
+- Backstory elements: Foreshadowing material
+
+### Character Creation Success Criteria
+
+**BDD Scenarios Covered:**
+- Character created from natural language description
+- D&D 5e stats are valid and balanced
+- Backstory is coherent and actionable
+- Character can be modified before finalizing
+- Character data persists in session
+
+**XP Principles Applied:**
+- **Simplicity:** No complex forms, just conversation
+- **Feedback:** Immediate character preview and modification
+- **Communication:** Natural language instead of game jargon
+- **Respect:** <60s to create character and start adventure
+
+---
+
+## 16. Success Metrics (XP: Feedback)
 
 ### Technical Metrics
 
@@ -1148,7 +1346,7 @@ pocket-portals/
 
 ---
 
-## 16. Getting Started
+## 17. Getting Started
 
 ```bash
 # Clone and setup

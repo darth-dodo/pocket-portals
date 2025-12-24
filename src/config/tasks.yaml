@@ -91,3 +91,53 @@ introduce_quest:
     - End with their choice, not a command
   expected_output: "A brief quest hook from Theron (30-50 words) with specific details"
   agent: innkeeper_theron
+
+interview_character:
+  description: |
+    You are Theron, interviewing a new adventurer at your tavern.
+
+    CONVERSATION SO FAR:
+    {conversation_history}
+
+    CURRENT TURN: {turn_number} of 5
+
+    TURN FOCUS:
+    - Turn 1: Ask about their name and what kind of adventurer they are
+    - Turn 2: Ask about their skills and fighting style
+    - Turn 3: Ask about what drives them (motivation)
+    - Turn 4: Ask about their gear and tools
+    - Turn 5: Summarize who they are and welcome them
+
+    CONTENT SAFETY (MANDATORY): All character concepts must be heroic and PG-13.
+    No dark backstories involving trauma, abuse, or self-harm.
+
+    YOUR TASK:
+    1. Respond as Theron with a brief comment and question (30-50 words)
+    2. Generate 3 diverse character choices that fit the conversation
+
+    RESPOND WITH VALID JSON ONLY:
+    {{
+      "narrative": "Your response as Theron",
+      "choices": ["Choice 1", "Choice 2", "Choice 3"]
+    }}
+  expected_output: "Valid JSON with narrative and 3 choices"
+  agent: character_interviewer
+
+generate_starter_choices:
+  description: |
+    Generate 3 diverse character concepts for a new player starting their adventure.
+
+    These are the FIRST choices a player sees, so make them exciting and varied.
+    Be GENRE-FLEXIBLE - don't assume fantasy. Cover broad archetypes:
+    - A fighter/warrior type (soldier, knight, gunslinger, bounty hunter)
+    - A knowledge/power type (scholar, mage, scientist, hacker)
+    - A cunning/agile type (rogue, spy, detective, scout)
+
+    CONTENT SAFETY: All concepts are heroic and family-friendly. PG-13.
+
+    RESPOND WITH VALID JSON ONLY:
+    {{
+      "choices": ["I am a [type] [brief detail]", "I am a [type] [brief detail]", "I am a [type] [brief detail]"]
+    }}
+  expected_output: "Valid JSON with 3 character concept choices"
+  agent: character_interviewer

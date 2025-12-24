@@ -385,13 +385,16 @@ echo "========================"
 ### Current State
 
 **Completed**:
-- ✅ FastAPI app with `/health`, `/start`, and `/action` endpoints
+- ✅ FastAPI app with `/health`, `/start`, `/action`, and `/character` endpoints
 - ✅ NarratorAgent using CrewAI + Anthropic Claude
+- ✅ CharacterInterviewerAgent for guided character creation
 - ✅ Session management for multi-user support
 - ✅ YAML-based agent configuration
 - ✅ Conversation context passing to LLM
 - ✅ Choice system (3 options + free text input)
+- ✅ Dynamic choice generation from LLM responses
 - ✅ Starter choices with shuffle from pool of 9 adventure hooks
+- ✅ Genre flexibility (fantasy, sci-fi, horror, modern, etc.)
 - ✅ Retro RPG web UI with NES.css styling
 - ✅ Docker containerization with multi-stage build
 - ✅ Improved UI readability with proper newline rendering
@@ -650,6 +653,16 @@ curl http://localhost:8888/start
 # Start with shuffled choices (randomizes which 3 from pool of 9)
 curl "http://localhost:8888/start?shuffle=true"
 
+# Start character creation interview
+curl -X POST http://localhost:8888/character \
+  -H "Content-Type: application/json" \
+  -d '{"action": "start"}'
+
+# Continue character creation
+curl -X POST http://localhost:8888/character \
+  -H "Content-Type: application/json" \
+  -d '{"action": "I want to be a space explorer", "session_id": "abc123"}'
+
 # Generate narrative (new session - direct action)
 curl -X POST http://localhost:8888/action \
   -H "Content-Type: application/json" \
@@ -679,6 +692,85 @@ curl -X POST http://localhost:8888/action \
   ]
 }
 ```
+
+### Character Creation Flow
+
+**CharacterInterviewerAgent** provides a guided interview process for character creation:
+
+1. **Start Interview**: POST to `/character` with `{"action": "start"}`
+2. **Agent Asks Questions**: AI guides player through character creation
+3. **Player Responds**: Continue with answers in subsequent requests
+4. **Dynamic Choices**: Agent generates 3 contextual choices based on conversation
+5. **Genre Flexibility**: Works with ANY setting (fantasy, sci-fi, horror, modern, cyberpunk, etc.)
+
+**Example Flow**:
+
+```bash
+# 1. Start character creation
+curl -X POST http://localhost:8888/character \
+  -H "Content-Type: application/json" \
+  -d '{"action": "start"}'
+
+# Response: "Welcome, adventurer! Let's create your character..."
+# Choices: ["Create a fantasy hero", "Design a sci-fi explorer", "Start with a custom concept"]
+
+# 2. Player chooses sci-fi
+curl -X POST http://localhost:8888/character \
+  -H "Content-Type: application/json" \
+  -d '{"choice_index": 2, "session_id": "xyz789"}'
+
+# Response: "Excellent! What kind of sci-fi character interests you?"
+# Choices: ["Space pilot", "Cybernetic engineer", "Describe my own idea"]
+
+# 3. Custom response
+curl -X POST http://localhost:8888/character \
+  -H "Content-Type: application/json" \
+  -d '{"action": "A telepathic alien diplomat", "session_id": "xyz789"}'
+
+# Response: "Fascinating! Tell me about your telepathic abilities..."
+# Choices: [contextual options based on player's concept]
+```
+
+**Testing Character Creation**:
+
+```bash
+# Run character creation tests
+uv run pytest tests/test_api.py::test_character_creation -v
+
+# Test dynamic choice generation
+uv run pytest tests/test_api.py::test_character_choices -v
+
+# Test genre flexibility
+uv run pytest tests/test_character_interviewer.py::test_genre_adaptation -v
+
+# Manual testing via Swagger UI
+make dev
+# Navigate to http://localhost:8888/docs
+# Try /character endpoint with different genres
+```
+
+**Genre Examples**:
+
+The CharacterInterviewerAgent adapts to ANY genre/setting:
+
+```json
+// Fantasy
+{"action": "I want to be a wizard in a medieval world"}
+
+// Sci-Fi
+{"action": "I'm a cyborg bounty hunter in space"}
+
+// Horror
+{"action": "Create a paranormal investigator in modern-day Salem"}
+
+// Cyberpunk
+{"action": "I'm a netrunner in a dystopian megacity"}
+
+// Modern
+{"action": "A detective in contemporary New York"}
+```
+
+The agent intelligently adapts its questions and suggestions based on player input, creating a natural interview experience regardless of genre.
 
 ---
 
@@ -713,6 +805,10 @@ make check            # Run all quality gates
 uv run pytest -x      # Stop on first failure
 uv run pytest -v      # Verbose output
 uv run pytest tests/test_api.py::test_name  # Run specific test
+
+# Character creation testing
+uv run pytest tests/test_api.py::test_character_creation -v
+uv run pytest tests/test_character_interviewer.py -v
 
 # Coverage
 uv run pytest --cov=src --cov-report=html
@@ -874,6 +970,65 @@ class AgentName:
         return str(task.execute_sync())
 ```
 
+### Dynamic Choice Generation
+
+**Feature**: LLM-generated choices that adapt to player actions and conversation context.
+
+**Implementation Pattern**:
+
+```python
+import re
+
+def extract_choices(narrative_text: str) -> list[str]:
+    """
+    Extract choices from LLM response using regex patterns.
+
+    Supports multiple formats:
+    - "CHOICE: option text"
+    - "**CHOICE:** option text"
+    - "CHOICE 1: option text"
+
+    Returns exactly 3 choices, with fallbacks if needed.
+    """
+    choice_pattern = re.compile(
+        r"\*\*CHOICE(?:\s+\d+)?:\*\*\s*(.+?)(?=\*\*CHOICE|\Z)",
+        re.IGNORECASE | re.DOTALL
+    )
+    matches = choice_pattern.findall(narrative_text)
+
+    choices = [choice.strip() for choice in matches if choice.strip()]
+
+    # Ensure exactly 3 choices with fallbacks
+    default_choices = ["Continue the conversation", "Ask a question", "Try something different"]
+    while len(choices) < 3:
+        choices.append(default_choices[len(choices)])
+
+    return choices[:3]
+
+# Usage in agent
+response = agent.respond(action, context)
+choices = extract_choices(response)
+```
+
+**Why Dynamic Choices?**:
+- **Context-Aware**: Choices reflect current narrative state
+- **Genre-Adaptive**: Options match the setting (fantasy, sci-fi, etc.)
+- **Natural Flow**: LLM understands conversation and suggests relevant actions
+- **Player-Driven**: Choices adapt to player's unique character concepts
+
+**Testing**:
+
+```bash
+# Test choice extraction with various formats
+uv run pytest tests/test_choices.py::test_extract_choices_formats -v
+
+# Test fallback to defaults when no choices found
+uv run pytest tests/test_choices.py::test_extract_choices_fallback -v
+
+# Test in character creation context
+uv run pytest tests/test_character_interviewer.py::test_dynamic_choices -v
+```
+
 ### Configuration
 
 **Agent Definitions**: `src/config/agents.yaml`
@@ -883,6 +1038,12 @@ narrator:
   role: "Dungeon Master Narrator"
   goal: "Create immersive D&D narratives"
   backstory: "An experienced DM who brings worlds to life"
+
+character_interviewer:
+  role: "Character Creation Guide"
+  goal: "Help players create compelling characters through guided interview"
+  backstory: "Expert in character development across all genres and settings"
+  # Note: Works with ANY genre - fantasy, sci-fi, horror, modern, etc.
 ```
 
 **Task Templates**: `src/config/tasks.yaml`

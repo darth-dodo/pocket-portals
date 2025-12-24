@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
+from src.agents.character_interviewer import CharacterInterviewerAgent
 from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
@@ -92,6 +93,7 @@ narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
+character_interviewer: CharacterInterviewerAgent | None = None
 session_manager = SessionManager()
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
@@ -124,9 +126,9 @@ CHARACTER_CREATION_NARRATIVE = (
 )
 
 CHARACTER_CREATION_CHOICES = [
-    "Describe your character",
-    "Tell your backstory",
-    "Skip and start adventuring",
+    "I am a battle-hardened dwarf",
+    "I am an elven mage seeking knowledge",
+    "I am a human rogue with secrets",
 ]
 
 
@@ -212,12 +214,13 @@ class ComplicateResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Initialize agents on startup."""
-    global narrator, innkeeper, keeper, jester, turn_executor
+    global narrator, innkeeper, keeper, jester, character_interviewer, turn_executor
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
         keeper = KeeperAgent()
         jester = JesterAgent()
+        character_interviewer = CharacterInterviewerAgent()
         turn_executor = TurnExecutor(
             narrator=narrator,
             keeper=keeper,
@@ -228,6 +231,7 @@ async def lifespan(app: FastAPI) -> Any:
     innkeeper = None
     keeper = None
     jester = None
+    character_interviewer = None
     turn_executor = None
 
 
@@ -303,7 +307,14 @@ async def start_adventure(
 
     # Start character creation flow
     session_manager.set_creation_turn(state.session_id, 1)
-    session_manager.set_choices(state.session_id, CHARACTER_CREATION_CHOICES)
+
+    # Generate dynamic starter choices using the agent
+    if character_interviewer:
+        starter_choices = character_interviewer.generate_starter_choices()
+    else:
+        starter_choices = CHARACTER_CREATION_CHOICES
+
+    session_manager.set_choices(state.session_id, starter_choices)
 
     if character:
         session_manager.set_character_description(state.session_id, character)
@@ -311,7 +322,7 @@ async def start_adventure(
     return NarrativeResponse(
         narrative=CHARACTER_CREATION_NARRATIVE,
         session_id=state.session_id,
-        choices=CHARACTER_CREATION_CHOICES,
+        choices=starter_choices,
     )
 
 
@@ -434,27 +445,34 @@ async def _handle_character_creation(
             choices=choices,
         )
 
-    # Continue character interview with innkeeper
-    # For now, use static prompts based on turn number
-    interview_prompts = {
-        2: "The innkeeper raises an eyebrow. 'And what skills do you bring? "
-        "Are you quick with a blade, clever with magic, or something else entirely?'",
-        3: "He nods thoughtfully. 'Every adventurer has a story. "
-        "What drove you to seek fortune in these dangerous lands?'",
-        4: "The innkeeper glances at your gear. 'What's in that pack of yours? "
-        "A traveler's worth is often measured by their tools.'",
-    }
+    # Build conversation history for context
+    history_lines = []
+    for entry in state.conversation_history:
+        if entry.get("action"):
+            history_lines.append(f"Player: {entry['action']}")
+        if entry.get("narrative"):
+            history_lines.append(f"Innkeeper: {entry['narrative']}")
+    conversation_history = "\n".join(history_lines)
 
-    narrative = interview_prompts.get(
-        new_turn,
-        "The innkeeper strokes his beard. 'Tell me more about yourself, traveler.'",
-    )
+    # Use agent to generate dynamic interview response
+    if character_interviewer:
+        interview_result = character_interviewer.interview_turn(
+            turn_number=new_turn,
+            conversation_history=conversation_history,
+        )
+        narrative = interview_result["narrative"]
+        choices = interview_result["choices"]
+    else:
+        # Fallback to static responses
+        narrative = (
+            "The innkeeper waits for your response. 'Tell me more about yourself.'"
+        )
+        choices = [
+            "I am a warrior",
+            "I am a scholar",
+            "I am a wanderer",
+        ]
 
-    choices = [
-        "Answer the question",
-        "Share more details",
-        "Skip and start adventuring",
-    ]
     session_manager.set_choices(state.session_id, choices)
 
     return NarrativeResponse(
