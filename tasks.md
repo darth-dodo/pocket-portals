@@ -162,19 +162,20 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Character creation system | 🔄 | CharacterSheet model done, integrating with API |
-| Integrate Innkeeper into flow | ⏳ | Currently standalone, needs `/start` and dialogue integration |
+| Combat mechanics | ⏳ | Medium priority |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Combat mechanics | ⏳ | Medium |
+| LLM-powered character generation | ⏳ | Use InnkeeperAgent to generate character sheets |
+| Add character sheet display to UI | ⏳ | Show character info in frontend |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Integrate character creation into /start and /action | ✅ | 136 tests, 74% coverage, `/start` begins CHARACTER_CREATION phase |
 | Add CharacterSheet model with TDD | ✅ | 36 tests, CharacterStats, CharacterClass, CharacterRace, full validation |
 | Integrate CharacterSheet with GameState | ✅ | CHARACTER_CREATION phase, has_character property, SessionManager methods |
 | Create character creation design doc | ✅ | `docs/design/2025-12-24-character-creation.md` - comprehensive design |
@@ -382,8 +383,8 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Character creation in progress (models done, API next)
-- **Test Coverage**: 76% (130 tests passing)
+- **Current Phase**: Character creation complete - MVP flow working
+- **Test Coverage**: 74% (136 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
@@ -395,7 +396,14 @@ gantt
 | Narrator | ✅ Always | - | Base agent for all turns |
 | Keeper | ✅ Mechanical/Combat | `/keeper/resolve` | Triggered by action keywords |
 | Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
-| Innkeeper | ❌ Not integrated | `/innkeeper/quest` | Needs `/start` + dialogue integration |
+| Innkeeper | 🔄 Partial | `/innkeeper/quest` | Integrated in CHARACTER_CREATION phase (static prompts) |
+
+### Character Creation Flow
+- `/start` begins in CHARACTER_CREATION phase with innkeeper greeting
+- `/action` during CHARACTER_CREATION uses static interview prompts (5 turns)
+- After 5 turns, generates CharacterSheet from conversation keywords
+- `skip_creation=true` query param skips to EXPLORATION with default character
+- Future: InnkeeperAgent LLM integration for dynamic interviews
 
 ### Development Workflow
 1. Check this file for current task status
