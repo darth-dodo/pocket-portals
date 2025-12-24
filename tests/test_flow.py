@@ -68,7 +68,7 @@ def test_flow_handles_error_gracefully(
 def test_flow_executes_specified_agents(
     flow: ConversationFlow, mock_agents: tuple[MagicMock, MagicMock, MagicMock]
 ) -> None:
-    """Test flow executes agents specified in state."""
+    """Test flow executes agents specified in state with accumulated context."""
     narrator, keeper, jester = mock_agents
     narrator.respond.return_value = "Narrator speaks."
     keeper.respond.return_value = "Keeper speaks."
@@ -83,14 +83,20 @@ def test_flow_executes_specified_agents(
 
     final_state = flow.kickoff(inputs=initial_state.model_dump())
 
-    narrator.respond.assert_called_once_with(
-        action="I examine the artifact",
-        context="You are in a temple.",
-    )
-    keeper.respond.assert_called_once_with(
-        action="I examine the artifact",
-        context="You are in a temple.",
-    )
+    # Narrator is called twice: once for narration, once for choice generation
+    assert narrator.respond.call_count == 2
+
+    # First call is for narration with original context
+    first_call = narrator.respond.call_args_list[0]
+    assert first_call.kwargs["action"] == "I examine the artifact"
+    assert first_call.kwargs["context"] == "You are in a temple."
+
+    # Keeper gets accumulated context including narrator's response
+    keeper.respond.assert_called_once()
+    keeper_call = keeper.respond.call_args
+    assert keeper_call.kwargs["action"] == "I examine the artifact"
+    assert "Narrator just said" in keeper_call.kwargs["context"]
+
     assert "Narrator speaks." in final_state.narrative
     assert "Keeper speaks." in final_state.narrative
 

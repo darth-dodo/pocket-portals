@@ -46,10 +46,15 @@ def test_executor_single_agent_narrator_only(
         context="You are standing at the entrance of a mysterious cave.",
     )
 
-    # Verify narrator was called with correct arguments
-    narrator.respond.assert_called_once_with(
-        action="I enter the cave",
-        context="You are standing at the entrance of a mysterious cave.",
+    # Narrator is called twice: once for narration, once for choice generation
+    assert narrator.respond.call_count == 2
+
+    # First call is for narration with original context
+    first_call = narrator.respond.call_args_list[0]
+    assert first_call.kwargs["action"] == "I enter the cave"
+    assert (
+        first_call.kwargs["context"]
+        == "You are standing at the entrance of a mysterious cave."
     )
 
     # Verify keeper and jester were not called
@@ -95,13 +100,19 @@ def test_executor_multi_agent_narrator_and_keeper(
         context="You are in an ancient temple.",
     )
 
-    # Verify both agents were called
-    narrator.respond.assert_called_once_with(
-        action="I examine the door closely", context="You are in an ancient temple."
-    )
-    keeper.respond.assert_called_once_with(
-        action="I examine the door closely", context="You are in an ancient temple."
-    )
+    # Narrator is called twice: once for narration, once for choice generation
+    assert narrator.respond.call_count == 2
+
+    # First narrator call is for narration with original context
+    first_narrator_call = narrator.respond.call_args_list[0]
+    assert first_narrator_call.kwargs["action"] == "I examine the door closely"
+    assert first_narrator_call.kwargs["context"] == "You are in an ancient temple."
+
+    # Keeper gets accumulated context including narrator's response
+    keeper.respond.assert_called_once()
+    keeper_call = keeper.respond.call_args
+    assert keeper_call.kwargs["action"] == "I examine the door closely"
+    assert "Narrator just said" in keeper_call.kwargs["context"]
 
     # Verify jester was not called
     jester.respond.assert_not_called()
@@ -149,15 +160,21 @@ def test_executor_multi_agent_with_jester(
         context="Guards are patrolling the courtyard.",
     )
 
-    # Verify both agents were called
-    narrator.respond.assert_called_once_with(
-        action="I try to sneak past the guards",
-        context="Guards are patrolling the courtyard.",
+    # Narrator is called twice: once for narration, once for choice generation
+    assert narrator.respond.call_count == 2
+
+    # First narrator call is for narration with original context
+    first_narrator_call = narrator.respond.call_args_list[0]
+    assert first_narrator_call.kwargs["action"] == "I try to sneak past the guards"
+    assert (
+        first_narrator_call.kwargs["context"] == "Guards are patrolling the courtyard."
     )
-    jester.respond.assert_called_once_with(
-        action="I try to sneak past the guards",
-        context="Guards are patrolling the courtyard.",
-    )
+
+    # Jester gets accumulated context including narrator's response
+    jester.respond.assert_called_once()
+    jester_call = jester.respond.call_args
+    assert jester_call.kwargs["action"] == "I try to sneak past the guards"
+    assert "Narrator just said" in jester_call.kwargs["context"]
 
     # Verify result structure
     assert len(result.responses) == 2
@@ -176,10 +193,10 @@ def test_executor_multi_agent_with_jester(
     )
 
 
-def test_executor_context_passed_to_each_agent(
+def test_executor_context_accumulated_across_agents(
     executor: TurnExecutor, mock_agents: tuple[Any, Any, Any]
 ) -> None:
-    """Test that context is passed correctly to each agent."""
+    """Test that context is accumulated across agent calls."""
     narrator, keeper, jester = mock_agents
     narrator.respond.return_value = "Narrator response"
     keeper.respond.return_value = "Keeper response"
@@ -198,10 +215,27 @@ def test_executor_context_passed_to_each_agent(
         context=context,
     )
 
-    # Verify each agent received the same context and action
-    narrator.respond.assert_called_once_with(action=action, context=context)
-    keeper.respond.assert_called_once_with(action=action, context=context)
-    jester.respond.assert_called_once_with(action=action, context=context)
+    # Narrator is called twice: once for narration, once for choice generation
+    assert narrator.respond.call_count == 2
+
+    # First narrator call gets original context
+    first_narrator_call = narrator.respond.call_args_list[0]
+    assert first_narrator_call.kwargs["action"] == action
+    assert first_narrator_call.kwargs["context"] == context
+
+    # Keeper gets accumulated context including narrator's response
+    keeper.respond.assert_called_once()
+    keeper_call = keeper.respond.call_args
+    assert keeper_call.kwargs["action"] == action
+    assert context in keeper_call.kwargs["context"]  # Original context included
+    assert "Narrator just said" in keeper_call.kwargs["context"]
+
+    # Jester gets accumulated context including narrator and keeper responses
+    jester.respond.assert_called_once()
+    jester_call = jester.respond.call_args
+    assert jester_call.kwargs["action"] == action
+    assert "Narrator just said" in jester_call.kwargs["context"]
+    assert "Keeper" in jester_call.kwargs["context"]
 
 
 def test_turn_result_contains_all_agent_responses(

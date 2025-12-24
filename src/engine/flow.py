@@ -92,26 +92,35 @@ class ConversationFlow(Flow[ConversationFlowState]):
 
         Executes agents in the order specified by the routing decision,
         calling each agent's respond method with the current action and context.
+        Context is accumulated so later agents can see earlier responses.
         If jester inclusion is flagged, executes jester last.
 
         Returns:
             Updated state with agent responses stored
         """
         try:
+            # Start with the initial context (conversation history)
+            accumulated_context = self.state.context
+
             # Execute main routed agents
             for agent_name in self.state.agents_to_invoke:
                 agent = self.agents[agent_name]
                 content = agent.respond(
                     action=self.state.action,
-                    context=self.state.context,
+                    context=accumulated_context,
                 )
                 self.state.responses[agent_name] = content
 
-            # Execute jester if flagged
+                # Accumulate context for subsequent agents
+                accumulated_context = self._build_accumulated_context(
+                    accumulated_context, agent_name, content
+                )
+
+            # Execute jester if flagged (sees all previous responses)
             if self.state.include_jester:
                 jester_content = self.agents["jester"].respond(
                     action=self.state.action,
-                    context=self.state.context,
+                    context=accumulated_context,
                 )
                 self.state.responses["jester"] = jester_content
 
@@ -121,6 +130,30 @@ class ConversationFlow(Flow[ConversationFlowState]):
             # Set error on state for routing to error handler
             self.state.error = f"Agent execution failed: {str(e)}"
             return self.state
+
+    def _build_accumulated_context(
+        self, current_context: str, agent_name: str, response: str
+    ) -> str:
+        """Build accumulated context including previous agent responses.
+
+        Args:
+            current_context: Existing context string
+            agent_name: Name of the agent that just responded
+            response: The agent's response text
+
+        Returns:
+            Updated context string including the new response
+        """
+        agent_labels = {
+            "narrator": "Narrator",
+            "keeper": "Keeper (Game Mechanics)",
+            "jester": "Jester",
+        }
+        label = agent_labels.get(agent_name, agent_name.title())
+
+        if current_context:
+            return f"{current_context}\n\n[{label} just said]: {response}"
+        return f"[{label} just said]: {response}"
 
     @router(execute_agents)
     def check_execution_status(self) -> str:
@@ -182,14 +215,54 @@ class ConversationFlow(Flow[ConversationFlowState]):
 
     @listen(aggregate_responses)
     def generate_choices(self) -> ConversationFlowState:
-        """Generate available player choices for the next action.
+        """Generate contextual player choices based on the narrative.
 
-        Currently sets default choices. This method can be extended to generate
-        context-aware choices based on narrative content and game state.
+        Asks the narrator agent to suggest 3 contextual choices based on
+        the current narrative. Falls back to default choices on error.
 
         Returns:
             Updated state with player choices set
         """
-        self.state.choices = self.DEFAULT_CHOICES
+        try:
+            # Ask narrator for contextual choices based on the narrative
+            narrator = self.agents.get("narrator")
+            if narrator and self.state.narrative:
+                choice_prompt = (
+                    f"Based on this scene:\n\n{self.state.narrative}\n\n"
+                    "Suggest exactly 3 short action choices (max 6 words each) "
+                    "the player could take next. Format as a simple numbered list:\n"
+                    "1. [action]\n2. [action]\n3. [action]"
+                )
+                response = narrator.respond(action=choice_prompt, context="")
 
+                # Parse the response to extract choices
+                choices = self._parse_choices(response)
+                if len(choices) >= 3:
+                    self.state.choices = choices[:3]
+                    return self.state
+
+        except Exception:
+            # Fall back to defaults on any error
+            pass
+
+        self.state.choices = self.DEFAULT_CHOICES
         return self.state
+
+    def _parse_choices(self, response: str) -> list[str]:
+        """Parse numbered choices from agent response.
+
+        Args:
+            response: Raw response containing numbered list
+
+        Returns:
+            List of extracted choice strings
+        """
+        choices = []
+        for line in response.strip().split("\n"):
+            line = line.strip()
+            # Match lines starting with numbers like "1.", "2.", "3."
+            if line and len(line) > 2 and line[0].isdigit() and line[1] in ".):":
+                choice = line[2:].strip().lstrip(".): ")
+                if choice:
+                    choices.append(choice)
+        return choices

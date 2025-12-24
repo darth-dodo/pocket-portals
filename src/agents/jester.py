@@ -49,6 +49,20 @@ class JesterAgent:
             llm=self.llm,
         )
 
+    def respond(self, action: str, context: str = "") -> str:
+        """Generate jester response to player action.
+
+        Provides the standard interface expected by the conversation flow.
+
+        Args:
+            action: The player's action
+            context: Optional conversation history
+
+        Returns:
+            Jester's meta-commentary or complication
+        """
+        return self.add_complication(situation=action, context=context)
+
     def add_complication(self, situation: str, context: str = "") -> str:
         """Add meta-commentary or complication to a situation.
 

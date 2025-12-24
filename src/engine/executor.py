@@ -66,6 +66,24 @@ class TurnExecutor:
             jester=jester,
         )
 
+    def _create_initial_state(
+        self,
+        action: str,
+        routing: RoutingDecision,
+        context: str,
+        session_id: str,
+    ) -> ConversationFlowState:
+        """Create initial flow state from parameters."""
+        return ConversationFlowState(
+            session_id=session_id,
+            action=action,
+            context=context,
+            phase="exploration",  # Default phase, will be updated by flow
+            agents_to_invoke=routing.agents.copy(),
+            include_jester=routing.include_jester,
+            routing_reason=routing.reason,
+        )
+
     def execute(
         self,
         action: str,
@@ -73,11 +91,9 @@ class TurnExecutor:
         context: str,
         session_id: str = "default",
     ) -> TurnResult:
-        """Execute a turn using ConversationFlow orchestration.
+        """Execute a turn using ConversationFlow orchestration (sync version).
 
-        Sets up the flow state with the provided parameters and kicks off
-        the flow execution. The flow handles routing, agent execution,
-        response aggregation, and choice generation.
+        Use execute_async() when calling from an async context (e.g., FastAPI).
 
         Args:
             action: The player's action text
@@ -88,19 +104,44 @@ class TurnExecutor:
         Returns:
             TurnResult containing all responses, combined narrative, and choices
         """
-        # Initialize flow state with input parameters
-        initial_state = ConversationFlowState(
-            session_id=session_id,
-            action=action,
-            context=context,
-            phase="exploration",  # Default phase, will be updated by flow
-            agents_to_invoke=routing.agents.copy(),
-            include_jester=routing.include_jester,
-            routing_reason=routing.reason,
+        initial_state = self._create_initial_state(action, routing, context, session_id)
+
+        # Execute the flow (sync - uses asyncio.run internally)
+        final_state = self.flow.kickoff(inputs=initial_state.model_dump())
+
+        # Build AgentResponse list from flow responses
+        responses = self._build_responses(final_state)
+
+        return TurnResult(
+            responses=responses,
+            narrative=final_state.narrative,
+            choices=final_state.choices,
         )
 
-        # Execute the flow
-        final_state = self.flow.kickoff(inputs=initial_state.model_dump())
+    async def execute_async(
+        self,
+        action: str,
+        routing: RoutingDecision,
+        context: str,
+        session_id: str = "default",
+    ) -> TurnResult:
+        """Execute a turn using ConversationFlow orchestration (async version).
+
+        Use this method when calling from an async context (e.g., FastAPI endpoints).
+
+        Args:
+            action: The player's action text
+            routing: Routing decision specifying which agents to use
+            context: Current game context/state
+            session_id: Unique identifier for the session
+
+        Returns:
+            TurnResult containing all responses, combined narrative, and choices
+        """
+        initial_state = self._create_initial_state(action, routing, context, session_id)
+
+        # Execute the flow asynchronously
+        final_state = await self.flow.kickoff_async(inputs=initial_state.model_dump())
 
         # Build AgentResponse list from flow responses
         responses = self._build_responses(final_state)

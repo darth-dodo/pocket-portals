@@ -29,6 +29,20 @@ class KeeperAgent:
             llm=self.llm,
         )
 
+    def respond(self, action: str, context: str = "") -> str:
+        """Generate keeper response to player action.
+
+        Provides the standard interface expected by the conversation flow.
+
+        Args:
+            action: The player's action
+            context: Optional conversation history
+
+        Returns:
+            Mechanical resolution of the action
+        """
+        return self.resolve_action(action=action, context=context)
+
     def resolve_action(
         self, action: str, context: str = "", difficulty: int = 12
     ) -> str:
