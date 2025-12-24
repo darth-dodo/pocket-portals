@@ -1,8 +1,15 @@
-"""Turn execution logic for Pocket Portals."""
+"""Turn execution logic for Pocket Portals.
+
+This module provides the TurnExecutor class which serves as the primary interface
+for executing player turns. It internally uses ConversationFlow for orchestration
+while maintaining a simple external API.
+"""
 
 from dataclasses import dataclass
 from typing import Any
 
+from src.engine.flow import ConversationFlow
+from src.engine.flow_state import ConversationFlowState
 from src.engine.router import RoutingDecision
 
 
@@ -35,21 +42,15 @@ class TurnResult:
 
 
 class TurnExecutor:
-    """Executes player turns by coordinating multiple agents.
+    """Executes player turns using ConversationFlow orchestration.
 
-    The executor takes a routing decision and executes the specified agents
-    in order, aggregating their responses into a coherent narrative with
-    player choices.
+    The executor provides a simplified interface for turn execution while
+    internally leveraging CrewAI's Flow-based orchestration for agent
+    coordination and response aggregation.
 
     Attributes:
-        DEFAULT_CHOICES: Standard player choices offered each turn
+        flow: ConversationFlow instance for orchestration
     """
-
-    DEFAULT_CHOICES = [
-        "Investigate further",
-        "Talk to someone nearby",
-        "Move to a new location",
-    ]
 
     def __init__(self, narrator: Any, keeper: Any, jester: Any) -> None:
         """Initialize executor with agent instances.
@@ -59,62 +60,82 @@ class TurnExecutor:
             keeper: KeeperAgent instance for lore and mechanics
             jester: JesterAgent instance for chaos and humor
         """
-        self.agents = {
-            "narrator": narrator,
-            "keeper": keeper,
-            "jester": jester,
-        }
+        self.flow = ConversationFlow(
+            narrator=narrator,
+            keeper=keeper,
+            jester=jester,
+        )
 
     def execute(
         self,
         action: str,
         routing: RoutingDecision,
         context: str,
+        session_id: str = "default",
     ) -> TurnResult:
-        """Execute a turn by coordinating agents.
+        """Execute a turn using ConversationFlow orchestration.
 
-        Executes each agent specified in the routing decision in order,
-        collecting their responses and combining them into a narrative.
+        Sets up the flow state with the provided parameters and kicks off
+        the flow execution. The flow handles routing, agent execution,
+        response aggregation, and choice generation.
 
         Args:
             action: The player's action text
             routing: Routing decision specifying which agents to use
             context: Current game context/state
+            session_id: Unique identifier for the session
 
         Returns:
             TurnResult containing all responses, combined narrative, and choices
         """
-        responses = []
+        # Initialize flow state with input parameters
+        initial_state = ConversationFlowState(
+            session_id=session_id,
+            action=action,
+            context=context,
+            phase="exploration",  # Default phase, will be updated by flow
+            agents_to_invoke=routing.agents.copy(),
+            include_jester=routing.include_jester,
+            routing_reason=routing.reason,
+        )
 
-        # Execute agents in the order specified by routing.agents
-        for agent_name in routing.agents:
-            agent = self.agents[agent_name]
-            content = agent.respond(action=action, context=context)
-            responses.append(AgentResponse(agent=agent_name, content=content))
+        # Execute the flow
+        final_state = self.flow.kickoff(inputs=initial_state.model_dump())
 
-        # Add jester if specified in routing
-        if routing.include_jester:
-            jester_content = self.agents["jester"].respond(
-                action=action, context=context
-            )
-            responses.append(AgentResponse(agent="jester", content=jester_content))
-
-        # Combine all responses into a single narrative
-        narrative = self._combine_narrative(responses)
+        # Build AgentResponse list from flow responses
+        responses = self._build_responses(final_state)
 
         return TurnResult(
             responses=responses,
-            narrative=narrative,
-            choices=self.DEFAULT_CHOICES,
+            narrative=final_state.narrative,
+            choices=final_state.choices,
         )
 
-    def _combine_narrative(self, responses: list[AgentResponse]) -> str:
-        """Combine multiple agent responses into a single narrative.
+    def _build_responses(self, state: ConversationFlowState) -> list[AgentResponse]:
+        """Build AgentResponse list from flow state.
+
+        Preserves the order of agent execution by iterating through
+        agents_to_invoke first, then adding jester if included.
 
         Args:
-            responses: List of agent responses to combine
+            state: Final flow state containing agent responses
 
         Returns:
-            Combined narrative with responses separated by double newlines
+            List of AgentResponse objects in execution order
         """
-        return "\n\n".join(response.content for response in responses)
+        responses = []
+
+        # Add responses in agent execution order
+        for agent_name in state.agents_to_invoke:
+            if agent_name in state.responses:
+                responses.append(
+                    AgentResponse(agent=agent_name, content=state.responses[agent_name])
+                )
+
+        # Add jester response if included
+        if state.include_jester and "jester" in state.responses:
+            responses.append(
+                AgentResponse(agent="jester", content=state.responses["jester"])
+            )
+
+        return responses
