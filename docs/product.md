@@ -29,33 +29,41 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 
 ### Current Implementation Status
 
-**✅ Completed Features:**
-- FastAPI backend with health, start, and action endpoints
-- Multi-agent system: Narrator, Keeper, Jester (all integrated in conversation flow)
-- InnkeeperAgent (standalone `/innkeeper/quest` endpoint)
-- SSE streaming endpoint `/action/stream` with real-time agent responses
-- CrewAI Flows integration for conversation orchestration
-- AgentRouter with phase-based routing and mechanical keyword detection
-- TurnExecutor with context accumulation across agents
-- Session management for multi-user support
-- YAML-based agent configuration (agents.yaml, tasks.yaml)
-- Conversation context passing to LLM for continuity
-- Choice system with 3 predefined options + free text input
-- Starter choices with shuffle feature (9 adventure hooks pool)
-- Retro RPG web UI with NES.css styling and SSE streaming support
-- Real-time agent indicators showing which agent is responding
-- Docker containerization with multi-stage build
-- 78 tests passing, 73% coverage
-- CORS middleware for development environment
+#### ✅ Completed Features
 
-**🚧 In Progress:**
-- Character creation and personalization system (FR-01, FR-02, FR-03)
-- Innkeeper integration into conversation flow
+| Category | Feature | Details |
+|----------|---------|---------|
+| **Backend** | FastAPI REST API | `/health`, `/start`, `/action`, `/action/stream` endpoints |
+| **Backend** | SSE Streaming | Real-time agent responses via Server-Sent Events |
+| **Backend** | Session Management | UUID-based multi-user support with in-memory state |
+| **Agents** | Multi-Agent System | Narrator, Keeper, Jester integrated in conversation flow |
+| **Agents** | InnkeeperAgent | Standalone `/innkeeper/quest` endpoint |
+| **Agents** | Agent Router | Phase-based routing with mechanical keyword detection |
+| **Agents** | Turn Executor | Context accumulation across sequential agent calls |
+| **Orchestration** | CrewAI Flows | `@start`, `@listen`, `@router` decorator-based orchestration |
+| **Config** | YAML-based Config | `agents.yaml`, `tasks.yaml` for agent personalities |
+| **Frontend** | Retro RPG UI | NES.css styling with Press Start 2P font |
+| **Frontend** | SSE Integration | Real-time agent indicators (Narrator/Keeper/Jester) |
+| **Frontend** | Choice System | 3 predefined options + free text input |
+| **Frontend** | Starter Choices | 9 adventure hooks with shuffle feature |
+| **DevOps** | Docker | Multi-stage build with docker-compose |
+| **Quality** | Test Suite | 78 tests passing, 73% coverage |
 
-**📋 Planned:**
-- Combat mechanics and dice rolling system
-- Character sheet generation
-- Adventure epilogue and export features
+#### 🚧 In Progress
+
+| Feature | Requirements | Status |
+|---------|--------------|--------|
+| Character Creation | FR-01, FR-02, FR-03 | Design complete, implementation starting |
+| Innkeeper Flow Integration | - | Currently standalone, needs `/start` integration |
+
+#### 📋 Planned
+
+| Feature | Priority | Dependencies |
+|---------|----------|--------------|
+| Combat Mechanics | P0 | Character creation |
+| Dice Rolling System | P0 | Combat mechanics |
+| Adventure Epilogue | P0 | Quest completion tracking |
+| Export Features | P1 | Epilogue system |
 
 ---
 
@@ -176,44 +184,104 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 ### 7.1 Core Agents (The Tavern Staff)
 
-| Agent | Role | Personality |
-|-------|------|-------------|
-| **Innkeeper Theron** | Quest introduction, NPC broker, session bookends | Weary, direct, speaks from experience. |
-| **Narrator** | Narrative generation, world state, scene description | Sensory, present-tense, adapts to player tone. |
-| **Keeper** | Dice rolls, health tracking, game state | Terse, functional, stays out of the way. |
-| **Jester** | Complications, observations, meta-commentary | Knowing, casual, fourth-wall aware. |
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        POCKET PORTALS AGENTS                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  🍺 INNKEEPER THERON          📜 NARRATOR                          │
+│  ├─ Quest introductions       ├─ Scene descriptions                │
+│  ├─ NPC broker                ├─ World state narration             │
+│  ├─ Session bookends          ├─ Adapts to player tone             │
+│  └─ Weary, direct voice       └─ Sensory, present-tense            │
+│                                                                     │
+│  🎲 KEEPER                    🎭 JESTER                             │
+│  ├─ Dice roll validation      ├─ Chaos injection (15% chance)      │
+│  ├─ HP/damage tracking        ├─ Meta-commentary                   │
+│  ├─ Game state enforcement    ├─ Fourth-wall awareness             │
+│  └─ Terse, mechanical         └─ Knowing, playful                  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+| Agent | Role | Personality | Integration Status |
+|-------|------|-------------|-------------------|
+| **Innkeeper Theron** | Quest introduction, NPC broker, session bookends | Weary, direct, speaks from experience | ⚠️ Standalone only |
+| **Narrator** | Narrative generation, world state, scene description | Sensory, present-tense, adapts to player tone | ✅ In flow |
+| **Keeper** | Dice rolls, health tracking, game state | Terse, functional, stays out of the way | ✅ In flow |
+| **Jester** | Complications, observations, meta-commentary | Knowing, casual, fourth-wall aware | ✅ In flow |
 
 ### 7.2 Agent Interaction Model
 
-1. **Parallel Analysis:** Character Crew (Innkeeper + Keeper + Jester) runs concurrently on character input
-2. **Sequential Handoff:** Narrator receives consolidated character context, generates quest
-3. **Dynamic Spawning:** NPC agents instantiated as needed with inherited world state
-4. **Tool Delegation:** Keeper owns dice tools; Narrator owns narrative tools
+```
+Player Action
+     │
+     ▼
+┌─────────────┐     ┌─────────────────────────────────────┐
+│ AgentRouter │────▶│ Routing Decision                    │
+└─────────────┘     │ • Phase-based (exploration/combat)  │
+                    │ • Keyword detection (attack, roll)  │
+                    │ • Jester probability (15%, 3-turn   │
+                    │   cooldown)                         │
+                    └─────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                    TurnExecutor                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐          │
+│  │ Narrator │───▶│  Keeper  │───▶│  Jester  │          │
+│  │ (always) │    │(if mech) │    │(if rand) │          │
+│  └──────────┘    └──────────┘    └──────────┘          │
+│        │              │               │                 │
+│        └──────────────┴───────────────┘                 │
+│                       │                                 │
+│              Context Accumulation                       │
+│         (each agent sees previous responses)            │
+└─────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    Combined Narrative
+                    + 3 Choice Options
+```
 
-### 7.3 Current Implementation Notes
+### 7.3 LLM Configuration
 
-**Implemented:**
-- **NarratorAgent:** Fully functional with YAML configuration, using Claude Sonnet 4 with temperature 0.7 and max_tokens 1024
-- **Session Management:** In-memory session storage with UUID-based session IDs for multi-user support
-- **Conversation Context:** History tracking and context building for narrative continuity across turns
-- **Choice System:**
-  - 3 predefined choices presented per turn (stored per session)
-  - Free text input support via `action` field
-  - Choice selection via `choice_index` (1-3)
-  - Starter choices pool with 9 adventure hooks, shuffleable via query parameter
+| Agent | Temperature | Max Tokens | Rationale |
+|-------|-------------|------------|-----------|
+| Narrator | 0.7 | 1024 | Creative, descriptive storytelling |
+| Innkeeper | 0.6 | 512 | Consistent, direct communication |
+| Keeper | 0.3 | 256 | Mechanical precision, low variance |
+| Jester | 0.8 | 256 | Playful unpredictability |
 
-**Technical Decisions:**
-- Using CrewAI's native LLM class (no langchain dependency)
-- YAML-based configuration for agents and tasks (src/config/)
-- Synchronous task execution with `task.execute_sync()`
-- Static file serving for frontend (index.html)
-- CORS enabled for development environment
+### 7.4 Technical Implementation
 
-**Pending Implementation:**
-- Innkeeper integration into conversation flow (currently standalone)
-- Character creation system with sheet generation
-- Combat mechanics and dice rolling tools
-- Dynamic NPC spawning
+**Agent Pattern:**
+```python
+class AgentName:
+    def __init__(self):
+        config = load_agent_config("agent_name")  # From YAML
+        self.agent = Agent(role=..., goal=..., llm=...)
+
+    def respond(self, action: str, context: str) -> str:
+        task = Task(description=..., agent=self.agent)
+        return task.execute_sync()
+```
+
+**Key Files:**
+- `src/agents/*.py` — Agent implementations
+- `src/config/agents.yaml` — Agent personalities and goals
+- `src/config/tasks.yaml` — Task templates
+- `src/engine/router.py` — AgentRouter logic
+- `src/engine/executor.py` — TurnExecutor orchestration
+
+### 7.5 Pending Implementation
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| Innkeeper Flow Integration | Add to `/start` and dialogue phase | High |
+| Character Creation Tasks | New YAML tasks for sheet generation | High |
+| Combat Tools | Dice rolling, damage calculation | Medium |
+| Dynamic NPC Spawning | Agent instantiation from templates | Low |
 
 ---
 
@@ -241,32 +309,90 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 ### 9.1 Core Loop
 
-**Current Implementation:**
-1. **✅ ENTER:** User lands on retro RPG-styled welcome screen
-2. **✅ START:** Click "Begin Adventure" to receive welcome narrative and 3 starter choices
-3. **✅ CHOOSE:** Select from 3 predefined choices or enter custom action via free text
-4. **✅ PLAY:** Narrator responds with immersive narrative, maintaining conversation history
-5. **✅ CONTINUE:** Receive new choices and continue the adventure
-6. **🚧 DESCRIBE:** Character creation (pending)
-7. **📋 RESOLVE:** Epilogue generation (planned)
-8. **📋 EXPORT:** Download adventure log (planned)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ADVENTURE FLOW                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐     │
+│  │  ENTER  │───▶│  START  │───▶│ DESCRIBE│───▶│  PLAY   │     │
+│  │   ✅    │    │   ✅    │    │   🚧    │    │   ✅    │     │
+│  └─────────┘    └─────────┘    └─────────┘    └─────────┘     │
+│   Welcome        Begin          Character       Turn-based     │
+│   Screen        Adventure       Creation        Adventure      │
+│                                                    │            │
+│                                                    ▼            │
+│                              ┌─────────┐    ┌─────────┐        │
+│                              │ RESOLVE │◀───│CONTINUE │◀───┘   │
+│                              │   📋    │    │   ✅    │        │
+│                              └─────────┘    └─────────┘        │
+│                               Epilogue       Loop back          │
+│                                  │                              │
+│                                  ▼                              │
+│                              ┌─────────┐                        │
+│                              │ EXPORT  │                        │
+│                              │   📋    │                        │
+│                              └─────────┘                        │
+│                              Download log                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**Implemented Flow Details:**
-- Session created on `/start` with unique UUID
-- Player selects action via choice button (1-3) or custom input field
-- Action sent to `/action` endpoint with session_id
-- Narrator processes action with full conversation context
-- Response includes narrative text and 3 new choices
-- Session history maintained in memory for continuity
+| Phase | Status | Description |
+|-------|--------|-------------|
+| **ENTER** | ✅ | User lands on retro RPG-styled welcome screen |
+| **START** | ✅ | Click "Begin Adventure" → welcome narrative + 3 starter choices |
+| **DESCRIBE** | 🚧 | Character creation via Innkeeper conversation |
+| **PLAY** | ✅ | Turn-based adventure with multi-agent responses |
+| **CONTINUE** | ✅ | Receive new choices, loop back to PLAY |
+| **RESOLVE** | 📋 | Epilogue generation based on choices |
+| **EXPORT** | 📋 | Download adventure log |
 
-### 9.2 Decision Points
+### 9.2 Turn Flow (PLAY Phase)
 
-**Current Implementation:**
-- Each turn presents exactly 3 predefined choices (e.g., "Investigate further", "Talk to someone nearby", "Move to a new location")
-- Custom input field accepts free-form player actions
-- System validates that either a choice or custom action is provided
-- Narrator receives context of all previous turns for coherent responses
-- Starter choices can be randomized via `shuffle=true` query parameter
+```
+┌──────────────────────────────────────────────────────────────┐
+│                       SINGLE TURN                             │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Player Input                                                │
+│  ├─ Choice button (1-3)                                      │
+│  └─ OR custom text input                                     │
+│           │                                                  │
+│           ▼                                                  │
+│  ┌─────────────────┐                                         │
+│  │  POST /action   │  (or /action/stream for SSE)           │
+│  │  {action,       │                                         │
+│  │   session_id}   │                                         │
+│  └─────────────────┘                                         │
+│           │                                                  │
+│           ▼                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                 │
+│  │  AgentRouter    │───▶│  TurnExecutor   │                 │
+│  │  (route agents) │    │  (run agents)   │                 │
+│  └─────────────────┘    └─────────────────┘                 │
+│                                │                             │
+│                                ▼                             │
+│  Response                                                    │
+│  ├─ Combined narrative (Narrator + Keeper? + Jester?)       │
+│  ├─ 3 new choices                                           │
+│  └─ Session state updated                                   │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 9.3 SSE Streaming Events
+
+When using `/action/stream`, the frontend receives real-time events:
+
+| Event | Payload | UI Action |
+|-------|---------|-----------|
+| `routing` | `{agents: [...], reason: "..."}` | Log which agents will respond |
+| `agent_start` | `{agent: "narrator"}` | Show "Narrator is speaking..." indicator |
+| `agent_response` | `{agent: "narrator", content: "..."}` | Display agent's message |
+| `choices` | `{choices: ["...", "...", "..."]}` | Update choice buttons |
+| `complete` | `{session_id: "..."}` | Hide loading, enable input |
+| `error` | `{message: "..."}` | Show error message |
 
 ---
 
@@ -333,40 +459,40 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 - NES.css: https://nostalgic-css.github.io/NES.css/
 - Render.com: https://render.com/docs
 
-### 13.4 Implementation Achievements
+### 13.4 API Reference
 
-**Core Infrastructure (✅ Complete):**
-- FastAPI backend with health monitoring and RESTful endpoints
-- Session-based state management supporting concurrent users
-- Docker containerization with multi-stage builds for production deployment
-- Environment-aware CORS configuration for development/production
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        API ENDPOINTS                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Core Endpoints                                                 │
+│  ├─ GET  /health              → Health check + environment     │
+│  ├─ GET  /start?shuffle=true  → New session + starter choices  │
+│  ├─ POST /action              → Process action (blocking)      │
+│  └─ POST /action/stream       → Process action (SSE stream)    │
+│                                                                 │
+│  Agent Endpoints (Standalone)                                   │
+│  ├─ GET  /innkeeper/quest?character=...  → Quest intro         │
+│  ├─ POST /keeper/resolve      → Mechanical resolution          │
+│  └─ POST /jester/complicate   → Add complication               │
+│                                                                 │
+│  Static Files                                                   │
+│  ├─ GET  /                    → index.html                     │
+│  └─ GET  /static/*            → CSS, JS, images                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**AI Agent System (✅ Complete):**
-- NarratorAgent with CrewAI framework integration
-- YAML-based configuration system for agents and tasks
-- Anthropic Claude Sonnet 4 integration via native CrewAI LLM class
-- Conversation context tracking and history management
-- Synchronous task execution pattern
+### 13.5 Development Roadmap
 
-**User Experience (✅ Complete):**
-- Retro RPG aesthetic with NES.css framework
-- Press Start 2P font for authentic 8-bit feel
-- Responsive design with mobile-friendly interface
-- Proper text rendering with newline preservation
-- Interactive choice system (3 options + custom input)
-- Adventure hook system with 9 diverse starter scenarios
-- Shuffle functionality for replay variety
-
-**API Design (✅ Complete):**
-- `/health` - Environment monitoring
-- `/start` - Session initialization with configurable starter choices
-- `/action` - Turn-based narrative progression with dual input modes
-
-**Next Development Priorities:**
-1. Character creation and sheet generation system
-2. Expand agent crew (Innkeeper, Keeper, Jester)
-3. Parallel agent execution workflows
-4. Combat mechanics with dice rolling
-5. Adventure epilogue and export features
+| Phase | Features | Status |
+|-------|----------|--------|
+| **Phase 1: Foundation** | FastAPI, Narrator, Sessions, Docker | ✅ Complete |
+| **Phase 2: Multi-Agent** | Keeper, Jester, Router, Executor | ✅ Complete |
+| **Phase 3: Streaming** | SSE endpoint, Frontend integration | ✅ Complete |
+| **Phase 4: Character** | Creation flow, Innkeeper integration | 🚧 In Progress |
+| **Phase 5: Combat** | Dice tools, HP tracking, Initiative | 📋 Planned |
+| **Phase 6: Epilogue** | Quest resolution, Export features | 📋 Planned |
 
 ---
