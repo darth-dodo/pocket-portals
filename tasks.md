@@ -162,7 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Character creation system | 🔄 | FR-01, FR-02, FR-03 - Design phase starting |
+| Character creation system | 🔄 | CharacterSheet model done, integrating with API |
 | Integrate Innkeeper into flow | ⏳ | Currently standalone, needs `/start` and dialogue integration |
 
 ### Up Next
@@ -175,6 +175,9 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Add CharacterSheet model with TDD | ✅ | 36 tests, CharacterStats, CharacterClass, CharacterRace, full validation |
+| Integrate CharacterSheet with GameState | ✅ | CHARACTER_CREATION phase, has_character property, SessionManager methods |
+| Create character creation design doc | ✅ | `docs/design/2025-12-24-character-creation.md` - comprehensive design |
 | Update frontend for SSE streaming | ✅ | Real-time agent indicators, per-agent message styling (Narrator/Keeper/Jester) |
 | Add SSE streaming endpoint | ✅ | `/action/stream` with real-time agent responses, context accumulation |
 | Add CrewAI Flows integration | ✅ | ConversationFlow with @start/@listen/@router decorators |
@@ -379,8 +382,8 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: SSE streaming complete, character creation next
-- **Test Coverage**: 73% (78 tests passing)
+- **Current Phase**: Character creation in progress (models done, API next)
+- **Test Coverage**: 76% (130 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
@@ -413,10 +416,12 @@ gantt
 - `docs/guides/CREWS-AND-FLOWS.md` - CrewAI Crews vs Flows patterns
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
 - `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
+- `docs/design/2025-12-24-character-creation.md` - Character creation design document
 - `src/config/agents.yaml` - Agent configurations
 - `src/config/loader.py` - Pydantic config models
+- `src/state/character.py` - CharacterSheet, CharacterStats, enums
 - `src/state/models.py` - GameState Pydantic model with GamePhase enum
-- `src/state/session_manager.py` - Session CRUD operations
+- `src/state/session_manager.py` - Session CRUD operations + character methods
 - `src/engine/router.py` - AgentRouter for multi-agent routing
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
 - `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
