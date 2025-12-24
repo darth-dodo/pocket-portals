@@ -1,7 +1,10 @@
 """FastAPI application for Pocket Portals."""
 
+import asyncio
+import json
 import os
 import random
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -12,11 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
+from sse_starlette.sse import EventSourceResponse
 
 from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
+from src.engine import AgentRouter, TurnExecutor
 from src.state import GameState, SessionManager
 
 load_dotenv()
@@ -27,6 +32,8 @@ innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 session_manager = SessionManager()
+agent_router = AgentRouter()
+turn_executor: TurnExecutor | None = None
 
 # Starter choices pool - adventure hooks to begin the journey
 STARTER_CHOICES_POOL = [
@@ -130,17 +137,23 @@ class ComplicateResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Initialize agents on startup."""
-    global narrator, innkeeper, keeper, jester
+    global narrator, innkeeper, keeper, jester, turn_executor
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
         keeper = KeeperAgent()
         jester = JesterAgent()
+        turn_executor = TurnExecutor(
+            narrator=narrator,
+            keeper=keeper,
+            jester=jester,
+        )
     yield
     narrator = None
     innkeeper = None
     keeper = None
     jester = None
+    turn_executor = None
 
 
 app = FastAPI(
@@ -215,7 +228,7 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     else:
         action = request.action or ""
 
-    if narrator is None:
+    if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
         session_manager.set_choices(state.session_id, choices)
         return NarrativeResponse(
@@ -224,22 +237,32 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
             choices=choices,
         )
 
+    # Route to appropriate agents based on phase and action
+    routing = agent_router.route(
+        action=action,
+        phase=state.phase,
+        recent_agents=state.recent_agents,
+    )
+
+    # Execute agents and get aggregated result
     context = build_context(state.conversation_history)
-    narrative = narrator.respond(action, context)
+    result = await turn_executor.execute_async(
+        action=action,
+        routing=routing,
+        context=context,
+    )
 
     # Store exchange in session (auto-limits to 20)
-    session_manager.add_exchange(state.session_id, action, narrative)
+    session_manager.add_exchange(state.session_id, action, result.narrative)
 
-    # Generate contextual choices (simple default for now - YAGNI)
-    choices = [
-        "Investigate further",
-        "Talk to someone nearby",
-        "Move to a new location",
-    ]
-    session_manager.set_choices(state.session_id, choices)
+    # Update recent agents for Jester cooldown tracking
+    session_manager.update_recent_agents(state.session_id, routing.agents)
+
+    # Use choices from turn result
+    session_manager.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
-        narrative=narrative, session_id=state.session_id, choices=choices
+        narrative=result.narrative, session_id=state.session_id, choices=result.choices
     )
 
 
@@ -307,6 +330,199 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
 
     complication = jester.add_complication(situation=request.situation, context=context)
     return ComplicateResponse(complication=complication)
+
+
+@app.post("/action/stream")
+async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
+    """Process player action with streaming response via Server-Sent Events.
+
+    Streams agent responses as they complete, providing real-time feedback.
+    Events sent:
+    - agent_start: When an agent begins processing
+    - agent_response: When an agent completes with its response
+    - choices: Final choices for next action
+    - complete: Signal that streaming is done
+    - error: If something goes wrong
+    """
+    state = get_session(request.session_id)
+
+    # Resolve action from choice_index or direct action
+    if request.choice_index is not None:
+        choices = state.current_choices or ["Look around", "Wait", "Leave"]
+        action = choices[request.choice_index - 1]
+    else:
+        action = request.action or ""
+
+    async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
+        """Generate SSE events as agents respond."""
+        try:
+            if turn_executor is None:
+                yield {
+                    "event": "error",
+                    "data": json.dumps(
+                        {"message": "Narrator not available. Check ANTHROPIC_API_KEY."}
+                    ),
+                }
+                return
+
+            # Route to appropriate agents
+            routing = agent_router.route(
+                action=action,
+                phase=state.phase,
+                recent_agents=state.recent_agents,
+            )
+
+            # Signal which agents will respond
+            agents_list = routing.agents.copy()
+            if routing.include_jester:
+                agents_list.append("jester")
+
+            yield {
+                "event": "routing",
+                "data": json.dumps({"agents": agents_list, "reason": routing.reason}),
+            }
+
+            # Build initial context from conversation history
+            accumulated_context = build_context(state.conversation_history)
+
+            # Get agent instances
+            agents = {
+                "narrator": narrator,
+                "keeper": keeper,
+                "jester": jester,
+            }
+
+            # Agent labels for context building
+            agent_labels = {
+                "narrator": "Narrator",
+                "keeper": "Keeper (Game Mechanics)",
+                "jester": "Jester",
+            }
+
+            narrative_parts = []
+
+            # Execute each agent and stream responses
+            for agent_name in routing.agents:
+                yield {
+                    "event": "agent_start",
+                    "data": json.dumps({"agent": agent_name}),
+                }
+
+                # Run agent in executor to not block
+                agent = agents.get(agent_name)
+                if agent:
+                    # Capture current context for closure
+                    current_context = accumulated_context
+
+                    # Execute synchronously but in a thread pool
+                    loop = asyncio.get_event_loop()
+                    response = await loop.run_in_executor(
+                        None,
+                        lambda ctx=current_context, a=agent: a.respond(
+                            action=action, context=ctx
+                        ),
+                    )
+
+                    narrative_parts.append(response)
+
+                    # Accumulate context for subsequent agents
+                    label = agent_labels.get(agent_name, agent_name.title())
+                    if accumulated_context:
+                        accumulated_context = (
+                            f"{accumulated_context}\n\n[{label} just said]: {response}"
+                        )
+                    else:
+                        accumulated_context = f"[{label} just said]: {response}"
+
+                    yield {
+                        "event": "agent_response",
+                        "data": json.dumps({"agent": agent_name, "content": response}),
+                    }
+
+            # Execute jester if included (sees all previous responses)
+            if routing.include_jester and jester:
+                yield {
+                    "event": "agent_start",
+                    "data": json.dumps({"agent": "jester"}),
+                }
+
+                # Capture current context for closure
+                current_context = accumulated_context
+
+                loop = asyncio.get_event_loop()
+                jester_response = await loop.run_in_executor(
+                    None,
+                    lambda ctx=current_context: jester.respond(
+                        action=action, context=ctx
+                    ),
+                )
+
+                narrative_parts.append(jester_response)
+
+                yield {
+                    "event": "agent_response",
+                    "data": json.dumps({"agent": "jester", "content": jester_response}),
+                }
+
+            # Combine narrative
+            full_narrative = "\n\n".join(narrative_parts)
+
+            # Generate choices (ask narrator for contextual choices)
+            choices = ["Look around", "Wait", "Leave"]  # Default
+            if narrator and full_narrative:
+                try:
+                    choice_prompt = (
+                        f"Based on this scene:\n\n{full_narrative}\n\n"
+                        "Suggest exactly 3 short action choices (max 6 words each) "
+                        "the player could take next. Format as a simple numbered list:\n"
+                        "1. [action]\n2. [action]\n3. [action]"
+                    )
+                    loop = asyncio.get_event_loop()
+                    choice_response = await loop.run_in_executor(
+                        None, lambda: narrator.respond(action=choice_prompt, context="")
+                    )
+
+                    # Parse choices
+                    parsed = []
+                    for line in choice_response.strip().split("\n"):
+                        line = line.strip()
+                        if (
+                            line
+                            and len(line) > 2
+                            and line[0].isdigit()
+                            and line[1] in ".):"
+                        ):
+                            choice = line[2:].strip().lstrip(".): ")
+                            if choice:
+                                parsed.append(choice)
+
+                    if len(parsed) >= 3:
+                        choices = parsed[:3]
+                except Exception:
+                    pass
+
+            yield {
+                "event": "choices",
+                "data": json.dumps({"choices": choices}),
+            }
+
+            # Update session state
+            session_manager.add_exchange(state.session_id, action, full_narrative)
+            session_manager.update_recent_agents(state.session_id, routing.agents)
+            session_manager.set_choices(state.session_id, choices)
+
+            yield {
+                "event": "complete",
+                "data": json.dumps({"session_id": state.session_id}),
+            }
+
+        except Exception as e:
+            yield {
+                "event": "error",
+                "data": json.dumps({"message": str(e)}),
+            }
+
+    return EventSourceResponse(event_generator())
 
 
 # Static file serving

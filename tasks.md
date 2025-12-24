@@ -162,19 +162,24 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| No active tasks | - | Ready for next feature |
+| Character creation system | 🔄 | FR-01, FR-02, FR-03 - Design phase starting |
+| Integrate Innkeeper into flow | ⏳ | Currently standalone, needs `/start` and dialogue integration |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Add conversation engine | ⏳ | High |
-| Character creation system | ⏳ | Medium |
+| Combat mechanics | ⏳ | Medium |
 
 ### Recently Completed
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Update frontend for SSE streaming | ✅ | Real-time agent indicators, per-agent message styling (Narrator/Keeper/Jester) |
+| Add SSE streaming endpoint | ✅ | `/action/stream` with real-time agent responses, context accumulation |
+| Add CrewAI Flows integration | ✅ | ConversationFlow with @start/@listen/@router decorators |
+| Create Crews and Flows documentation | ✅ | `docs/guides/CREWS-AND-FLOWS.md` comprehensive guide |
+| Add conversation engine | ✅ | AgentRouter, TurnExecutor, API integration, 71 tests, 83% coverage |
 | Implement world state management | ✅ | GameState Pydantic model, SessionManager CRUD, API integration, 17 tests, 82% coverage |
 | Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
 | Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
@@ -313,6 +318,42 @@ gantt
 
 ---
 
+### Phase 3: Conversation Engine (2025-12-23)
+
+#### Multi-Agent Orchestration
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Create design document | ✅ | `docs/design/2025-12-23-conversation-engine.md` |
+| Implement AgentRouter | ✅ | Phase-based routing, mechanical keywords, Jester probability |
+| Implement TurnExecutor | ✅ | Sequential execution, response aggregation |
+| Add API integration | ✅ | `/action` endpoint uses router and executor |
+| Update GameState model | ✅ | Added phase, recent_agents, turns_since_jester |
+| Update SessionManager | ✅ | Added update_recent_agents method |
+| Run quality gates | ✅ | 71 tests passing, 83% coverage |
+
+**Implementation Details**:
+- AgentRouter routes to agents based on GamePhase and action keywords
+- TurnExecutor executes agents sequentially and aggregates responses
+- Jester has 15% probability in exploration with 3-turn cooldown
+- Mechanical keywords (attack, fight, roll, etc.) trigger Keeper inclusion
+- API endpoint updated to use multi-agent orchestration
+
+**Files Created**:
+- `src/engine/__init__.py` - Package exports
+- `src/engine/router.py` - AgentRouter class
+- `src/engine/executor.py` - TurnExecutor class
+- `tests/test_router.py` - 10 tests
+- `tests/test_executor.py` - 8 tests
+- `docs/design/2025-12-23-conversation-engine.md` - Design doc
+
+**Files Modified**:
+- `src/state/models.py` - Added GamePhase enum and new GameState fields
+- `src/state/session_manager.py` - Added update_recent_agents method
+- `src/api/main.py` - Updated /action endpoint for multi-agent orchestration
+
+---
+
 ## Task History Archive
 
 ### Session Log: 2025-12-21
@@ -338,12 +379,20 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Multi-agent crew complete, ready for world state
-- **Test Coverage**: 79% (36 tests passing)
+- **Current Phase**: SSE streaming complete, character creation next
+- **Test Coverage**: 73% (78 tests passing)
 - **CI/CD**: GitHub Actions with lint + test jobs
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
+
+### Agent Integration Status
+| Agent | In Conversation Flow | Standalone Endpoint | Notes |
+|-------|---------------------|---------------------|-------|
+| Narrator | ✅ Always | - | Base agent for all turns |
+| Keeper | ✅ Mechanical/Combat | `/keeper/resolve` | Triggered by action keywords |
+| Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
+| Innkeeper | ❌ Not integrated | `/innkeeper/quest` | Needs `/start` + dialogue integration |
 
 ### Development Workflow
 1. Check this file for current task status
@@ -361,9 +410,16 @@ gantt
 - `docs/adr/` - Architecture decision records
 - `docs/guides/CRASH-COURSE.md` - Comprehensive spike documentation
 - `docs/guides/ONBOARDING.md` - Developer onboarding guide
+- `docs/guides/CREWS-AND-FLOWS.md` - CrewAI Crews vs Flows patterns
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
+- `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
 - `src/config/agents.yaml` - Agent configurations
 - `src/config/loader.py` - Pydantic config models
-- `src/state/models.py` - GameState Pydantic model
+- `src/state/models.py` - GameState Pydantic model with GamePhase enum
 - `src/state/session_manager.py` - Session CRUD operations
+- `src/engine/router.py` - AgentRouter for multi-agent routing
+- `src/engine/executor.py` - TurnExecutor for agent orchestration
+- `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
+- `src/api/main.py` - API endpoints including `/action/stream` SSE
+- `static/index.html` - Frontend with SSE streaming support
 - `.github/workflows/ci.yml` - CI/CD workflow
