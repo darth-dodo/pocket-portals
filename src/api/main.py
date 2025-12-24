@@ -33,6 +33,60 @@ from src.state import (
 
 load_dotenv()
 
+# Content safety filter - redirects inappropriate input
+BLOCKED_PATTERNS = [
+    # Self-harm
+    "hurt myself",
+    "kill myself",
+    "harm myself",
+    "cut myself",
+    "suicide",
+    "self-harm",
+    "self harm",
+    "end my life",
+    "end it all",
+    # Sexual content
+    "sex",
+    "seduce",
+    "kiss",
+    "romance",
+    "make love",
+    "naked",
+    "undress",
+    "sexual",
+    "erotic",
+    "intimate",
+    # Violence/torture
+    "torture",
+    "mutilate",
+    "rape",
+    "abuse",
+    "molest",
+    # Hate speech
+    "slur",
+    "racist",
+    "nazi",
+]
+
+SAFE_REDIRECT = "take a deep breath and focus on the adventure ahead"
+
+
+def filter_content(action: str) -> str:
+    """Filter inappropriate content from player actions.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        Original action if safe, or redirect action if inappropriate
+    """
+    action_lower = action.lower()
+    for pattern in BLOCKED_PATTERNS:
+        if pattern in action_lower:
+            return SAFE_REDIRECT
+    return action
+
+
 # Global state
 narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
@@ -273,6 +327,9 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
         action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
     else:
         action = request.action or ""
+
+    # Apply content safety filter
+    action = filter_content(action)
 
     # Handle CHARACTER_CREATION phase specially
     if state.phase == GamePhase.CHARACTER_CREATION:
@@ -573,6 +630,9 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
         action = choices[request.choice_index - 1]
     else:
         action = request.action or ""
+
+    # Apply content safety filter
+    action = filter_content(action)
 
     async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
         """Generate SSE events as agents respond."""

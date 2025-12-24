@@ -7,8 +7,8 @@
 
     <!-- NES.css for retro RPG styling -->
     <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
-    <!-- Press Start 2P font for authentic 8-bit look -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Press Start 2P font for headers, Crimson Pro for readable narrative text -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- RPG Awesome icons -->
     <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
 
@@ -35,8 +35,47 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
+        }
+
+        /* Reading mode toggle */
+        .reading-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(26, 26, 46, 0.95);
+            border: 3px solid #444;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reading-mode-toggle:hover {
+            border-color: #f7d354;
+            transform: scale(1.05);
+        }
+
+        .reading-mode-toggle i {
+            color: #f7d354;
+            font-size: 1.2rem;
+        }
+
+        /* Reading mode active - larger text, simpler styling */
+        body.reading-mode .message-text {
+            font-size: 1.25rem !important;
+            line-height: 2 !important;
+        }
+
+        body.reading-mode .story-box {
+            max-height: 600px !important;
+        }
+
+        body.reading-mode .message {
+            padding: 24px 28px !important;
+            margin-bottom: 28px !important;
         }
 
         /* Header */
@@ -79,13 +118,14 @@
 
         /* Story area */
         .story-box {
-            min-height: 350px;
-            max-height: 450px;
+            min-height: 400px;
+            max-height: 520px;
             overflow-y: auto;
             margin-bottom: 0;
             background: linear-gradient(180deg, #1a1a2e 0%, #212529 100%) !important;
-            padding: 24px;
+            padding: 32px;
             border-radius: 4px;
+            scroll-behavior: smooth;
         }
 
         .story-box::-webkit-scrollbar {
@@ -106,10 +146,23 @@
 
         /* Messages */
         .message {
-            margin-bottom: 24px;
+            margin-bottom: 28px;
             animation: fadeIn 0.4s ease-out;
-            padding: 16px;
+            padding: 20px 24px;
             border-radius: 8px;
+            position: relative;
+        }
+
+        /* Visual separator between messages */
+        .message:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #444, transparent);
         }
 
         @keyframes fadeIn {
@@ -142,11 +195,13 @@
         }
 
         .message-label {
-            font-size: 0.55rem;
-            margin-bottom: 10px;
+            font-size: 0.7rem;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .message-narrator .message-label {
@@ -166,9 +221,12 @@
         }
 
         .message-text {
-            font-size: 0.75rem;
-            line-height: 2.2;
-            letter-spacing: 0.03em;
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 1.15rem;
+            line-height: 1.9;
+            letter-spacing: 0.01em;
+            color: #f5f5f5;
+            font-weight: 400;
         }
 
         .message-text p {
@@ -177,6 +235,37 @@
 
         .message-text p:last-child {
             margin-bottom: 0;
+        }
+
+        /* First letter drop cap for narrator immersion */
+        .message-narrator .message-text p:first-child::first-letter {
+            font-size: 2.2em;
+            float: left;
+            line-height: 1;
+            margin-right: 8px;
+            margin-top: 4px;
+            color: #f7d354;
+            font-weight: 600;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+        }
+
+        /* Keeper uses a different style - more mechanical */
+        .message-keeper .message-text {
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0;
+        }
+
+        /* Jester is playful */
+        .message-jester .message-text {
+            font-style: italic;
+        }
+
+        /* Player actions are concise */
+        .message-player .message-text {
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
         }
 
         /* Welcome message */
@@ -194,12 +283,13 @@
         }
 
         .welcome p {
-            font-size: 0.6rem;
-            line-height: 2.2;
+            font-size: 0.75rem;
+            line-height: 2.4;
             margin-bottom: 28px;
-            max-width: 500px;
+            max-width: 550px;
             margin-left: auto;
             margin-right: auto;
+            color: #d0d0d0;
         }
 
         .welcome .begin-btn {
@@ -233,11 +323,13 @@
 
         .choices-label {
             color: #f7d354;
-            font-size: 0.55rem;
-            margin-bottom: 16px;
+            font-size: 0.7rem;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
             gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .choices-label i {
@@ -247,12 +339,13 @@
         .choice-btn {
             display: block;
             width: 100%;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             text-align: left;
-            font-size: 0.6rem !important;
-            padding: 16px 20px !important;
+            font-size: 0.75rem !important;
+            padding: 18px 24px !important;
             transition: all 0.2s ease;
             border-radius: 4px;
+            line-height: 1.6;
         }
 
         .choice-btn:last-child {
@@ -280,11 +373,13 @@
 
         .input-label {
             color: #209cee;
-            font-size: 0.55rem;
-            margin-bottom: 16px;
+            font-size: 0.7rem;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
             gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .input-label i {
@@ -298,14 +393,14 @@
 
         .input-row .nes-input {
             flex: 1;
-            font-size: 0.6rem !important;
-            padding: 12px !important;
+            font-size: 0.75rem !important;
+            padding: 14px !important;
         }
 
         .input-row .nes-btn {
-            font-size: 0.55rem !important;
+            font-size: 0.7rem !important;
             white-space: nowrap;
-            padding: 12px 20px !important;
+            padding: 14px 24px !important;
         }
 
         /* Loading */
@@ -446,10 +541,30 @@
             opacity: 0.6;
         }
 
-        /* Responsive */
+        /* Responsive - Tablet */
+        @media (max-width: 768px) {
+            .reading-mode-toggle {
+                top: 12px;
+                right: 12px;
+                padding: 8px 12px;
+            }
+
+            .message-text {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Responsive - Mobile */
         @media (max-width: 600px) {
             body {
                 padding: 12px;
+            }
+
+            .reading-mode-toggle {
+                position: static;
+                display: block;
+                margin: 0 auto 16px;
+                text-align: center;
             }
 
             .title {
@@ -461,23 +576,36 @@
             }
 
             .story-box {
-                min-height: 280px;
-                max-height: 320px;
-                padding: 16px;
+                min-height: 300px;
+                max-height: 400px;
+                padding: 20px;
             }
 
             .message {
-                padding: 12px;
-                margin-bottom: 16px;
+                padding: 16px;
+                margin-bottom: 20px;
             }
 
             .message-text {
-                font-size: 0.65rem;
-                line-height: 2;
+                font-size: 1rem;
+                line-height: 1.8;
+            }
+
+            .message-label {
+                font-size: 0.6rem;
+            }
+
+            .message-narrator .message-text p:first-child::first-letter {
+                font-size: 1.8em;
             }
 
             .welcome {
                 padding: 24px 16px;
+            }
+
+            .welcome p {
+                font-size: 0.9rem;
+                font-family: 'Crimson Pro', Georgia, serif;
             }
 
             .welcome i {
@@ -493,6 +621,12 @@
                 padding: 16px;
             }
 
+            .choice-btn {
+                font-size: 0.9rem !important;
+                font-family: 'Inter', system-ui, sans-serif;
+                padding: 16px 20px !important;
+            }
+
             .input-row {
                 flex-direction: column;
             }
@@ -501,10 +635,19 @@
                 width: 100%;
             }
 
+            .input-row .nes-input {
+                font-family: 'Inter', system-ui, sans-serif;
+                font-size: 1rem !important;
+            }
+
             .session-bar {
                 flex-direction: column;
                 gap: 12px;
                 text-align: center;
+            }
+
+            body.reading-mode .message-text {
+                font-size: 1.15rem !important;
             }
         }
 
@@ -515,6 +658,11 @@
     </style>
 </head>
 <body>
+    <!-- Reading Mode Toggle -->
+    <button class="reading-mode-toggle" id="reading-toggle" title="Toggle Reading Mode">
+        <i class="ra ra-book"></i>
+    </button>
+
     <div class="container">
         <header>
             <h1 class="title"><i class="ra ra-door-open"></i> Pocket Portals</h1>
@@ -876,6 +1024,20 @@
 
         // Focus on load
         actionInput.focus();
+
+        // ===== Reading Mode Toggle =====
+        const readingToggle = document.getElementById('reading-toggle');
+        const savedReadingMode = localStorage.getItem('readingMode') === 'true';
+
+        if (savedReadingMode) {
+            document.body.classList.add('reading-mode');
+        }
+
+        readingToggle.addEventListener('click', () => {
+            document.body.classList.toggle('reading-mode');
+            const isActive = document.body.classList.contains('reading-mode');
+            localStorage.setItem('readingMode', isActive);
+        });
     </script>
 </body>
 </html>
