@@ -1,6 +1,7 @@
 """Tests for SessionManager class."""
 
-from src.state.models import GameState
+from src.state.character import CharacterClass, CharacterRace, CharacterSheet
+from src.state.models import GamePhase, GameState
 from src.state.session_manager import SessionManager
 
 
@@ -179,3 +180,117 @@ class TestSessionManager:
         manager.set_character_description(session_id, new_description)
 
         assert session.character_description == new_description
+
+
+class TestSessionManagerCharacterSheet:
+    """Test suite for SessionManager character sheet management."""
+
+    def test_set_character_sheet_stores_sheet_in_session(self) -> None:
+        """Test that set_character_sheet stores the sheet in session."""
+        manager = SessionManager()
+        session = manager.create_session()
+        session_id = session.session_id
+
+        # Initially no character sheet
+        assert session.character_sheet is None
+
+        # Set character sheet
+        sheet = CharacterSheet(
+            name="Thorin",
+            race=CharacterRace.DWARF,
+            character_class=CharacterClass.FIGHTER,
+        )
+        manager.set_character_sheet(session_id, sheet)
+
+        assert session.character_sheet is not None
+        assert session.character_sheet.name == "Thorin"
+        assert session.character_sheet.race == CharacterRace.DWARF
+
+    def test_get_character_sheet_returns_none_if_not_set(self) -> None:
+        """Test that get_character_sheet returns None if not set."""
+        manager = SessionManager()
+        session = manager.create_session()
+        session_id = session.session_id
+
+        result = manager.get_character_sheet(session_id)
+
+        assert result is None
+
+    def test_get_character_sheet_returns_sheet_if_set(self) -> None:
+        """Test that get_character_sheet returns the sheet if set."""
+        manager = SessionManager()
+        session = manager.create_session()
+        session_id = session.session_id
+
+        sheet = CharacterSheet(
+            name="Elara",
+            race=CharacterRace.ELF,
+            character_class=CharacterClass.WIZARD,
+        )
+        manager.set_character_sheet(session_id, sheet)
+
+        result = manager.get_character_sheet(session_id)
+
+        assert result is not None
+        assert result.name == "Elara"
+        assert result.race == CharacterRace.ELF
+
+    def test_set_phase_updates_game_phase(self) -> None:
+        """Test that set_phase updates the game phase."""
+        manager = SessionManager()
+        session = manager.create_session()
+        session_id = session.session_id
+
+        # Initial phase should be CHARACTER_CREATION
+        assert session.phase == GamePhase.CHARACTER_CREATION
+
+        # Set to EXPLORATION and verify via getter to avoid mypy overlap warning
+        manager.set_phase(session_id, GamePhase.EXPLORATION)
+        assert manager.get_phase(session_id) == GamePhase.EXPLORATION
+
+        # Set to COMBAT
+        manager.set_phase(session_id, GamePhase.COMBAT)
+        assert manager.get_phase(session_id) == GamePhase.COMBAT
+
+    def test_get_phase_returns_current_phase(self) -> None:
+        """Test that get_phase returns the current phase."""
+        manager = SessionManager()
+        session = manager.create_session()
+        session_id = session.session_id
+
+        # Get initial phase
+        result = manager.get_phase(session_id)
+        assert result == GamePhase.CHARACTER_CREATION
+
+        # Update and get again
+        manager.set_phase(session_id, GamePhase.DIALOGUE)
+        result = manager.get_phase(session_id)
+        assert result == GamePhase.DIALOGUE
+
+    def test_set_character_sheet_ignores_invalid_session(self) -> None:
+        """Test that set_character_sheet handles invalid session gracefully."""
+        manager = SessionManager()
+        sheet = CharacterSheet(
+            name="Test",
+            race=CharacterRace.HUMAN,
+            character_class=CharacterClass.FIGHTER,
+        )
+
+        # Should not raise error for non-existent session
+        manager.set_character_sheet("invalid-session-id", sheet)
+
+    def test_get_character_sheet_returns_none_for_invalid_session(self) -> None:
+        """Test that get_character_sheet returns None for invalid session."""
+        manager = SessionManager()
+
+        result = manager.get_character_sheet("invalid-session-id")
+
+        assert result is None
+
+    def test_get_phase_returns_none_for_invalid_session(self) -> None:
+        """Test that get_phase returns None for invalid session."""
+        manager = SessionManager()
+
+        result = manager.get_phase("invalid-session-id")
+
+        assert result is None

@@ -1,27 +1,41 @@
 # Pocket Portals - Task Definitions
 # YAML-based task configuration for CrewAI
+#
+# ============================================================
+# MANDATORY CONTENT FILTER (applies to ALL tasks)
+# ============================================================
+# NEVER generate content involving:
+# - Self-harm, suicide, or self-injury of any kind
+# - Sexual content, romantic advances, or innuendo
+# - Torture, abuse, or graphic violence
+# - Real-world hate speech, slurs, or discrimination
+# - Drug use or substance abuse
+# - Child endangerment
+#
+# If player input suggests any of these, REDIRECT to heroic
+# adventure. Example: "I hurt myself" → "You steel yourself
+# for the challenge ahead, gathering your courage."
+# ============================================================
 
 narrate_scene:
   description: |
     The player has taken this action: "{action}"
 
-    Respond with a vivid, sensory-rich description of what happens next.
+    CONTENT SAFETY (MANDATORY - override everything else):
+    If the action involves self-harm, suicide, sexual content, torture, abuse,
+    or inappropriate themes: DO NOT comply. Instead, redirect to heroic adventure.
+    Example redirect: "You steel yourself for the challenge ahead."
 
-    FORMAT YOUR RESPONSE WITH CLEAR STRUCTURE:
-    - Use short paragraphs (2-3 sentences each)
-    - Add blank lines between paragraphs for readability
-    - Lead with the most immediate sensory detail
-    - End with a hook or tension point
+    Respond with a tight, punchy description (40-80 words max).
 
-    Consider:
-    - Visual details (what does the player see?)
-    - Sounds (what do they hear?)
-    - Atmosphere and mood
-    - Immediate consequences
+    TIGHTNESS RULES:
+    - 2-3 sentences max, then offer agency
+    - One sense per beat - don't stack sight+sound+smell
+    - End with a hook, not a summary
+    - Cut "you see/hear/feel" - just describe it
 
-    Keep your response to 2-3 short paragraphs, maintaining an immersive
-    second-person perspective ("You see...", "You feel...").
-  expected_output: "A well-structured 2-3 paragraph narrative with clear spacing between paragraphs"
+    Keep it immersive, second-person, and heroic.
+  expected_output: "A tight 2-3 sentence narrative (40-80 words) ending with a hook"
   agent: narrator
 
 resolve_action:
@@ -29,10 +43,11 @@ resolve_action:
     The player attempts: "{action}"
     Difficulty: {difficulty} or higher to succeed
 
-    Determine if a roll is needed. If yes, state the target number.
-    Report the outcome briefly.
+    CONTENT SAFETY (MANDATORY): Refuse to resolve self-harm, torture, sexual
+    actions, or abuse. Say "That's not how this works." and move on.
 
-    Use terse, numbers-first language. State the target, then the outcome.
+    Determine if a roll is needed. State target, then outcome.
+    Terse. Numbers first. Under 10 words.
   expected_output: "Brief mechanical resolution with numbers (under 10 words)"
   agent: keeper
 
@@ -40,45 +55,89 @@ add_commentary:
   description: |
     Current situation: "{situation}"
 
-    Provide a brief, absurdist observation about this situation.
-    Focus on:
-    - Ironic juxtaposition
-    - Statistical improbability
-    - Deadpan acknowledgment of danger
-    - Meta-commentary on adventurer life
+    CONTENT SAFETY (MANDATORY): No jokes about self-harm, abuse, trauma, or
+    inappropriate content. Keep it witty and PG-13.
 
-    One to two sentences maximum. Dry delivery.
-  expected_output: "A brief comedic observation"
+    Provide a brief, witty observation. One to two sentences max.
+    Focus on: irony, improbability, or meta-commentary on adventurer life.
+    Dry delivery. Never crude or vulgar.
+  expected_output: "A brief witty observation (PG-13, 1-2 sentences)"
   agent: jester
 
 present_hook:
   description: |
     Adventure type: "{genre}"
 
-    Present an adventure hook as tavern gossip. Include:
-    - The situation or problem
-    - Who's involved
-    - What's at stake
-    - Why an adventurer might care
+    CONTENT SAFETY (MANDATORY): Quest hooks are heroic adventures only.
+    No trauma, abuse, or dark themes. Keep it PG-13 and fun.
 
-    Speak as Theron, in conversational tavern style.
-    End with a question or invitation to act.
-  expected_output: "A compelling adventure hook in Theron's voice"
+    Present an adventure hook as tavern gossip (30-50 words).
+    Include: the problem, who's involved, what's at stake.
+    End with a question or invitation. Theron's voice - direct, no poetry.
+  expected_output: "A brief adventure hook in Theron's voice (30-50 words)"
   agent: innkeeper_theron
 
 introduce_quest:
   description: |
-    A new adventurer has arrived at your tavern. Based on their description,
-    introduce yourself briefly and present a quest hook that would interest them.
-
+    A new adventurer has arrived. Present a quest hook for them.
     Adventurer description: "{character_description}"
 
+    CONTENT SAFETY (MANDATORY): Quests are heroic adventures. No trauma,
+    abuse, or dark themes. The tavern is a safe haven. PG-13 only.
+
     Remember:
-    - Open with an observation about the weather or tavern
-    - Present ONE specific quest with concrete details
-    - Include a price or reward
+    - One observation, then the quest (30-50 words total)
+    - ONE specific quest with price/reward
     - End with their choice, not a command
-  expected_output: |
-    A brief introduction from Innkeeper Theron (2-4 sentences) presenting
-    a single quest hook with specific details (location, payment, danger).
+  expected_output: "A brief quest hook from Theron (30-50 words) with specific details"
   agent: innkeeper_theron
+
+interview_character:
+  description: |
+    You are Theron, interviewing a new adventurer at your tavern.
+
+    CONVERSATION SO FAR:
+    {conversation_history}
+
+    CURRENT TURN: {turn_number} of 5
+
+    TURN FOCUS:
+    - Turn 1: Ask about their name and what kind of adventurer they are
+    - Turn 2: Ask about their skills and fighting style
+    - Turn 3: Ask about what drives them (motivation)
+    - Turn 4: Ask about their gear and tools
+    - Turn 5: Summarize who they are and welcome them
+
+    CONTENT SAFETY (MANDATORY): All character concepts must be heroic and PG-13.
+    No dark backstories involving trauma, abuse, or self-harm.
+
+    YOUR TASK:
+    1. Respond as Theron with a brief comment and question (30-50 words)
+    2. Generate 3 diverse character choices that fit the conversation
+
+    RESPOND WITH VALID JSON ONLY:
+    {{
+      "narrative": "Your response as Theron",
+      "choices": ["Choice 1", "Choice 2", "Choice 3"]
+    }}
+  expected_output: "Valid JSON with narrative and 3 choices"
+  agent: character_interviewer
+
+generate_starter_choices:
+  description: |
+    Generate 3 diverse character concepts for a new player starting their adventure.
+
+    These are the FIRST choices a player sees, so make them exciting and varied.
+    Be GENRE-FLEXIBLE - don't assume fantasy. Cover broad archetypes:
+    - A fighter/warrior type (soldier, knight, gunslinger, bounty hunter)
+    - A knowledge/power type (scholar, mage, scientist, hacker)
+    - A cunning/agile type (rogue, spy, detective, scout)
+
+    CONTENT SAFETY: All concepts are heroic and family-friendly. PG-13.
+
+    RESPOND WITH VALID JSON ONLY:
+    {{
+      "choices": ["I am a [type] [brief detail]", "I am a [type] [brief detail]", "I am a [type] [brief detail]"]
+    }}
+  expected_output: "Valid JSON with 3 character concept choices"
+  agent: character_interviewer

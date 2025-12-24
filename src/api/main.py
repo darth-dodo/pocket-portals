@@ -17,20 +17,83 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
+from src.agents.character_interviewer import CharacterInterviewerAgent
 from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
 from src.engine import AgentRouter, TurnExecutor
-from src.state import GameState, SessionManager
+from src.state import (
+    CharacterClass,
+    CharacterRace,
+    CharacterSheet,
+    GamePhase,
+    GameState,
+    SessionManager,
+)
 
 load_dotenv()
+
+# Content safety filter - redirects inappropriate input
+BLOCKED_PATTERNS = [
+    # Self-harm
+    "hurt myself",
+    "kill myself",
+    "harm myself",
+    "cut myself",
+    "suicide",
+    "self-harm",
+    "self harm",
+    "end my life",
+    "end it all",
+    # Sexual content
+    "sex",
+    "seduce",
+    "kiss",
+    "romance",
+    "make love",
+    "naked",
+    "undress",
+    "sexual",
+    "erotic",
+    "intimate",
+    # Violence/torture
+    "torture",
+    "mutilate",
+    "rape",
+    "abuse",
+    "molest",
+    # Hate speech
+    "slur",
+    "racist",
+    "nazi",
+]
+
+SAFE_REDIRECT = "take a deep breath and focus on the adventure ahead"
+
+
+def filter_content(action: str) -> str:
+    """Filter inappropriate content from player actions.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        Original action if safe, or redirect action if inappropriate
+    """
+    action_lower = action.lower()
+    for pattern in BLOCKED_PATTERNS:
+        if pattern in action_lower:
+            return SAFE_REDIRECT
+    return action
+
 
 # Global state
 narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
+character_interviewer: CharacterInterviewerAgent | None = None
 session_manager = SessionManager()
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
@@ -53,6 +116,20 @@ WELCOME_NARRATIVE = (
     "Three paths shimmer with possibility, each promising adventure, danger, "
     "and glory. Choose wisely, brave soul, for your legend begins with a single step..."
 )
+
+# Character creation narrative - innkeeper greeting
+CHARACTER_CREATION_NARRATIVE = (
+    "You push through the tavern door, escaping the cold night. The warmth of the fire "
+    "and the smell of ale wash over you. Behind the bar, a weathered innkeeper looks up "
+    "with knowing eyes. 'Well now,' he says, wiping a mug, 'another soul seeking adventure. "
+    "Before I point you toward trouble, tell me - who are you, traveler?'"
+)
+
+CHARACTER_CREATION_CHOICES = [
+    "I am a battle-hardened dwarf",
+    "I am an elven mage seeking knowledge",
+    "I am a human rogue with secrets",
+]
 
 
 def get_session(session_id: str | None) -> GameState:
@@ -137,12 +214,13 @@ class ComplicateResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Initialize agents on startup."""
-    global narrator, innkeeper, keeper, jester, turn_executor
+    global narrator, innkeeper, keeper, jester, character_interviewer, turn_executor
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
         keeper = KeeperAgent()
         jester = JesterAgent()
+        character_interviewer = CharacterInterviewerAgent()
         turn_executor = TurnExecutor(
             narrator=narrator,
             keeper=keeper,
@@ -153,6 +231,7 @@ async def lifespan(app: FastAPI) -> Any:
     innkeeper = None
     keeper = None
     jester = None
+    character_interviewer = None
     turn_executor = None
 
 
@@ -186,32 +265,64 @@ async def start_adventure(
     character: str = Query(
         default="", description="Optional character description for personalization"
     ),
+    skip_creation: bool = Query(
+        default=False, description="Skip character creation and start with default"
+    ),
 ) -> NarrativeResponse:
     """Start a new adventure with starter choices.
 
     Returns 3 starter choices from the pool to begin the adventure.
     Use shuffle=true to randomize which choices are presented.
     Optionally provide a character description for personalized narrative.
+    Use skip_creation=true to skip character creation with a default character.
     """
     # Create new session
     state = get_session(None)
 
-    # Select 3 choices from the pool
-    if shuffle:
-        choices = random.sample(STARTER_CHOICES_POOL, 3)
-    else:
-        # Default: first 3 choices for consistency
-        choices = STARTER_CHOICES_POOL[:3]
+    if skip_creation:
+        # Create default character and skip to exploration
+        default_character = CharacterSheet(
+            name="Adventurer",
+            race=CharacterRace.HUMAN,
+            character_class=CharacterClass.FIGHTER,
+        )
+        session_manager.set_character_sheet(state.session_id, default_character)
+        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
 
-    # Store choices and character description in session state
-    session_manager.set_choices(state.session_id, choices)
+        # Select 3 choices from the adventure pool
+        if shuffle:
+            choices = random.sample(STARTER_CHOICES_POOL, 3)
+        else:
+            choices = STARTER_CHOICES_POOL[:3]
+
+        session_manager.set_choices(state.session_id, choices)
+        if character:
+            session_manager.set_character_description(state.session_id, character)
+
+        return NarrativeResponse(
+            narrative=WELCOME_NARRATIVE,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Start character creation flow
+    session_manager.set_creation_turn(state.session_id, 1)
+
+    # Generate dynamic starter choices using the agent
+    if character_interviewer:
+        starter_choices = character_interviewer.generate_starter_choices()
+    else:
+        starter_choices = CHARACTER_CREATION_CHOICES
+
+    session_manager.set_choices(state.session_id, starter_choices)
+
     if character:
         session_manager.set_character_description(state.session_id, character)
 
     return NarrativeResponse(
-        narrative=WELCOME_NARRATIVE,
+        narrative=CHARACTER_CREATION_NARRATIVE,
         session_id=state.session_id,
-        choices=choices,
+        choices=starter_choices,
     )
 
 
@@ -227,6 +338,13 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
         action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
     else:
         action = request.action or ""
+
+    # Apply content safety filter
+    action = filter_content(action)
+
+    # Handle CHARACTER_CREATION phase specially
+    if state.phase == GamePhase.CHARACTER_CREATION:
+        return await _handle_character_creation(state, action)
 
     if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
@@ -263,6 +381,184 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
 
     return NarrativeResponse(
         narrative=result.narrative, session_id=state.session_id, choices=result.choices
+    )
+
+
+async def _handle_character_creation(
+    state: GameState, action: str
+) -> NarrativeResponse:
+    """Handle actions during character creation phase.
+
+    Args:
+        state: Current game state
+        action: Player's action/response
+
+    Returns:
+        NarrativeResponse with innkeeper's next question or character sheet
+    """
+    # Increment creation turn
+    new_turn = session_manager.increment_creation_turn(state.session_id)
+
+    # Store the exchange
+    session_manager.add_exchange(state.session_id, action, "")
+
+    # Check if user wants to skip
+    if "skip" in action.lower():
+        # Create default character and transition to exploration
+        default_character = CharacterSheet(
+            name="Adventurer",
+            race=CharacterRace.HUMAN,
+            character_class=CharacterClass.FIGHTER,
+        )
+        session_manager.set_character_sheet(state.session_id, default_character)
+        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+        choices = STARTER_CHOICES_POOL[:3]
+        session_manager.set_choices(state.session_id, choices)
+
+        return NarrativeResponse(
+            narrative=WELCOME_NARRATIVE,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # If we've completed 5 turns, generate character sheet and transition
+    if new_turn >= 5:
+        # Build character from conversation history
+        character_sheet = _generate_character_from_history(state)
+        session_manager.set_character_sheet(state.session_id, character_sheet)
+        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+        choices = STARTER_CHOICES_POOL[:3]
+        session_manager.set_choices(state.session_id, choices)
+
+        narrative = (
+            f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+            f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+            "I've seen your kind before. There's work for those willing to take risks.' "
+            "He leans closer. 'Choose your path...'"
+        )
+
+        return NarrativeResponse(
+            narrative=narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Build conversation history for context
+    history_lines = []
+    for entry in state.conversation_history:
+        if entry.get("action"):
+            history_lines.append(f"Player: {entry['action']}")
+        if entry.get("narrative"):
+            history_lines.append(f"Innkeeper: {entry['narrative']}")
+    conversation_history = "\n".join(history_lines)
+
+    # Use agent to generate dynamic interview response
+    if character_interviewer:
+        interview_result = character_interviewer.interview_turn(
+            turn_number=new_turn,
+            conversation_history=conversation_history,
+        )
+        narrative = interview_result["narrative"]
+        choices = interview_result["choices"]
+    else:
+        # Fallback to static responses
+        narrative = (
+            "The innkeeper waits for your response. 'Tell me more about yourself.'"
+        )
+        choices = [
+            "I am a warrior",
+            "I am a scholar",
+            "I am a wanderer",
+        ]
+
+    session_manager.set_choices(state.session_id, choices)
+
+    return NarrativeResponse(
+        narrative=narrative,
+        session_id=state.session_id,
+        choices=choices,
+    )
+
+
+def _generate_character_from_history(state: GameState) -> CharacterSheet:
+    """Generate a character sheet from conversation history.
+
+    For MVP, this creates a basic character. Future versions will use
+    InnkeeperAgent to parse the conversation and generate appropriate stats.
+
+    Args:
+        state: Game state with conversation history
+
+    Returns:
+        Generated CharacterSheet
+    """
+    # Extract character info from conversation history
+    history_text = " ".join(
+        entry.get("action", "") for entry in state.conversation_history
+    ).lower()
+
+    # Detect race from keywords
+    race = CharacterRace.HUMAN
+    if "elf" in history_text:
+        race = CharacterRace.ELF
+    elif "dwarf" in history_text:
+        race = CharacterRace.DWARF
+    elif "halfling" in history_text:
+        race = CharacterRace.HALFLING
+    elif "dragonborn" in history_text or "dragon" in history_text:
+        race = CharacterRace.DRAGONBORN
+    elif "tiefling" in history_text:
+        race = CharacterRace.TIEFLING
+
+    # Detect class from keywords
+    character_class = CharacterClass.FIGHTER
+    if "wizard" in history_text or "magic" in history_text or "mage" in history_text:
+        character_class = CharacterClass.WIZARD
+    elif (
+        "rogue" in history_text or "thief" in history_text or "stealth" in history_text
+    ):
+        character_class = CharacterClass.ROGUE
+    elif (
+        "cleric" in history_text or "priest" in history_text or "healer" in history_text
+    ):
+        character_class = CharacterClass.CLERIC
+    elif (
+        "ranger" in history_text or "archer" in history_text or "hunter" in history_text
+    ):
+        character_class = CharacterClass.RANGER
+    elif (
+        "bard" in history_text
+        or "musician" in history_text
+        or "performer" in history_text
+    ):
+        character_class = CharacterClass.BARD
+
+    # Extract name if mentioned (simple heuristic)
+    name = "Adventurer"
+    for entry in state.conversation_history:
+        action_text = entry.get("action", "")
+        # Look for "I am X" or "my name is X" patterns
+        if "i am " in action_text.lower():
+            parts = action_text.lower().split("i am ")
+            if len(parts) > 1:
+                potential_name = parts[1].split()[0].strip(".,!?")
+                if potential_name and len(potential_name) > 1:
+                    name = potential_name.title()
+                    break
+        elif "name is " in action_text.lower():
+            parts = action_text.lower().split("name is ")
+            if len(parts) > 1:
+                potential_name = parts[1].split()[0].strip(".,!?")
+                if potential_name and len(potential_name) > 1:
+                    name = potential_name.title()
+                    break
+
+    return CharacterSheet(
+        name=name,
+        race=race,
+        character_class=character_class,
     )
 
 
@@ -352,6 +648,9 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
         action = choices[request.choice_index - 1]
     else:
         action = request.action or ""
+
+    # Apply content safety filter
+    action = filter_content(action)
 
     async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
         """Generate SSE events as agents respond."""

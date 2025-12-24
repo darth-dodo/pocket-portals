@@ -1,8 +1,14 @@
 """Session manager for game state persistence."""
 
-import uuid
+from __future__ import annotations
 
-from src.state.models import GameState
+import uuid
+from typing import TYPE_CHECKING
+
+from src.state.models import GamePhase, GameState
+
+if TYPE_CHECKING:
+    from src.state.character import CharacterSheet
 
 
 class SessionManager:
@@ -119,3 +125,93 @@ class SessionManager:
                 state.turns_since_jester = 0
             else:
                 state.turns_since_jester += 1
+
+    def set_character_sheet(self, session_id: str, sheet: CharacterSheet) -> None:
+        """Set the character sheet for a session.
+
+        Args:
+            session_id: Session identifier
+            sheet: CharacterSheet instance to store
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            state.character_sheet = sheet
+
+    def get_character_sheet(self, session_id: str) -> CharacterSheet | None:
+        """Get the character sheet for a session.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            CharacterSheet if set, None otherwise
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            return state.character_sheet
+        return None
+
+    def set_phase(self, session_id: str, phase: GamePhase) -> None:
+        """Set the game phase for a session.
+
+        Args:
+            session_id: Session identifier
+            phase: GamePhase value to set
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            state.phase = phase
+
+    def get_phase(self, session_id: str) -> GamePhase | None:
+        """Get the current game phase for a session.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            GamePhase if session exists, None otherwise
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            return state.phase
+        return None
+
+    def set_creation_turn(self, session_id: str, turn: int) -> None:
+        """Set the character creation turn number.
+
+        Args:
+            session_id: Session identifier
+            turn: Turn number (0-5)
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            state.creation_turn = min(5, max(0, turn))
+
+    def increment_creation_turn(self, session_id: str) -> int:
+        """Increment the character creation turn and return new value.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            New turn number after incrementing (capped at 5)
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            state.creation_turn = min(5, state.creation_turn + 1)
+            return state.creation_turn
+        return 0
+
+    def get_creation_turn(self, session_id: str) -> int:
+        """Get the current character creation turn.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            Current turn number (0 if session doesn't exist)
+        """
+        state = self._sessions.get(session_id)
+        if state:
+            return state.creation_turn
+        return 0
