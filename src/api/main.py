@@ -657,6 +657,31 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
     # Apply content safety filter
     action = filter_content(action)
 
+    # Handle CHARACTER_CREATION phase - redirect to non-streaming endpoint
+    if state.phase == GamePhase.CHARACTER_CREATION:
+        result = await _handle_character_creation(state, action)
+
+        async def creation_generator() -> AsyncGenerator[dict[str, Any], None]:
+            # Emit innkeeper response as narrator-style message
+            yield {
+                "event": "agent_start",
+                "data": json.dumps({"agent": "narrator"}),
+            }
+            yield {
+                "event": "agent_response",
+                "data": json.dumps({"agent": "narrator", "content": result.narrative}),
+            }
+            yield {
+                "event": "choices",
+                "data": json.dumps({"choices": result.choices}),
+            }
+            yield {
+                "event": "complete",
+                "data": json.dumps({"session_id": result.session_id}),
+            }
+
+        return EventSourceResponse(creation_generator())
+
     async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
         """Generate SSE events as agents respond."""
         try:
