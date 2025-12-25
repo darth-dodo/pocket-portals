@@ -137,14 +137,45 @@ def get_session(session_id: str | None) -> GameState:
     return session_manager.get_or_create_session(session_id)
 
 
-def build_context(history: list[dict[str, str]]) -> str:
-    """Format conversation history for LLM context."""
-    if not history:
-        return ""
-    lines = ["Previous conversation:"]
-    for turn in history:
-        lines.append(f"- Player: {turn['action']}")
-        lines.append(f"- Narrator: {turn['narrative']}")
+def build_context(
+    history: list[dict[str, str]],
+    character_sheet: Any = None,
+    character_description: str = "",
+) -> str:
+    """Format conversation history and character info for LLM context.
+
+    Args:
+        history: List of conversation exchanges
+        character_sheet: Optional CharacterSheet with structured character data
+        character_description: Optional text description of character
+
+    Returns:
+        Formatted context string for LLM
+    """
+    lines = []
+
+    # Include character information for continuity
+    if character_sheet:
+        lines.append("Character:")
+        lines.append(f"- Name: {character_sheet.name}")
+        lines.append(f"- Race: {character_sheet.race.value}")
+        lines.append(f"- Class: {character_sheet.character_class.value}")
+        if character_sheet.background:
+            lines.append(f"- Background: {character_sheet.background}")
+        lines.append("")
+
+    # Include character description if no sheet but description exists
+    elif character_description:
+        lines.append(f"Character: {character_description}")
+        lines.append("")
+
+    # Include conversation history
+    if history:
+        lines.append("Previous conversation:")
+        for turn in history:
+            lines.append(f"- Player: {turn['action']}")
+            lines.append(f"- Narrator: {turn['narrative']}")
+
     return "\n".join(lines)
 
 
@@ -363,7 +394,11 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     )
 
     # Execute agents and get aggregated result
-    context = build_context(state.conversation_history)
+    context = build_context(
+        state.conversation_history,
+        character_sheet=state.character_sheet,
+        character_description=state.character_description,
+    )
     result = await turn_executor.execute_async(
         action=action,
         routing=routing,
@@ -603,7 +638,11 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
     context = ""
     if request.session_id:
         state = get_session(request.session_id)
-        context = build_context(state.conversation_history)
+        context = build_context(
+            state.conversation_history,
+            character_sheet=state.character_sheet,
+            character_description=state.character_description,
+        )
 
     result = keeper.resolve_action(
         action=request.action, context=context, difficulty=request.difficulty
@@ -627,7 +666,11 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
     context = ""
     if request.session_id:
         state = get_session(request.session_id)
-        context = build_context(state.conversation_history)
+        context = build_context(
+            state.conversation_history,
+            character_sheet=state.character_sheet,
+            character_description=state.character_description,
+        )
 
     complication = jester.add_complication(situation=request.situation, context=context)
     return ComplicateResponse(complication=complication)
@@ -657,20 +700,32 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
     # Apply content safety filter
     action = filter_content(action)
 
-    # Handle CHARACTER_CREATION phase - redirect to non-streaming endpoint
+    # Handle CHARACTER_CREATION phase with character-by-character streaming
     if state.phase == GamePhase.CHARACTER_CREATION:
         result = await _handle_character_creation(state, action)
 
         async def creation_generator() -> AsyncGenerator[dict[str, Any], None]:
-            # Emit innkeeper response as narrator-style message
+            # Signal agent starting
             yield {
                 "event": "agent_start",
                 "data": json.dumps({"agent": "narrator"}),
             }
+
+            # Stream narrative character by character
+            for char in result.narrative:
+                yield {
+                    "event": "agent_chunk",
+                    "data": json.dumps({"agent": "narrator", "chunk": char}),
+                }
+                await asyncio.sleep(0.02)  # 20ms delay for typewriter effect
+
+            # Signal narrative complete
             yield {
                 "event": "agent_response",
                 "data": json.dumps({"agent": "narrator", "content": result.narrative}),
             }
+
+            # Send choices
             yield {
                 "event": "choices",
                 "data": json.dumps({"choices": result.choices}),
@@ -712,7 +767,11 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
             }
 
             # Build initial context from conversation history
-            accumulated_context = build_context(state.conversation_history)
+            accumulated_context = build_context(
+                state.conversation_history,
+                character_sheet=state.character_sheet,
+                character_description=state.character_description,
+            )
 
             # Get agent instances
             agents = {
@@ -754,6 +813,14 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
 
                     narrative_parts.append(response)
 
+                    # Stream response character by character
+                    for char in response:
+                        yield {
+                            "event": "agent_chunk",
+                            "data": json.dumps({"agent": agent_name, "chunk": char}),
+                        }
+                        await asyncio.sleep(0.015)  # 15ms delay for typewriter effect
+
                     # Accumulate context for subsequent agents
                     label = agent_labels.get(agent_name, agent_name.title())
                     if accumulated_context:
@@ -787,6 +854,14 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
                 )
 
                 narrative_parts.append(jester_response)
+
+                # Stream jester response character by character
+                for char in jester_response:
+                    yield {
+                        "event": "agent_chunk",
+                        "data": json.dumps({"agent": "jester", "chunk": char}),
+                    }
+                    await asyncio.sleep(0.015)  # 15ms delay for typewriter effect
 
                 yield {
                     "event": "agent_response",

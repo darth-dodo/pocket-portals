@@ -241,6 +241,19 @@
             margin-bottom: 0;
         }
 
+        /* Blinking cursor for streaming text */
+        .streaming-text::after {
+            content: '▌';
+            color: #f7d354;
+            animation: blink 0.7s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
         /* First letter drop cap for narrator immersion */
         .message-narrator .message-text p:first-child::first-letter {
             font-size: 2.2em;
@@ -981,6 +994,11 @@
             player: { label: '🧙 You', icon: 'ra-player' }
         };
 
+        // Track the current streaming message element
+        let streamingMessageEl = null;
+        let streamingTextEl = null;
+        let streamingContent = '';
+
         function addMessage(text, type) {
             // Remove welcome if present
             const welcome = storyBox.querySelector('.welcome');
@@ -1001,6 +1019,52 @@
 
             storyBox.appendChild(div);
             storyBox.scrollTop = storyBox.scrollHeight;
+        }
+
+        function startStreamingMessage(type) {
+            // Remove welcome if present
+            const welcome = storyBox.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            // Create the message container
+            streamingMessageEl = document.createElement('div');
+            streamingMessageEl.className = `message message-${type}`;
+
+            const config = agentConfig[type] || agentConfig.narrator;
+
+            streamingMessageEl.innerHTML = `
+                <div class="message-label"><i class="ra ${config.icon}"></i> ${config.label}</div>
+                <div class="message-text"><p class="streaming-text"></p></div>
+            `;
+
+            storyBox.appendChild(streamingMessageEl);
+            streamingTextEl = streamingMessageEl.querySelector('.streaming-text');
+            streamingContent = '';
+        }
+
+        function appendStreamingChar(char) {
+            if (!streamingTextEl) return;
+
+            streamingContent += char;
+            // Convert newlines for display
+            const formattedText = streamingContent
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            streamingTextEl.innerHTML = formattedText;
+
+            // Keep scrolled to bottom
+            storyBox.scrollTop = storyBox.scrollHeight;
+        }
+
+        function endStreamingMessage() {
+            // Remove blinking cursor by removing the streaming-text class
+            if (streamingTextEl) {
+                streamingTextEl.classList.remove('streaming-text');
+            }
+            // Clear streaming state
+            streamingMessageEl = null;
+            streamingTextEl = null;
+            streamingContent = '';
         }
 
         function updateChoices(choices) {
@@ -1116,9 +1180,20 @@
                                 console.log('Routing:', data);
                             } else if (currentEventType === 'agent_start') {
                                 showAgentIndicator(data.agent);
+                                // Start streaming message for this agent
+                                startStreamingMessage(data.agent);
+                            } else if (currentEventType === 'agent_chunk') {
+                                // Append character to streaming message
+                                appendStreamingChar(data.chunk);
                             } else if (currentEventType === 'agent_response') {
                                 hideAgentIndicator();
-                                addMessage(data.content, data.agent);
+                                // If we were streaming, just clean up (message already shown)
+                                // If not streaming, add the full message
+                                if (streamingMessageEl) {
+                                    endStreamingMessage();
+                                } else {
+                                    addMessage(data.content, data.agent);
+                                }
                             } else if (currentEventType === 'choices') {
                                 updateChoices(data.choices);
                             } else if (currentEventType === 'complete') {
