@@ -422,7 +422,25 @@ class AgentInvoker:
 | **Response quality voting** | Single narrator maintains consistency | If narrative quality varies significantly |
 | **Agent memory isolation** | Shared context is simpler | If agents conflict on world state |
 
-### 6.2 Explicit Extension Points
+### 6.2 What HAS Been Built (Implemented Features)
+
+**Streaming Implementation**:
+- SSE (Server-Sent Events) for real-time narrative delivery
+- Character-by-character streaming via `agent_chunk` events
+- Frontend functions: `startStreamingMessage()`, `appendStreamingChar()`, `endStreamingMessage()`
+- Smooth user experience with progressive text rendering
+
+**Context Management**:
+- `build_context()` function accepts `character_sheet` and `character_description` parameters
+- Full conversation history passed to agents for continuity
+- Session-based state management for character persistence
+
+**Model Configuration**:
+- All agents use Claude 3.5 Haiku (claude-3-5-haiku-20241022)
+- Optimized for response speed and cost efficiency
+- Consistent quality across all agent types
+
+### 6.3 Explicit Extension Points
 
 **Design for Future**:
 

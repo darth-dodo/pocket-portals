@@ -1042,6 +1042,10 @@
             streamingContent = '';
         }
 
+        // Throttle scroll updates for smooth streaming
+        let lastScrollTime = 0;
+        const SCROLL_THROTTLE_MS = 100; // Only scroll every 100ms max
+
         function appendStreamingChar(char) {
             if (!streamingTextEl) return;
 
@@ -1052,8 +1056,15 @@
                 .replace(/\n/g, '<br>');
             streamingTextEl.innerHTML = formattedText;
 
-            // Keep scrolled to bottom
-            storyBox.scrollTop = storyBox.scrollHeight;
+            // Throttle scroll updates for smooth experience
+            const now = Date.now();
+            if (now - lastScrollTime >= SCROLL_THROTTLE_MS) {
+                lastScrollTime = now;
+                // Use requestAnimationFrame for smooth scrolling
+                requestAnimationFrame(() => {
+                    storyBox.scrollTop = storyBox.scrollHeight;
+                });
+            }
         }
 
         function endStreamingMessage() {

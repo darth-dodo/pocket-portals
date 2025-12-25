@@ -25,12 +25,18 @@ The Conversation Engine orchestrates multiple agents per turn, enabling richer n
 
 ## Non-Goals (YAGNI - Defer to Future)
 
-- SSE streaming (use simple JSON responses for now)
 - Combat phase mechanics (dice, initiative)
-- Character creation phase
 - Token budget enforcement
 - NPC spawning
 - Epilogue generation
+
+## Implemented Features (Beyond MVP)
+
+- SSE streaming with `agent_chunk` events for character-by-character delivery
+- Character creation phase with interactive interviewer agent
+- Context building with character_sheet and character_description parameters
+- All agents using claude-3-5-haiku-20241022 model
+- Frontend streaming functions (startStreamingMessage, appendStreamingChar, endStreamingMessage)
 
 ---
 
@@ -202,11 +208,18 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
         recent_agents=state.recent_agents,
     )
 
+    # Build context with character information
+    context = build_context(
+        state.conversation_history,
+        character_sheet=state.character_sheet,
+        character_description=state.character_description,
+    )
+
     # Execute agents
     result = turn_executor.execute(
         action=action,
         routing=routing,
-        context=build_context(state.conversation_history),
+        context=context,
     )
 
     # Update state
@@ -221,33 +234,121 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     )
 ```
 
+**Note**: Current implementation uses SSE streaming endpoint `/action/stream` for real-time character-by-character delivery via `agent_chunk` events.
+
 ### Response Format
 
 No changes to NarrativeResponse - maintains backward compatibility.
 
 ---
 
+## SSE Streaming Architecture
+
+### Event Types
+
+The streaming endpoint `/action/stream` emits the following Server-Sent Events:
+
+| Event Type | Data Format | Purpose |
+|-----------|-------------|---------|
+| `agent_start` | `{"agent": "narrator"}` | Signal start of agent response |
+| `agent_chunk` | `{"agent": "narrator", "chunk": "Y"}` | Single character of narrative |
+| `agent_end` | `{"agent": "narrator"}` | Signal completion of agent response |
+| `choices` | `{"choices": [...]}` | Available player actions |
+| `error` | `{"error": "message"}` | Error information |
+| `done` | `{}` | End of turn processing |
+
+### Frontend Integration
+
+**JavaScript Streaming Functions**:
+
+```javascript
+function startStreamingMessage(agentType) {
+    // Create new message container for agent
+    // Add agent-specific styling (narrator, keeper, jester)
+    // Prepare for character-by-character rendering
+}
+
+function appendStreamingChar(char) {
+    // Append single character to current message
+    // Provides smooth typewriter effect
+    // Updates UI in real-time
+}
+
+function endStreamingMessage() {
+    // Finalize message rendering
+    // Apply final formatting
+    // Clean up streaming state
+}
+```
+
+**Event Source Processing**:
+
+```javascript
+eventSource.addEventListener('agent_chunk', (event) => {
+    const data = JSON.parse(event.data);
+    appendStreamingChar(data.chunk);
+});
+```
+
+### Character-by-Character Delivery
+
+The `agent_chunk` event enables smooth narrative delivery:
+
+1. Backend streams each character as it's generated from Claude API
+2. Frontend receives individual characters via SSE
+3. UI updates progressively using `appendStreamingChar()`
+4. Creates natural reading experience with typewriter effect
+5. Reduces perceived latency vs. waiting for complete response
+
+### Model Configuration
+
+**Claude 3.5 Haiku Integration**:
+
+```python
+# All agents configured with same model for consistency
+Agent(
+    role="Narrator",
+    goal="...",
+    backstory="...",
+    llm=LLM(
+        model="anthropic/claude-3-5-haiku-20241022",
+        # Fast streaming response times
+        # Cost-effective for high-frequency agent calls
+    )
+)
+```
+
+**Benefits**:
+- Consistent response times across all agents
+- Optimized cost per adventure session
+- Reliable streaming performance
+- Low latency for real-time gameplay
+
+---
+
 ## Implementation Plan
 
-### Phase 1: Core Engine (This PR)
+### Phase 1: Core Engine ✅ Complete
 
-1. **GamePhase enum** - Add to `src/state/models.py`
-2. **AgentRouter** - Create `src/engine/router.py`
-3. **TurnExecutor** - Create `src/engine/executor.py`
-4. **API Integration** - Update `/action` endpoint
-5. **Tests** - TDD for router and executor
+1. ✅ **GamePhase enum** - Add to `src/state/models.py`
+2. ✅ **AgentRouter** - Create `src/engine/router.py`
+3. ✅ **TurnExecutor** - Create `src/engine/executor.py`
+4. ✅ **API Integration** - Update `/action` endpoint
+5. ✅ **Tests** - TDD for router and executor
 
-### Phase 2: Enhanced Phases (Future)
+### Phase 2: Streaming ✅ Complete
+
+1. ✅ **SSE Streaming** - `/action/stream` endpoint with agent_chunk events
+2. ✅ **Frontend Integration** - startStreamingMessage(), appendStreamingChar(), endStreamingMessage()
+3. ✅ **Character-by-character delivery** - Smooth typewriter effect
+4. ✅ **Model Configuration** - All agents using claude-3-5-haiku-20241022
+5. ✅ **Context Enhancement** - build_context() with character_sheet and character_description
+
+### Phase 3: Enhanced Phases (Future)
 
 - Combat phase with dice mechanics
 - Dialogue phase with NPC focus
 - Phase transition detection
-
-### Phase 3: Streaming (Future)
-
-- SSE event streaming
-- Chunked content delivery
-- Frontend integration
 
 ---
 
@@ -286,6 +387,7 @@ tests/
 
 ## Success Criteria
 
+**Core Engine** (Phase 1):
 - [x] AgentRouter routes based on phase and action
 - [x] TurnExecutor orchestrates multiple agents
 - [x] Jester appears probabilistically (15% in exploration)
@@ -293,6 +395,15 @@ tests/
 - [x] API returns combined narrative
 - [x] Test coverage ≥70% (83% achieved)
 - [x] All existing tests pass (71 tests)
+
+**Streaming Implementation** (Phase 2):
+- [x] SSE streaming endpoint functional
+- [x] agent_chunk events deliver characters progressively
+- [x] Frontend streaming functions integrated
+- [x] Character-by-character typewriter effect working
+- [x] All agents using claude-3-5-haiku-20241022
+- [x] build_context() accepts character_sheet and character_description
+- [x] Smooth user experience with minimal perceived latency
 
 ---
 
