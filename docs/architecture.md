@@ -78,7 +78,8 @@ Behavior-Driven Development ensures we build what users actually need:
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                   ANTHROPIC CLAUDE API                          │
-│            Sonnet (narrative) │ Haiku (mechanics)               │
+│                 Claude 3.5 Haiku (all agents)                   │
+│                  claude-3-5-haiku-20241022                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -91,8 +92,9 @@ Behavior-Driven Development ensures we build what users actually need:
 **What we build:**
 - Single FastAPI application (monolith)
 - In-memory session state (dict per session)
-- Server-rendered HTML with HTMX for interactivity
+- SSE (Server-Sent Events) streaming for real-time narrative delivery
 - CrewAI for agent orchestration
+- Character-by-character streaming via `agent_chunk` SSE events
 - SQLite for adventure logs (if persistence needed)
 
 **What we DON'T build (yet):**
@@ -765,10 +767,13 @@ class TokenBudget:
 
 | Task | Model | Why |
 |------|-------|-----|
-| Narrative generation | Claude Sonnet | Quality matters |
-| Stat calculations | Claude Haiku | Fast, cheap, deterministic |
-| Validation | Claude Haiku | Binary decisions |
-| Epilogue | Claude Sonnet | Emotional resonance |
+| All agents | Claude 3.5 Haiku | Fast, cost-effective, consistent quality |
+| Narrative generation | claude-3-5-haiku-20241022 | Optimized for speed and storytelling |
+| Character creation | claude-3-5-haiku-20241022 | Interactive dialogue with low latency |
+| Mechanics validation | claude-3-5-haiku-20241022 | Quick dice rolls and rule checks |
+| Jester commentary | claude-3-5-haiku-20241022 | Rapid witty interjections |
+
+**Note**: Current implementation uses Claude 3.5 Haiku (claude-3-5-haiku-20241022) for all agents to optimize for response speed and cost efficiency while maintaining narrative quality.
 
 ---
 

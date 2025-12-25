@@ -15,7 +15,7 @@ class NarratorAgent:
 
         # CrewAI's native LLM class - no langchain needed
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-3-5-haiku-20241022",
             api_key=settings.anthropic_api_key,
             temperature=0.7,
             max_tokens=1024,

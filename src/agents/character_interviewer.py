@@ -25,7 +25,7 @@ class CharacterInterviewerAgent:
         config = load_agent_config("character_interviewer")
 
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-3-5-haiku-20241022",
             api_key=settings.anthropic_api_key,
             temperature=0.8,  # Higher temperature for creative character options
             max_tokens=512,
@@ -65,6 +65,48 @@ class CharacterInterviewerAgent:
             pass
 
         return self.DEFAULT_STARTER_CHOICES
+
+    def generate_adventure_hooks(self, character_info: str) -> list[str]:
+        """Generate adventure hooks tailored to the character.
+
+        Called after character creation to provide contextually relevant
+        adventure options based on the character's race, class, and background.
+
+        Args:
+            character_info: Formatted string with character details
+                           (name, race, class, background)
+
+        Returns:
+            List of 3 adventure hook strings tailored to the character
+        """
+        # Fallback adventure hooks if LLM fails
+        default_hooks = [
+            "A hooded figure beckons you to a shadowy corner",
+            "The innkeeper mentions trouble in the nearby village",
+            "A mysterious map falls from a traveler's pocket",
+        ]
+
+        try:
+            task_config = load_task_config("generate_adventure_hooks")
+
+            description = task_config.description.format(character_info=character_info)
+
+            task = Task(
+                description=description,
+                expected_output=task_config.expected_output,
+                agent=self.agent,
+            )
+
+            result = task.execute_sync()
+            parsed = self._parse_json_response(str(result))
+
+            if parsed and "choices" in parsed and len(parsed["choices"]) >= 3:
+                return parsed["choices"][:3]
+
+        except Exception:
+            pass
+
+        return default_hooks
 
     def interview_turn(
         self, turn_number: int, conversation_history: str

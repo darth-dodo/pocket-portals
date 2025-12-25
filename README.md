@@ -113,9 +113,9 @@ curl -X POST http://localhost:8888/jester/complicate \
 ## Stack
 
 - **Python 3.12** - Runtime
-- **FastAPI** - API framework
+- **FastAPI** - API framework with Server-Sent Events (SSE) for streaming
 - **CrewAI** - Agent orchestration
-- **Anthropic Claude** - LLM provider
+- **Anthropic Claude Haiku** (claude-3-5-haiku-20241022) - LLM provider for all agents
 
 ## Project Structure
 
@@ -195,6 +195,32 @@ Set `ANTHROPIC_API_KEY` in Render environment variables before deploying.
 - ✅ 36 tests passing, 79% coverage
 - ✅ CI/CD with GitHub Actions
 - ✅ Pre-commit hooks (ruff, mypy)
+- ✅ Character-by-character streaming with typewriter effect
+- ✅ Session context with character sheet persistence
+- ✅ Mobile-optimized UI with improved readability
+
+### Recent Features
+
+**Streaming Experience**
+- Character-by-character streaming for all agent responses
+- Animated blinking cursor during content generation
+- Server-Sent Events (SSE) for real-time updates
+
+**Character Persistence**
+- Session context now includes character details (name, race, class, background)
+- Improved narrative continuity across multi-turn adventures
+- Character info displayed in UI during gameplay
+
+**Mobile Improvements**
+- Larger fonts for better readability (18px base)
+- Touch-friendly button sizing (min 44px height)
+- Safe area insets for modern mobile devices
+- Improved spacing and visual hierarchy
+
+**Character Creation**
+- Fixed custom input flow for race, class, and background
+- Smooth transitions between selection and custom entry
+- Validation and error handling
 
 See `tasks.md` for current progress and `docs/guides/ONBOARDING.md` for detailed development guide.
 

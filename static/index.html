@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pocket Portals - Solo D&D Adventure</title>
 
     <!-- NES.css for retro RPG styling -->
@@ -32,6 +32,10 @@
                 linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0f3460 100%);
             background-attachment: fixed;
             padding: 20px;
+            /* Safe area for notched devices */
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
         }
 
         .container {
@@ -237,6 +241,19 @@
             margin-bottom: 0;
         }
 
+        /* Blinking cursor for streaming text */
+        .streaming-text::after {
+            content: '▌';
+            color: #f7d354;
+            animation: blink 0.7s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
         /* First letter drop cap for narrator immersion */
         .message-narrator .message-text p:first-child::first-letter {
             font-size: 2.2em;
@@ -272,7 +289,7 @@
         .welcome {
             text-align: center;
             padding: 40px 30px;
-            color: #adafbc;
+            color: #c4c6d0; /* Improved contrast */
         }
 
         .welcome h2 {
@@ -289,7 +306,7 @@
             max-width: 550px;
             margin-left: auto;
             margin-right: auto;
-            color: #d0d0d0;
+            color: #d8d8d8; /* Improved contrast */
         }
 
         .welcome .begin-btn {
@@ -499,7 +516,7 @@
         }
 
         .session-info {
-            color: #adafbc;
+            color: #c4c6d0; /* Improved contrast */
             font-size: 0.45rem;
             display: flex;
             align-items: center;
@@ -520,7 +537,7 @@
             text-align: center;
             margin-top: 24px;
             padding: 16px;
-            color: #adafbc;
+            color: #c4c6d0; /* Improved contrast */
             font-size: 0.45rem;
         }
 
@@ -546,66 +563,115 @@
             .reading-mode-toggle {
                 top: 12px;
                 right: 12px;
-                padding: 8px 12px;
+                padding: 10px 14px;
             }
 
             .message-text {
-                font-size: 1.1rem;
+                font-size: 1.15rem;
+                line-height: 1.95;
+            }
+
+            .choice-btn {
+                min-height: 52px;
+                font-size: 0.85rem !important;
             }
         }
 
         /* Responsive - Mobile */
         @media (max-width: 600px) {
             body {
+                padding: 10px;
+            }
+
+            /* Compact header on mobile */
+            header {
+                margin-bottom: 16px;
                 padding: 12px;
             }
 
-            .reading-mode-toggle {
-                position: static;
-                display: block;
-                margin: 0 auto 16px;
-                text-align: center;
-            }
-
             .title {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
+                margin-bottom: 8px;
             }
 
             .subtitle {
                 font-size: 0.5rem;
+                display: none; /* Hide subtitle to save space */
             }
 
+            /* Reading mode toggle - fixed bottom right FAB style */
+            .reading-mode-toggle {
+                position: fixed;
+                bottom: max(20px, env(safe-area-inset-bottom));
+                right: max(20px, env(safe-area-inset-right));
+                top: auto;
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                z-index: 1000;
+            }
+
+            .reading-mode-toggle i {
+                font-size: 1.4rem;
+            }
+
+            /* Story area - more space for content */
             .story-box {
-                min-height: 300px;
-                max-height: 400px;
-                padding: 20px;
+                min-height: 280px;
+                max-height: none; /* Remove max-height constraint */
+                padding: 16px;
+                margin-bottom: 0;
             }
 
+            /* Messages - improved readability */
             .message {
-                padding: 16px;
-                margin-bottom: 20px;
+                padding: 18px 16px;
+                margin-bottom: 24px;
+                border-radius: 6px;
             }
 
             .message-text {
-                font-size: 1rem;
-                line-height: 1.8;
+                font-size: 1.125rem; /* 18px - comfortable mobile reading */
+                line-height: 1.9;
+                letter-spacing: 0.02em;
             }
 
             .message-label {
-                font-size: 0.6rem;
+                font-size: 0.65rem;
+                margin-bottom: 10px;
             }
 
+            /* Smaller drop cap on mobile */
             .message-narrator .message-text p:first-child::first-letter {
-                font-size: 1.8em;
+                font-size: 1.6em;
+                margin-right: 6px;
             }
 
+            /* Keeper text slightly larger on mobile */
+            .message-keeper .message-text {
+                font-size: 1rem;
+                line-height: 1.7;
+            }
+
+            /* Player text */
+            .message-player .message-text {
+                font-size: 1rem;
+            }
+
+            /* Welcome screen */
             .welcome {
-                padding: 24px 16px;
+                padding: 28px 20px;
             }
 
             .welcome p {
-                font-size: 0.9rem;
+                font-size: 1rem;
                 font-family: 'Crimson Pro', Georgia, serif;
+                line-height: 1.8;
+                color: #d8d8d8;
             }
 
             .welcome i {
@@ -613,41 +679,193 @@
             }
 
             .welcome h2 {
-                font-size: 0.8rem;
+                font-size: 0.85rem;
+                margin-bottom: 16px;
             }
 
-            .choices-section,
-            .input-section {
+            .welcome .begin-btn {
+                font-size: 0.75rem !important;
+                padding: 18px 36px !important;
+                min-height: 56px;
+            }
+
+            /* Choices - larger touch targets */
+            .choices-section {
                 padding: 16px;
+                margin-top: 16px;
+            }
+
+            .choices-label {
+                font-size: 0.65rem;
+                margin-bottom: 14px;
             }
 
             .choice-btn {
-                font-size: 0.9rem !important;
+                font-size: 1rem !important; /* Readable size */
                 font-family: 'Inter', system-ui, sans-serif;
                 padding: 16px 20px !important;
+                min-height: 56px; /* Touch-friendly */
+                margin-bottom: 12px;
+                line-height: 1.5;
+                display: flex;
+                align-items: center;
+            }
+
+            .choice-btn i {
+                font-size: 1.1rem;
+                flex-shrink: 0;
+            }
+
+            /* Input section */
+            .input-section {
+                padding: 16px;
+                margin-top: 16px;
+            }
+
+            .input-label {
+                font-size: 0.65rem;
+                margin-bottom: 14px;
             }
 
             .input-row {
                 flex-direction: column;
-            }
-
-            .input-row .nes-btn {
-                width: 100%;
+                gap: 10px;
             }
 
             .input-row .nes-input {
                 font-family: 'Inter', system-ui, sans-serif;
-                font-size: 1rem !important;
+                font-size: 16px !important; /* Prevents iOS zoom */
+                min-height: 52px;
+                padding: 14px 16px !important;
             }
 
+            .input-row .nes-btn {
+                width: 100%;
+                min-height: 52px;
+                font-size: 0.8rem !important;
+            }
+
+            /* Loading indicator */
+            .loading {
+                padding: 24px;
+            }
+
+            .loading-text {
+                font-size: 0.6rem;
+            }
+
+            /* Agent indicator */
+            .agent-indicator {
+                padding: 14px;
+            }
+
+            .agent-indicator-text {
+                font-size: 0.6rem;
+            }
+
+            /* Session bar */
             .session-bar {
                 flex-direction: column;
                 gap: 12px;
                 text-align: center;
+                padding: 14px 16px;
+                margin-top: 16px;
             }
 
+            .session-info {
+                font-size: 0.5rem;
+            }
+
+            .new-game-btn {
+                font-size: 0.5rem !important;
+                min-height: 44px;
+                padding: 12px 20px !important;
+            }
+
+            /* Footer */
+            footer {
+                margin-top: 20px;
+                padding: 14px;
+                font-size: 0.5rem;
+            }
+
+            /* Reading mode enhancements for mobile */
             body.reading-mode .message-text {
-                font-size: 1.15rem !important;
+                font-size: 1.25rem !important; /* 20px */
+                line-height: 2.1 !important;
+            }
+
+            body.reading-mode .message {
+                padding: 22px 18px !important;
+            }
+
+            body.reading-mode .story-box {
+                padding: 20px;
+            }
+
+            /* Error box */
+            .error-box {
+                font-size: 0.6rem;
+                padding: 14px;
+            }
+        }
+
+        /* Extra small mobile (320px - older/smaller phones) */
+        @media (max-width: 380px) {
+            body {
+                padding: 8px;
+            }
+
+            .title {
+                font-size: 0.95rem;
+            }
+
+            .story-box {
+                padding: 14px;
+            }
+
+            .message {
+                padding: 14px 12px;
+            }
+
+            .message-text {
+                font-size: 1.0625rem; /* 17px */
+            }
+
+            .choice-btn {
+                font-size: 0.9375rem !important; /* 15px */
+                padding: 14px 16px !important;
+            }
+
+            .welcome h2 {
+                font-size: 0.75rem;
+            }
+
+            .welcome p {
+                font-size: 0.9375rem;
+            }
+        }
+
+        /* Accessibility: Respect reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .message-text {
+                color: #ffffff;
+            }
+
+            .message-label {
+                font-weight: bold;
+            }
+
+            .choice-btn {
+                border-width: 3px;
             }
         }
 
@@ -776,6 +994,11 @@
             player: { label: '🧙 You', icon: 'ra-player' }
         };
 
+        // Track the current streaming message element
+        let streamingMessageEl = null;
+        let streamingTextEl = null;
+        let streamingContent = '';
+
         function addMessage(text, type) {
             // Remove welcome if present
             const welcome = storyBox.querySelector('.welcome');
@@ -796,6 +1019,63 @@
 
             storyBox.appendChild(div);
             storyBox.scrollTop = storyBox.scrollHeight;
+        }
+
+        function startStreamingMessage(type) {
+            // Remove welcome if present
+            const welcome = storyBox.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            // Create the message container
+            streamingMessageEl = document.createElement('div');
+            streamingMessageEl.className = `message message-${type}`;
+
+            const config = agentConfig[type] || agentConfig.narrator;
+
+            streamingMessageEl.innerHTML = `
+                <div class="message-label"><i class="ra ${config.icon}"></i> ${config.label}</div>
+                <div class="message-text"><p class="streaming-text"></p></div>
+            `;
+
+            storyBox.appendChild(streamingMessageEl);
+            streamingTextEl = streamingMessageEl.querySelector('.streaming-text');
+            streamingContent = '';
+        }
+
+        // Throttle scroll updates for smooth streaming
+        let lastScrollTime = 0;
+        const SCROLL_THROTTLE_MS = 100; // Only scroll every 100ms max
+
+        function appendStreamingChar(char) {
+            if (!streamingTextEl) return;
+
+            streamingContent += char;
+            // Convert newlines for display
+            const formattedText = streamingContent
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            streamingTextEl.innerHTML = formattedText;
+
+            // Throttle scroll updates for smooth experience
+            const now = Date.now();
+            if (now - lastScrollTime >= SCROLL_THROTTLE_MS) {
+                lastScrollTime = now;
+                // Use requestAnimationFrame for smooth scrolling
+                requestAnimationFrame(() => {
+                    storyBox.scrollTop = storyBox.scrollHeight;
+                });
+            }
+        }
+
+        function endStreamingMessage() {
+            // Remove blinking cursor by removing the streaming-text class
+            if (streamingTextEl) {
+                streamingTextEl.classList.remove('streaming-text');
+            }
+            // Clear streaming state
+            streamingMessageEl = null;
+            streamingTextEl = null;
+            streamingContent = '';
         }
 
         function updateChoices(choices) {
@@ -911,9 +1191,20 @@
                                 console.log('Routing:', data);
                             } else if (currentEventType === 'agent_start') {
                                 showAgentIndicator(data.agent);
+                                // Start streaming message for this agent
+                                startStreamingMessage(data.agent);
+                            } else if (currentEventType === 'agent_chunk') {
+                                // Append character to streaming message
+                                appendStreamingChar(data.chunk);
                             } else if (currentEventType === 'agent_response') {
                                 hideAgentIndicator();
-                                addMessage(data.content, data.agent);
+                                // If we were streaming, just clean up (message already shown)
+                                // If not streaming, add the full message
+                                if (streamingMessageEl) {
+                                    endStreamingMessage();
+                                } else {
+                                    addMessage(data.content, data.agent);
+                                }
                             } else if (currentEventType === 'choices') {
                                 updateChoices(data.choices);
                             } else if (currentEventType === 'complete') {
