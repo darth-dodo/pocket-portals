@@ -399,9 +399,6 @@ async def _handle_character_creation(
     # Increment creation turn
     new_turn = session_manager.increment_creation_turn(state.session_id)
 
-    # Store the exchange
-    session_manager.add_exchange(state.session_id, action, "")
-
     # Check if user wants to skip
     if "skip" in action.lower():
         # Create default character and transition to exploration
@@ -414,6 +411,7 @@ async def _handle_character_creation(
         session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         choices = STARTER_CHOICES_POOL[:3]
+        session_manager.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
         session_manager.set_choices(state.session_id, choices)
 
         return NarrativeResponse(
@@ -424,8 +422,11 @@ async def _handle_character_creation(
 
     # If we've completed 5 turns, generate character sheet and transition
     if new_turn >= 5:
-        # Build character from conversation history
-        character_sheet = _generate_character_from_history(state)
+        # Build character from conversation history (include current action)
+        session_manager.add_exchange(state.session_id, action, "")
+        character_sheet = _generate_character_from_history(
+            session_manager.get_or_create_session(state.session_id)
+        )
         session_manager.set_character_sheet(state.session_id, character_sheet)
         session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
 
@@ -445,13 +446,15 @@ async def _handle_character_creation(
             choices=choices,
         )
 
-    # Build conversation history for context
+    # Build conversation history for context, including current action
     history_lines = []
     for entry in state.conversation_history:
         if entry.get("action"):
             history_lines.append(f"Player: {entry['action']}")
         if entry.get("narrative"):
             history_lines.append(f"Innkeeper: {entry['narrative']}")
+    # Add current action to context so agent sees what player just said
+    history_lines.append(f"Player: {action}")
     conversation_history = "\n".join(history_lines)
 
     # Use agent to generate dynamic interview response
@@ -473,6 +476,8 @@ async def _handle_character_creation(
             "I am a wanderer",
         ]
 
+    # Store the exchange with the actual narrative response
+    session_manager.add_exchange(state.session_id, action, narrative)
     session_manager.set_choices(state.session_id, choices)
 
     return NarrativeResponse(
