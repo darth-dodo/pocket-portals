@@ -160,8 +160,8 @@ def build_context(
         lines.append(f"- Name: {character_sheet.name}")
         lines.append(f"- Race: {character_sheet.race.value}")
         lines.append(f"- Class: {character_sheet.character_class.value}")
-        if character_sheet.background:
-            lines.append(f"- Background: {character_sheet.background}")
+        if character_sheet.backstory:
+            lines.append(f"- Backstory: {character_sheet.backstory}")
         lines.append("")
 
     # Include character description if no sheet but description exists
@@ -465,7 +465,20 @@ async def _handle_character_creation(
         session_manager.set_character_sheet(state.session_id, character_sheet)
         session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
 
-        choices = STARTER_CHOICES_POOL[:3]
+        # Generate contextual adventure hooks based on the character
+        character_info = (
+            f"Name: {character_sheet.name}\n"
+            f"Race: {character_sheet.race.value}\n"
+            f"Class: {character_sheet.character_class.value}"
+        )
+        if character_sheet.backstory:
+            character_info += f"\nBackstory: {character_sheet.backstory}"
+
+        if character_interviewer:
+            choices = character_interviewer.generate_adventure_hooks(character_info)
+        else:
+            choices = STARTER_CHOICES_POOL[:3]
+
         session_manager.set_choices(state.session_id, choices)
 
         narrative = (

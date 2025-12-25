@@ -141,3 +141,25 @@ generate_starter_choices:
     }}
   expected_output: "Valid JSON with 3 character concept choices"
   agent: character_interviewer
+
+generate_adventure_hooks:
+  description: |
+    Generate 3 adventure hooks specifically tailored to a character who just arrived at the tavern.
+
+    CHARACTER INFORMATION:
+    {character_info}
+
+    Create 3 adventure choices that:
+    1. Fit the character's class and abilities (e.g., a rogue might hear about a heist, a mage about arcane mysteries)
+    2. Reference their race or backstory subtly when appropriate
+    3. Feel like natural opportunities that would present themselves at a tavern
+    4. Are varied in tone (one urgent, one mysterious, one potentially lucrative)
+
+    CONTENT SAFETY: All hooks are heroic and family-friendly. PG-13.
+
+    RESPOND WITH VALID JSON ONLY:
+    {{
+      "choices": ["First adventure hook", "Second adventure hook", "Third adventure hook"]
+    }}
+  expected_output: "Valid JSON with 3 contextual adventure hook choices"
+  agent: character_interviewer
