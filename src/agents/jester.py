@@ -34,7 +34,7 @@ class JesterAgent:
 
         # CrewAI's native LLM class - playful and surprising
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-3-5-haiku-20241022",
             api_key=settings.anthropic_api_key,
             temperature=0.8,
             max_tokens=256,

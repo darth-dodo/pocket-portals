@@ -14,7 +14,7 @@ class InnkeeperAgent:
         config = load_agent_config("innkeeper_theron")
 
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-3-5-haiku-20241022",
             api_key=settings.anthropic_api_key,
             temperature=0.6,
             max_tokens=512,

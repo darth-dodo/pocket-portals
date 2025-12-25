@@ -14,7 +14,7 @@ class KeeperAgent:
         config = load_agent_config("keeper")
 
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-3-5-haiku-20241022",
             api_key=settings.anthropic_api_key,
             temperature=0.3,
             max_tokens=256,
