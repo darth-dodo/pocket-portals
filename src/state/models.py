@@ -27,6 +27,48 @@ class GamePhase(str, Enum):
     DIALOGUE = "dialogue"
 
 
+class CombatPhaseEnum(str, Enum):
+    """Enumeration of combat phases.
+
+    Attributes:
+        INITIATIVE: Rolling for initiative to determine turn order
+        PLAYER_TURN: Player's turn to take action
+        ENEMY_TURN: Enemy's turn to take action
+        RESOLUTION: Combat resolution and cleanup
+    """
+
+    INITIATIVE = "initiative"
+    PLAYER_TURN = "player_turn"
+    ENEMY_TURN = "enemy_turn"
+    RESOLUTION = "resolution"
+
+
+class CombatantType(str, Enum):
+    """Type of combatant.
+
+    Attributes:
+        PLAYER: Player character
+        ENEMY: Enemy or NPC combatant
+    """
+
+    PLAYER = "player"
+    ENEMY = "enemy"
+
+
+class CombatAction(str, Enum):
+    """Available combat actions.
+
+    Attributes:
+        ATTACK: Attack the enemy
+        DEFEND: Take defensive stance
+        FLEE: Attempt to flee from combat
+    """
+
+    ATTACK = "attack"
+    DEFEND = "defend"
+    FLEE = "flee"
+
+
 class GameState(BaseModel):
     """Minimal game state for solo D&D narrative adventure.
 
@@ -56,6 +98,7 @@ class GameState(BaseModel):
     creation_turn: int = Field(default=0, ge=0, le=5)
     recent_agents: list[str] = Field(default_factory=list)
     turns_since_jester: int = 0
+    combat_state: CombatState | None = None
 
     @field_validator("character_sheet", mode="before")
     @classmethod
@@ -120,3 +163,73 @@ class GameState(BaseModel):
                 f"health_max ({self.health_max})"
             )
         return self
+
+
+class Combatant(BaseModel):
+    """Individual combatant in combat.
+
+    Attributes:
+        id: Unique identifier for the combatant
+        name: Display name of the combatant
+        type: Type of combatant (PLAYER or ENEMY)
+        initiative: Initiative roll value (determines turn order)
+        current_hp: Current hit points
+        max_hp: Maximum hit points
+        armor_class: Armor class (AC) for defense
+        is_alive: Whether the combatant is still alive
+    """
+
+    id: str
+    name: str
+    type: CombatantType
+    initiative: int = 0
+    current_hp: int
+    max_hp: int
+    armor_class: int
+    is_alive: bool = True
+
+
+class Enemy(BaseModel):
+    """Enemy template with stats and information.
+
+    Attributes:
+        name: Display name of the enemy
+        description: Descriptive text about the enemy
+        max_hp: Maximum hit points
+        armor_class: Armor class (AC) for defense
+        attack_bonus: Bonus to attack rolls
+        damage_dice: Dice notation for damage (e.g., "1d6+2")
+    """
+
+    name: str
+    description: str
+    max_hp: int
+    armor_class: int
+    attack_bonus: int
+    damage_dice: str
+
+
+class CombatState(BaseModel):
+    """State for active combat encounter.
+
+    Attributes:
+        is_active: Whether combat is currently active
+        phase: Current phase of combat
+        round_number: Current round number
+        combatants: List of all combatants in the encounter
+        turn_order: Ordered list of combatant IDs by initiative
+        current_turn_index: Index into turn_order for current turn
+        enemy_template: Template used to create the enemy
+        combat_log: Log of combat events and messages
+        player_defending: True if player used Defend last turn
+    """
+
+    is_active: bool = False
+    phase: CombatPhaseEnum = CombatPhaseEnum.INITIATIVE
+    round_number: int = 0
+    combatants: list[Combatant] = Field(default_factory=list)
+    turn_order: list[str] = Field(default_factory=list)
+    current_turn_index: int = 0
+    enemy_template: Enemy | None = None
+    combat_log: list[str] = Field(default_factory=list)
+    player_defending: bool = False

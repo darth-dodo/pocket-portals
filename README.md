@@ -201,6 +201,14 @@ Set `ANTHROPIC_API_KEY` in Render environment variables before deploying.
 
 ### Recent Features
 
+**Combat System**
+- D&D 5e-inspired turn-based combat mechanics
+- Initiative-based turn order (d20 + DEX modifier)
+- Attack, Defend, and Flee actions with real dice rolling
+- HP tracking with visual progress bars
+- Dramatic narrative summaries at battle conclusion
+- Cost-efficient design (~$0.002 per combat)
+
 **Streaming Experience**
 - Character-by-character streaming for all agent responses
 - Animated blinking cursor during content generation

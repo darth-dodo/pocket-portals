@@ -70,7 +70,8 @@ Behavior-Driven Development ensures we build what users actually need:
 │                          │                                      │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    SHARED TOOLS                          │   │
-│  │  [DiceRoller] [CharacterSheet] [WorldState] [Combat]    │   │
+│  │  [DiceRoller] [CharacterSheet] [WorldState]             │   │
+│  │  [CombatManager] [CombatState] [Enemy Templates]        │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -1330,7 +1331,162 @@ The Character Interviewer's output feeds directly into other agents:
 
 ---
 
-## 16. Success Metrics (XP: Feedback)
+## 16. Combat Architecture
+
+### Overview
+
+The combat system implements D&D 5e-inspired mechanics with a focus on cost efficiency and gameplay immersion. Combat is handled by the KeeperAgent with pure Python mechanics, with a single LLM call for narrative summary at the end.
+
+### Cost-Efficient Design (Batched Summary Approach)
+
+**During Combat: Pure Python Mechanics (No LLM Calls)**
+- Initiative rolling (d20 + DEX modifier)
+- Attack resolution (d20 + attack bonus vs AC)
+- Damage calculation (weapon dice + modifiers)
+- Defend action (enemy gets disadvantage)
+- Flee action (DEX check vs DC 12)
+- HP tracking and combat state management
+
+**At Combat End: Single Narrator LLM Call**
+- Batched combat summary with dramatic narrative
+- References key moments and turning points
+- Describes final blow or escape
+- Sets up continuation of adventure
+
+**Cost Comparison:**
+- Batched Summary Approach: ~$0.002 per combat
+- Full LLM Approach: ~$0.05 per combat (25x more expensive)
+
+### Key Components
+
+**DiceRoller** (`src/utils/dice.py`)
+- Dice notation parser (1d20, 2d6+3, 1d8-1, etc.)
+- Roll validation and result calculation
+- Supports standard D&D dice (d4, d6, d8, d10, d12, d20, d100)
+
+**CombatManager** (`src/engine/combat_manager.py`)
+- Combat state machine and turn order
+- Attack resolution logic
+- Defend and flee action handling
+- Victory/defeat/escape detection
+
+**KeeperAgent** (`src/agents/keeper.py`)
+- Mechanical referee for combat
+- Dice roll coordination
+- HP tracking and damage application
+- Combat phase management
+
+**NarratorAgent.summarize_combat()** (`src/agents/narrator.py`)
+- Single LLM call for battle summary
+- Dramatic narrative of combat events
+- References character actions and outcomes
+- Transition to next adventure phase
+
+### Enemy Templates
+
+The system includes 5 enemy types with D&D 5e-style stats:
+
+| Enemy | HP | AC | Attack Bonus | Damage | Special |
+|-------|----|----|--------------|--------|---------|
+| Goblin | 7 | 13 | +4 | 1d6+2 | Nimble escape |
+| Bandit | 11 | 12 | +3 | 1d8+1 | Pack tactics |
+| Skeleton | 13 | 13 | +4 | 1d6+2 | Undead resilience |
+| Wolf | 11 | 13 | +4 | 2d4+2 | Pack tactics |
+| Orc | 15 | 13 | +5 | 1d12+3 | Aggressive |
+
+### Combat Flow
+
+```
+Enemy Encounter Triggered
+        │
+        ▼
+┌─────────────────────┐
+│ Roll Initiative     │ → d20 + DEX modifier for all combatants
+│ (KeeperAgent)       │    Determines turn order
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Player Turn         │ → Display: HP bars, action buttons
+│ (Frontend HUD)      │    Actions: Attack, Defend, Flee
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Resolve Action      │ → Attack: d20 + bonus vs AC, then damage dice
+│ (CombatManager)     │    Defend: Enemy gets disadvantage next turn
+└─────────────────────┘    Flee: DEX check vs DC 12
+        │
+        ▼
+┌─────────────────────┐
+│ Enemy Turn          │ → Enemy attacks with same mechanics
+│ (CombatManager)     │    Apply damage to player
+└─────────────────────┘
+        │
+        ▼
+┌─────────────────────┐
+│ Check Combat End    │ → Victory: All enemies defeated
+│                     │    Defeat: Player HP ≤ 0
+└─────────────────────┘    Escape: Successful flee
+        │
+        ▼
+┌─────────────────────┐
+│ Generate Summary    │ → Single Narrator LLM call
+│ (NarratorAgent)     │    Batched dramatic summary
+└─────────────────────┘    References combat events
+        │
+        ▼
+Continue Adventure
+```
+
+### API Endpoints
+
+**POST /combat/start**
+- Initiates combat encounter with enemy type
+- Rolls initiative for all combatants
+- Returns combat state with turn order
+
+**POST /combat/action**
+- Executes player combat action (attack/defend/flee)
+- Resolves mechanics (dice rolls, damage)
+- Processes enemy turn if combat continues
+- Returns updated combat state
+
+### Frontend Combat HUD
+
+**Visual Components:**
+- HP progress bars for player and enemies
+- Action buttons (Attack, Defend, Flee)
+- Turn order display
+- Dice roll animations
+- Combat log with attack results
+
+**Responsive Design:**
+- Mobile-optimized touch targets
+- Readable combat stats
+- Clear visual feedback for actions
+- Accessible color coding (red/green HP)
+
+### Testing
+
+**Coverage:** 275 backend tests passing
+- DiceRoller: Notation parsing, roll validation, modifiers
+- CombatState: State management, combatant tracking
+- Enemy templates: Stat validation, attacks
+- CombatManager: Initiative, attack resolution, action handling
+- Integration: Full combat flows, edge cases
+
+### XP Principles Applied
+
+- **Simplicity:** Pure Python mechanics, single LLM call
+- **Feedback:** Immediate dice results, visual HP updates
+- **Cost Efficiency:** 25x cheaper than full LLM approach
+- **Quality:** D&D 5e-accurate mechanics with dramatic narrative
+- **Respect:** Fast combat resolution, no waiting for LLM
+
+---
+
+## 17. Success Metrics (XP: Feedback)
 
 ### Technical Metrics
 

@@ -873,6 +873,152 @@
         .choices-section.hidden {
             display: none;
         }
+
+        /* ===== COMBAT HUD ===== */
+        .combat-hud {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 280px;
+            z-index: 100;
+            padding: 15px;
+            display: none;
+        }
+
+        .combat-hud.active {
+            display: block;
+        }
+
+        .initiative-tracker h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.6rem;
+            color: #f7d354;
+        }
+
+        .initiative-tracker ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+        }
+
+        .initiative-tracker li {
+            padding: 5px 8px;
+            margin: 3px 0;
+            background: #333;
+            font-size: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .initiative-tracker li.active-turn {
+            background: #92cc41;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .hp-displays {
+            margin-bottom: 15px;
+        }
+
+        .hp-bar {
+            margin: 8px 0;
+        }
+
+        .hp-bar label {
+            display: block;
+            font-size: 0.5rem;
+            margin-bottom: 3px;
+            color: #f7d354;
+        }
+
+        .hp-bar progress {
+            width: 100%;
+            height: 20px;
+        }
+
+        .hp-bar span {
+            font-size: 0.5rem;
+            float: right;
+            margin-top: -18px;
+            margin-right: 5px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .combat-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .combat-actions button {
+            flex: 1;
+            min-width: 70px;
+            font-size: 0.5rem !important;
+            padding: 8px 4px !important;
+        }
+
+        .dice-display {
+            margin-top: 10px;
+            text-align: center;
+            padding: 8px;
+            background: #222;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .dice-display.active {
+            display: block;
+        }
+
+        .dice-display .dice-icon {
+            font-size: 24px;
+            animation: dice-spin 0.3s ease-out;
+        }
+
+        @keyframes dice-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .dice-display span {
+            display: block;
+            font-size: 0.5rem;
+            margin-top: 5px;
+            color: #f7d354;
+        }
+
+        /* Mobile responsive for combat HUD */
+        @media (max-width: 768px) {
+            .combat-hud {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                border-radius: 0;
+            }
+
+            .combat-actions button {
+                font-size: 0.6rem !important;
+                padding: 10px 8px !important;
+            }
+        }
+
+        /* Extra small mobile */
+        @media (max-width: 380px) {
+            .combat-hud {
+                padding: 12px;
+            }
+
+            .hp-bar label {
+                font-size: 0.45rem;
+            }
+
+            .initiative-tracker li {
+                font-size: 0.45rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -880,6 +1026,48 @@
     <button class="reading-mode-toggle" id="reading-toggle" title="Toggle Reading Mode">
         <i class="ra ra-book"></i>
     </button>
+
+    <!-- Combat HUD -->
+    <div id="combat-hud" class="nes-container is-dark combat-hud">
+        <!-- Turn Order -->
+        <div class="initiative-tracker">
+            <h4><i class="ra ra-crossed-swords"></i> COMBAT</h4>
+            <ul id="turn-order-list"></ul>
+        </div>
+
+        <!-- HP Bars -->
+        <div class="hp-displays">
+            <div class="hp-bar">
+                <label>You</label>
+                <progress class="nes-progress is-success" id="player-hp-bar" value="20" max="20"></progress>
+                <span id="player-hp-text">20/20</span>
+            </div>
+            <div class="hp-bar">
+                <label id="enemy-name-label">Enemy</label>
+                <progress class="nes-progress is-error" id="enemy-hp-bar" value="7" max="7"></progress>
+                <span id="enemy-hp-text">7/7</span>
+            </div>
+        </div>
+
+        <!-- Combat Actions -->
+        <div id="combat-actions" class="combat-actions">
+            <button class="nes-btn is-error" onclick="executeCombatAction('attack')">
+                <i class="ra ra-axe"></i> Attack
+            </button>
+            <button class="nes-btn is-primary" onclick="executeCombatAction('defend')">
+                <i class="ra ra-shield"></i> Defend
+            </button>
+            <button class="nes-btn is-warning" onclick="executeCombatAction('flee')">
+                <i class="ra ra-boot-stomp"></i> Flee
+            </button>
+        </div>
+
+        <!-- Dice Roll Display -->
+        <div id="dice-display" class="dice-display">
+            <span class="dice-icon">🎲</span>
+            <span id="dice-result-text"></span>
+        </div>
+    </div>
 
     <div class="container">
         <header>
@@ -972,6 +1160,8 @@
         let sessionId = null;
         let currentChoices = [];
         let isLoading = false;
+        let combatState = null;
+        let isInCombat = false;
 
         // ===== DOM Elements =====
         const storyBox = document.getElementById('story');
@@ -1079,6 +1269,7 @@
         }
 
         function updateChoices(choices) {
+            console.log('updateChoices called with:', choices);
             currentChoices = choices || [];
 
             if (currentChoices.length > 0) {
@@ -1206,6 +1397,7 @@
                                     addMessage(data.content, data.agent);
                                 }
                             } else if (currentEventType === 'choices') {
+                                console.log('Received choices:', data.choices);
                                 updateChoices(data.choices);
                             } else if (currentEventType === 'complete') {
                                 sessionId = data.session_id;
@@ -1293,6 +1485,203 @@
             actionInput.focus();
         }
 
+        // ===== Combat Functions =====
+        function showCombatHUD(state) {
+            combatState = state;
+            isInCombat = true;
+            const hudEl = document.getElementById('combat-hud');
+            hudEl.classList.add('active');
+            updateCombatHUD(state);
+
+            // Disable normal input during combat
+            actionInput.disabled = true;
+            submitBtn.disabled = true;
+        }
+
+        function hideCombatHUD() {
+            isInCombat = false;
+            combatState = null;
+            const hudEl = document.getElementById('combat-hud');
+            hudEl.classList.remove('active');
+
+            // Re-enable normal input
+            actionInput.disabled = false;
+            submitBtn.disabled = false;
+        }
+
+        function updateCombatHUD(state) {
+            if (!state) return;
+
+            // Update turn order
+            const turnList = document.getElementById('turn-order-list');
+            turnList.innerHTML = '';
+            state.turn_order.forEach((id, index) => {
+                const combatant = state.combatants.find(c => c.id === id);
+                if (combatant) {
+                    const li = document.createElement('li');
+                    const icon = combatant.type === 'player' ? '🗡️' : '👹';
+                    li.textContent = `${icon} ${combatant.name}`;
+                    if (index === state.current_turn_index) {
+                        li.classList.add('active-turn');
+                    }
+                    turnList.appendChild(li);
+                }
+            });
+
+            // Update HP bars
+            const player = state.combatants.find(c => c.type === 'player');
+            const enemy = state.combatants.find(c => c.type === 'enemy');
+
+            if (player) {
+                document.getElementById('player-hp-bar').value = player.current_hp;
+                document.getElementById('player-hp-bar').max = player.max_hp;
+                document.getElementById('player-hp-text').textContent = `${player.current_hp}/${player.max_hp}`;
+            }
+
+            if (enemy) {
+                document.getElementById('enemy-name-label').textContent = enemy.name;
+                document.getElementById('enemy-hp-bar').value = enemy.current_hp;
+                document.getElementById('enemy-hp-bar').max = enemy.max_hp;
+                document.getElementById('enemy-hp-text').textContent = `${enemy.current_hp}/${enemy.max_hp}`;
+            }
+
+            // Enable/disable actions based on turn
+            const isPlayerTurn = state.phase === 'player_turn';
+            const buttons = document.querySelectorAll('.combat-actions button');
+            buttons.forEach(btn => {
+                btn.disabled = !isPlayerTurn;
+            });
+        }
+
+        function showDiceRoll(attackRoll, total) {
+            const display = document.getElementById('dice-display');
+            const resultText = document.getElementById('dice-result-text');
+
+            display.classList.add('active');
+
+            // Format the dice notation
+            if (attackRoll && attackRoll.notation) {
+                resultText.textContent = `${attackRoll.notation} = ${total}`;
+            } else {
+                resultText.textContent = `Roll: ${total}`;
+            }
+
+            // Reset animation
+            const icon = display.querySelector('.dice-icon');
+            icon.style.animation = 'none';
+            icon.offsetHeight; // Trigger reflow
+            icon.style.animation = 'dice-spin 0.3s ease-out';
+
+            // Hide after delay
+            setTimeout(() => {
+                display.classList.remove('active');
+            }, 2000);
+        }
+
+        async function executeCombatAction(action) {
+            if (!isInCombat || !sessionId) return;
+
+            // Disable buttons during action
+            const buttons = document.querySelectorAll('.combat-actions button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            try {
+                const response = await fetch('/combat/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        action: action
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    addMessage(data.message || 'Action failed', 'keeper');
+                    return;
+                }
+
+                // Show dice roll if present
+                if (data.result && data.result.attack_roll) {
+                    showDiceRoll(data.result.attack_roll, data.result.total_attack);
+                }
+
+                // Show mechanical result message
+                addMessage(data.message, 'keeper');
+
+                // Update combat state
+                updateCombatHUD(data.combat_state);
+
+                // Check for combat end
+                if (data.combat_ended) {
+                    // Show narrative summary if present
+                    if (data.narrative) {
+                        addMessage(data.narrative, 'narrator');
+                    }
+
+                    // Show result message
+                    if (data.victory === true) {
+                        addMessage('🎉 Victory! The enemy has been defeated!', 'keeper');
+                    } else if (data.victory === false) {
+                        addMessage('💀 Defeated... You have fallen in battle.', 'keeper');
+                    } else if (data.fled) {
+                        addMessage('🏃 You escaped from combat!', 'keeper');
+                    }
+
+                    // Hide HUD after delay
+                    setTimeout(() => {
+                        hideCombatHUD();
+                    }, 2000);
+                }
+
+            } catch (error) {
+                console.error('Combat action error:', error);
+                addMessage('Combat error occurred', 'keeper');
+            } finally {
+                // Re-enable buttons if combat continues
+                if (isInCombat && combatState && combatState.phase === 'player_turn') {
+                    buttons.forEach(btn => btn.disabled = false);
+                }
+            }
+        }
+
+        async function startCombat(enemyType) {
+            if (!sessionId) {
+                showError('No active session. Start a new adventure first.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/combat/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        enemy_type: enemyType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Combat start failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Show combat narrative
+                addMessage(data.narrative, 'narrator');
+
+                // Show combat HUD
+                if (data.combat_state) {
+                    showCombatHUD(data.combat_state);
+                }
+
+            } catch (error) {
+                console.error('Start combat error:', error);
+                showError(`Failed to start combat: ${error.message}`);
+            }
+        }
+
         // ===== Event Listeners =====
         submitBtn.addEventListener('click', submitAction);
         actionInput.addEventListener('keypress', (e) => {
@@ -1300,13 +1689,8 @@
         });
         newGameBtn.addEventListener('click', newGame);
 
-        // Begin Quest button (if present in initial state)
-        const beginBtn = document.getElementById('begin-btn');
-        if (beginBtn) {
-            beginBtn.addEventListener('click', () => startNewAdventure(true));
-        }
-
-        // Also handle dynamically added begin buttons after newGame
+        // Handle begin button clicks (both initial and dynamically added)
+        // Use event delegation to avoid double-firing
         storyBox.addEventListener('click', (e) => {
             if (e.target.id === 'begin-btn' || e.target.closest('#begin-btn')) {
                 startNewAdventure(true);

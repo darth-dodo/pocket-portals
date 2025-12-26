@@ -76,6 +76,14 @@ make dev  # Then check http://localhost:8888/docs
 - **Testing**: Character creation completes successfully in 5-6 turns
 - **See**: [Character Creation Flow](#character-creation-flow) section
 
+### 6. Combat System Implementation
+- **What Changed**: Complete D&D 5e-inspired combat mechanics added
+- **Why It Matters**: Turn-based combat with real dice rolling, initiative, and dramatic battles
+- **Implementation**: DiceRoller, CombatManager, 5 enemy types, attack/defend/flee actions
+- **Testing**: 275 backend tests passing, frontend HUD with HP bars and action buttons
+- **Cost**: ~$0.002 per combat with batched narrator summary
+- **See**: [Combat System](#combat-system) section
+
 **Quick Migration Guide**:
 - If testing API manually: Use `curl -N` for streaming endpoints
 - If working on agents: All use Haiku model, not Sonnet
@@ -1333,6 +1341,101 @@ uv run pytest tests/test_api.py::test_streaming -v
 make dev
 # Open http://localhost:8888/docs and try /action endpoint
 ```
+
+---
+
+### Combat System
+
+**Overview**: D&D 5e-inspired turn-based combat with cost-efficient design.
+
+**Combat Flow**:
+1. **Encounter Triggered** - Enemy appears based on narrative context
+2. **Initiative Rolled** - d20 + DEX modifier determines turn order
+3. **Player Turn** - Choose Attack, Defend, or Flee
+4. **Enemy Turn** - Enemy attacks with same mechanics
+5. **Victory/Defeat/Escape** - Combat ends with narrative summary
+
+**API Endpoints**:
+
+```python
+# Start combat encounter
+POST /combat/start
+{
+  "session_id": "uuid",
+  "enemy_type": "goblin"  # goblin, bandit, skeleton, wolf, orc
+}
+
+# Execute combat action
+POST /combat/action
+{
+  "session_id": "uuid",
+  "action": "attack"  # attack, defend, flee
+}
+```
+
+**Key Components**:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| DiceRoller | `src/utils/dice.py` | Parse dice notation (1d20, 2d6+3, etc.) |
+| CombatManager | `src/engine/combat_manager.py` | Combat state machine and resolution |
+| CombatState | `src/state/combat.py` | Combat state models |
+| KeeperAgent | `src/agents/keeper.py` | Mechanical referee |
+| Enemy Templates | `src/engine/combat_manager.py` | 5 enemy types with D&D stats |
+
+**Enemy Types**:
+
+| Enemy | HP | AC | Attack | Damage | Notes |
+|-------|----|----|--------|--------|-------|
+| Goblin | 7 | 13 | +4 | 1d6+2 | Nimble |
+| Bandit | 11 | 12 | +3 | 1d8+1 | Human |
+| Skeleton | 13 | 13 | +4 | 1d6+2 | Undead |
+| Wolf | 11 | 13 | +4 | 2d4+2 | Pack tactics |
+| Orc | 15 | 13 | +5 | 1d12+3 | Aggressive |
+
+**Combat Actions**:
+
+```python
+# Attack - Roll d20 + attack bonus vs enemy AC
+# If hit: Roll damage dice + modifiers
+result = combat_manager.attack(target)
+
+# Defend - Enemy gets disadvantage on next attack
+combat_manager.defend()
+
+# Flee - DEX check (d20 + DEX modifier) vs DC 12
+success = combat_manager.flee()
+```
+
+**Cost-Efficient Design**:
+- **During Combat**: Pure Python mechanics, no LLM calls
+- **At Combat End**: Single Narrator LLM call for dramatic summary
+- **Cost**: ~$0.002 per combat (vs ~$0.05 for full LLM approach)
+
+**Testing**:
+```bash
+# Run combat tests (275 tests)
+uv run pytest tests/test_dice.py -v
+uv run pytest tests/test_combat_state.py -v
+uv run pytest tests/test_combat_manager.py -v
+uv run pytest tests/test_keeper.py -v
+
+# Integration tests
+uv run pytest tests/test_combat_integration.py -v
+```
+
+**Frontend Combat HUD**:
+- HP progress bars (player and enemies)
+- Action buttons (Attack, Defend, Flee)
+- Turn order display
+- Dice roll animations
+- Combat log with results
+
+**Common Issues**:
+- **Enemy not found**: Check enemy_type matches template names
+- **Invalid dice notation**: Use standard D&D format (1d20, 2d6+3)
+- **Combat state lost**: Ensure session_id matches active session
+- **HP not updating**: Verify combat state is saved after each turn
 
 ---
 

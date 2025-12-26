@@ -1,6 +1,6 @@
 """Tests for AgentRouter."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -16,8 +16,9 @@ class TestAgentRouter:
         """Create an AgentRouter instance."""
         return AgentRouter()
 
+    @patch("src.engine.router.random.random", return_value=0.5)
     def test_exploration_phase_routes_to_narrator_by_default(
-        self, router: AgentRouter
+        self, mock_random: MagicMock, router: AgentRouter
     ) -> None:
         """Test that exploration phase routes to narrator by default."""
         action = "I walk down the hallway"
