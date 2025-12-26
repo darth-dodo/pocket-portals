@@ -1,9 +1,37 @@
 # Combat Mechanics System Design
 
 **Date:** 2025-12-25
-**Status:** Design Specification
+**Status:** Implemented
+**Implementation Date:** 2025-12-26
 **Related Requirements:** FR-14, FR-15, FR-16, FR-17
 **Dependencies:** Character Creation (FR-01, FR-02), Keeper Agent
+
+---
+
+## Implementation Summary
+
+The combat system was implemented using **Approach 5: Batched Summary** for cost-efficient design. This approach uses zero LLM calls during combat rounds, with a single Narrator LLM call at the end to summarize the entire battle.
+
+### Key Implementation Decisions
+
+1. **Cost Efficiency**: All combat mechanics (dice rolls, damage calculation, HP tracking) handled by `CombatManager` without LLM calls
+2. **Narrative Quality**: Single `Narrator.summarize_combat()` call at combat end generates dramatic 2-4 sentence summary from combat log
+3. **D&D 5e Compliance**: Initiative (d20 + DEX), attack rolls vs AC, weapon damage by class, advantage/disadvantage mechanics
+4. **Defensive Actions**: Defend action gives enemy disadvantage on next attack; Flee triggers opportunity attack with advantage on failure
+
+### Files Implemented
+
+| File | Purpose |
+|------|---------|
+| `src/engine/combat_manager.py` | Core combat logic, attack resolution, turn management |
+| `src/utils/dice.py` | D&D notation parser, advantage/disadvantage support |
+| `src/data/enemies.py` | Enemy templates (goblin, bandit, skeleton, wolf, orc) |
+| `src/agents/keeper.py` | Combat method delegation to CombatManager |
+| `src/agents/narrator.py` | `summarize_combat()` method for end-of-combat narrative |
+| `src/state/models.py` | CombatState, Combatant, Enemy, CombatAction models |
+| `src/api/main.py` | `/combat/start` and `/combat/action` endpoints |
+| `static/index.html` | Combat UI (HP bars, action buttons, dice display) |
+| `static/combat-test.html` | Standalone combat testing interface |
 
 ---
 
@@ -644,70 +672,97 @@ resolve_attack:
 
 ## 9. API Design
 
-### 9.1 New Endpoints
+### 9.1 Implemented Endpoints
 
 **POST /combat/start**
 ```python
 class StartCombatRequest(BaseModel):
     session_id: str
-    enemy_type: str  # "goblin", "bandit", "skeleton", etc.
+    enemy_type: str  # "goblin", "bandit", "skeleton", "wolf", "orc"
 
 class StartCombatResponse(BaseModel):
-    narrative: str  # Narrator's combat scene description
+    narrative: str  # Combined scene description + initiative results
     combat_state: CombatState
-    initiative_results: list[dict]  # Initiative roll details
+    initiative_results: list[dict]  # {"id", "roll", "modifier", "total"}
 ```
 
 **POST /combat/action**
 ```python
 class CombatActionRequest(BaseModel):
     session_id: str
-    action: CombatAction  # "attack", "defend", "flee"
+    action: str  # "attack", "defend", "flee"
 
 class CombatActionResponse(BaseModel):
-    mechanical_result: dict  # Keeper's dice rolls and mechanics
-    narrative: str  # Narrator's description of action
+    success: bool              # Action executed successfully
+    result: dict               # Attack/defend/flee result details
+    message: str               # Formatted combat log text
+    narrative: str | None      # Narrator summary (only at combat end)
     combat_state: CombatState  # Updated state
-    combat_ongoing: bool
-    victory: bool | None  # True if player won, False if lost, None if fled
+    combat_ended: bool         # True if combat is over
+    victory: bool | None       # True=win, False=lose, None=ongoing/fled
+    fled: bool = False         # True if player successfully escaped
 ```
 
-**GET /combat/state**
-```python
-class CombatStateResponse(BaseModel):
-    combat_state: CombatState
-    is_active: bool
-```
+**Implementation Notes:**
+- `/combat/start` requires valid session with completed character sheet
+- `/combat/action` validates player turn before executing
+- Narrator narrative only generated at combat end (cost efficiency)
+- Enemy turn auto-executes after player action if combat continues
 
 ### 9.2 Enemy Templates
 
-**Enemy database** (simple dict in `src/data/enemies.py`):
+**Implemented in `src/data/enemies.py`:**
+
+| Enemy Type | Name | HP | AC | Attack | Damage |
+|------------|------|----|----|--------|--------|
+| `goblin` | Goblin Raider | 7 | 13 | +4 | 1d6+2 |
+| `bandit` | Bandit Outlaw | 11 | 12 | +3 | 1d6+1 |
+| `skeleton` | Skeleton Warrior | 13 | 13 | +4 | 1d6+2 |
+| `wolf` | Dire Wolf | 11 | 13 | +5 | 2d4+3 |
+| `orc` | Orc Warrior | 15 | 13 | +5 | 1d12+3 |
+
 ```python
 ENEMY_TEMPLATES = {
     "goblin": Enemy(
         name="Goblin Raider",
-        description="A small, green-skinned creature with a wicked grin",
+        description="A small, green-skinned creature with a wicked grin and sharp teeth",
         max_hp=7,
         armor_class=13,
         attack_bonus=4,
-        damage_dice="1d6+2"
+        damage_dice="1d6+2",
     ),
     "bandit": Enemy(
-        name="Highway Bandit",
-        description="A rough-looking human with a scarred face",
+        name="Bandit Outlaw",
+        description="A rough-looking human with a scarred face and tattered leather armor",
         max_hp=11,
         armor_class=12,
         attack_bonus=3,
-        damage_dice="1d8+1"
+        damage_dice="1d6+1",
     ),
     "skeleton": Enemy(
-        name="Animated Skeleton",
-        description="Bones held together by dark magic",
+        name="Skeleton Warrior",
+        description="An animated skeleton wielding a rusty sword and wearing tattered armor",
         max_hp=13,
         armor_class=13,
         attack_bonus=4,
-        damage_dice="1d6+2"
-    )
+        damage_dice="1d6+2",
+    ),
+    "wolf": Enemy(
+        name="Dire Wolf",
+        description="A large, fierce wolf with matted gray fur and glowing yellow eyes",
+        max_hp=11,
+        armor_class=13,
+        attack_bonus=5,
+        damage_dice="2d4+3",
+    ),
+    "orc": Enemy(
+        name="Orc Warrior",
+        description="A muscular, gray-skinned humanoid with tusks and a battle-scarred face",
+        max_hp=15,
+        armor_class=13,
+        attack_bonus=5,
+        damage_dice="1d12+3",
+    ),
 }
 ```
 
@@ -983,87 +1038,92 @@ function showDiceRoll(rollData) {
 
 ## 11. Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+> **All phases completed on 2025-12-26**
+
+### Phase 1: Foundation - COMPLETE
 **Goal:** Basic combat state and dice rolling
 
 **Tasks:**
-1. ✅ Implement `CombatState`, `Combatant`, `Enemy` models
-2. ✅ Create `DiceRoller` utility with tests
-3. ✅ Add `combat_state` to `GameState`
-4. ✅ Create enemy templates database
-5. ✅ Unit tests for dice rolling (>90% coverage)
+1. Implement `CombatState`, `Combatant`, `Enemy` models - `src/state/models.py`
+2. Create `DiceRoller` utility with tests - `src/utils/dice.py`
+3. Add `combat_state` to `GameState` - `src/state/models.py`
+4. Create enemy templates database - `src/data/enemies.py`
+5. Unit tests for dice rolling
 
-**Acceptance Criteria:**
-- Can instantiate CombatState with player and enemy
-- Dice rolls produce valid results with modifiers
-- Enemy templates loadable by type
+**Implementation Notes:**
+- `DiceRoller` supports standard notation (XdY+Z), advantage, and disadvantage
+- Five enemy templates: goblin, bandit, skeleton, wolf, orc
+- `DiceRoll` dataclass provides formatted output for combat log
 
-### Phase 2: Initiative System (Week 1)
+### Phase 2: Initiative System - COMPLETE
 **Goal:** Turn order establishment
 
 **Tasks:**
-1. ✅ Implement `KeeperAgent.roll_initiative()`
-2. ✅ Create `/combat/start` endpoint
-3. ✅ Initiative roll task config in YAML
-4. ✅ Frontend: Display initiative order UI
-5. ✅ Integration tests for initiative flow
+1. Implement `CombatManager.roll_initiative()` - `src/engine/combat_manager.py`
+2. Create `/combat/start` endpoint - `src/api/main.py`
+3. Keeper formats initiative results - `src/agents/keeper.py`
+4. Frontend: Display initiative order UI - `static/index.html`
 
-**Acceptance Criteria:**
-- Initiative rolled correctly with DEX modifiers
-- Turn order sorted high to low
-- Frontend displays turn tracker
+**Implementation Notes:**
+- Initiative uses 1d20 + DEX modifier (D&D 5e standard)
+- `KeeperAgent.format_initiative_result()` provides human-readable output
+- Turn order sorted high to low, ties handled by roll order
 
-### Phase 3: Attack Resolution (Week 2)
+### Phase 3: Attack Resolution - COMPLETE
 **Goal:** Basic attack mechanics
 
 **Tasks:**
-1. ✅ Implement attack resolution algorithm
-2. ✅ Create `KeeperAgent.resolve_combat_action()`
-3. ✅ Add weapon damage by class lookup
-4. ✅ Create `/combat/action` endpoint
-5. ✅ Frontend: Combat action buttons
-6. ✅ Frontend: Dice roll animations
+1. Implement `CombatManager.resolve_attack()` - `src/engine/combat_manager.py`
+2. Add weapon damage by class lookup - `WEAPON_DAMAGE` dict in combat_manager.py
+3. Create `/combat/action` endpoint - `src/api/main.py`
+4. Frontend: Combat action buttons - `static/index.html`
 
-**Acceptance Criteria:**
-- Attack hits/misses based on AC
-- Damage calculated correctly with modifiers
-- HP updated after damage
-- Frontend shows dice results
+**Implementation Notes:**
+- Attack resolution: d20 + attack_bonus vs AC
+- Damage calculation: weapon_dice + stat_modifier
+- Combat log entries generated for each action
+- Class-based weapons: Fighter (1d8+STR), Rogue (1d4+DEX), Wizard (1d6+STR), etc.
 
-### Phase 4: Combat Flow (Week 2)
+### Phase 4: Combat Flow - COMPLETE
 **Goal:** Complete turn-based combat loop
 
 **Tasks:**
-1. ✅ Implement turn advancement logic
-2. ✅ Add enemy AI (always attacks for MVP)
-3. ✅ Implement combat end detection
-4. ✅ Frontend: HP bars and live updates
-5. ✅ Narrative integration with Narrator
+1. Implement `CombatManager.advance_turn()` - handles turn/round progression
+2. Implement `CombatManager.execute_enemy_turn()` - enemy AI (always attacks)
+3. Implement `CombatManager.check_combat_end()` - victory/defeat detection
+4. Implement `Narrator.summarize_combat()` - end-of-combat narrative
+5. Frontend: HP bars and live updates - `static/index.html`
 
-**Acceptance Criteria:**
-- Turns alternate between player and enemy
-- Combat ends when HP reaches 0
-- Victory/defeat narratives generated
-- Combat state resets after resolution
+**Implementation Notes:**
+- Turn advancement wraps to next round when all combatants have acted
+- Phase transitions: PLAYER_TURN <-> ENEMY_TURN based on turn_order
+- Single Narrator LLM call at combat end (cost-efficient design)
+- Combat log preserved for narrative generation
 
-### Phase 5: Defend and Flee (Week 3)
+### Phase 5: Defend and Flee - COMPLETE
 **Goal:** Additional player actions
 
 **Tasks:**
-1. ✅ Implement defend action (disadvantage on enemy attack)
-2. ✅ Implement flee action (DEX check vs DC 12)
-3. ✅ Update frontend with action buttons
-4. ✅ Add flee consequence tracking
+1. Implement `CombatManager.execute_defend()` - sets `player_defending` flag
+2. Implement `CombatManager.execute_flee()` - DEX check vs DC 12
+3. Implement opportunity attack on failed flee - enemy attacks with advantage
+4. Update frontend with action buttons - Attack, Defend, Flee
 
-**Acceptance Criteria:**
-- Defend gives mechanical benefit
-- Flee can succeed or fail
-- Failed flee triggers enemy attack
-- All actions have narrative descriptions
+**Implementation Notes:**
+- Defend: Sets `combat_state.player_defending = True`, enemy next attack has disadvantage
+- Flee success: Combat ends immediately, player escapes
+- Flee failure: Enemy gets free attack with advantage (opportunity attack)
+- `CombatActionResponse.fled` flag indicates successful escape
 
 ---
 
 ## 12. Future Enhancements
+
+### Already Implemented Beyond Original MVP
+- Advantage/disadvantage mechanics
+- Opportunity attacks (on failed flee)
+- Combat log for narrative generation
+- Five enemy types (originally planned 3)
 
 ### Phase 6: Advanced Combat (Post-MVP)
 - Multiple simultaneous enemies
@@ -1113,27 +1173,48 @@ function showDiceRoll(rollData) {
 pocket-portals/
 ├── src/
 │   ├── state/
-│   │   └── models.py               # CombatState, Combatant, Enemy
+│   │   └── models.py               # CombatState, Combatant, Enemy, CombatAction, CombatPhaseEnum
+│   ├── engine/
+│   │   └── combat_manager.py       # CombatManager - core combat logic
 │   ├── utils/
-│   │   └── dice.py                 # DiceRoller (new file)
+│   │   └── dice.py                 # DiceRoller, DiceRoll dataclass
 │   ├── data/
-│   │   └── enemies.py              # ENEMY_TEMPLATES (new file)
+│   │   └── enemies.py              # ENEMY_TEMPLATES (goblin, bandit, skeleton, wolf, orc)
 │   ├── agents/
-│   │   └── keeper.py               # Extended with combat methods
+│   │   ├── keeper.py               # Combat method delegation to CombatManager
+│   │   └── narrator.py             # summarize_combat() for end-of-combat narrative
 │   ├── api/
-│   │   └── main.py                 # New combat endpoints
+│   │   └── main.py                 # /combat/start, /combat/action endpoints
 │   └── config/
-│       ├── agents.yaml             # Updated Keeper config
-│       └── tasks.yaml              # New combat tasks
+│       └── tasks.yaml              # summarize_combat task config
 ├── static/
-│   ├── index.html                  # Combat HUD markup
-│   ├── style.css                   # Combat styling
-│   └── script.js                   # Combat JS functions
+│   ├── index.html                  # Combat HUD (HP bars, actions, initiative)
+│   └── combat-test.html            # Standalone combat testing interface
 └── tests/
-    ├── test_dice.py                # DiceRoller tests (new file)
-    ├── test_combat_state.py        # Combat model tests (new file)
-    └── test_combat_flow.py         # Integration tests (new file)
+    └── (combat tests)              # Integration tests for combat flow
 ```
+
+### Key Classes and Methods
+
+**CombatManager** (`src/engine/combat_manager.py`):
+- `start_combat(character_sheet, enemy_type)` - Initialize combat encounter
+- `roll_initiative(combatants, dex_modifiers)` - Roll initiative for all
+- `resolve_attack(attacker, defender, ...)` - Resolve attack with advantage/disadvantage
+- `execute_player_attack(combat_state, character_sheet)` - Player attack action
+- `execute_enemy_turn(combat_state)` - Enemy AI attack
+- `execute_defend(combat_state, character_sheet)` - Defend action
+- `execute_flee(combat_state, character_sheet)` - Flee with opportunity attack
+- `advance_turn(combat_state)` - Turn/round progression
+- `check_combat_end(combat_state)` - Victory/defeat detection
+- `end_combat(combat_state, result)` - Cleanup and finalize
+
+**DiceRoller** (`src/utils/dice.py`):
+- `roll(notation)` - Parse and roll D&D notation (e.g., "2d6+3")
+- `roll_with_advantage()` - Roll 2d20, take higher
+- `roll_with_disadvantage()` - Roll 2d20, take lower
+
+**NarratorAgent** (`src/agents/narrator.py`):
+- `summarize_combat(combat_log, victory, enemy_name, player_name)` - Single LLM call for combat narrative
 
 ---
 
