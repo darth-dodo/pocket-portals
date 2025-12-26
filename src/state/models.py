@@ -164,6 +164,51 @@ class GameState(BaseModel):
             )
         return self
 
+    def to_json(self) -> str:
+        """Serialize the GameState to a JSON string.
+
+        This method provides a convenient way to serialize the entire game state,
+        including nested models like CharacterSheet and CombatState, to a JSON
+        string suitable for storage in Redis or other backends.
+
+        Returns:
+            JSON string representation of the game state
+
+        Examples:
+            >>> state = GameState(session_id="test-123")
+            >>> json_str = state.to_json()
+            >>> isinstance(json_str, str)
+            True
+        """
+        return self.model_dump_json()
+
+    @classmethod
+    def from_json(cls, json_str: str) -> GameState:
+        """Deserialize a GameState from a JSON string.
+
+        This class method reconstructs a GameState instance from its JSON
+        representation, properly handling nested models like CharacterSheet
+        and CombatState.
+
+        Args:
+            json_str: JSON string representation of a GameState
+
+        Returns:
+            Reconstructed GameState instance
+
+        Raises:
+            pydantic.ValidationError: If the JSON is invalid or doesn't match
+                the expected schema
+
+        Examples:
+            >>> state = GameState(session_id="test-123")
+            >>> json_str = state.to_json()
+            >>> restored = GameState.from_json(json_str)
+            >>> restored.session_id == state.session_id
+            True
+        """
+        return cls.model_validate_json(json_str)
+
 
 class Combatant(BaseModel):
     """Individual combatant in combat.
