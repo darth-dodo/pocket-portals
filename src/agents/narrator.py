@@ -80,7 +80,7 @@ class NarratorAgent:
 
         # Format combat log as numbered lines
         formatted_log = "\n".join(
-            f"{i+1}. {entry}" for i, entry in enumerate(combat_log)
+            f"{i + 1}. {entry}" for i, entry in enumerate(combat_log)
         )
 
         # Determine outcome text
