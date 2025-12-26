@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +32,7 @@ from src.state import (
     GameState,
     SessionManager,
 )
+from src.state.backends import create_backend
 from src.state.models import CombatPhaseEnum, CombatState
 
 load_dotenv()
@@ -90,16 +91,17 @@ def filter_content(action: str) -> str:
     return action
 
 
-# Global state
+# Global state - agents initialized in lifespan
 narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 character_interviewer: CharacterInterviewerAgent | None = None
-session_manager = SessionManager()
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
 combat_manager = CombatManager()
+
+# Note: session_manager is now initialized via FastAPI lifespan and accessed via app.state
 
 # Starter choices pool - adventure hooks to begin the journey
 STARTER_CHOICES_POOL = [
@@ -135,9 +137,30 @@ CHARACTER_CREATION_CHOICES = [
 ]
 
 
-def get_session(session_id: str | None) -> GameState:
-    """Get existing session or create new one."""
-    return session_manager.get_or_create_session(session_id)
+def get_session_manager(request: Request) -> SessionManager:
+    """FastAPI dependency to get session manager from app state.
+
+    Args:
+        request: FastAPI Request object
+
+    Returns:
+        SessionManager: The session manager instance from app.state
+    """
+    return request.app.state.session_manager
+
+
+async def get_session(request: Request, session_id: str | None) -> GameState:
+    """Get existing session or create new one.
+
+    Args:
+        request: FastAPI Request object (to access app.state)
+        session_id: Optional existing session ID
+
+    Returns:
+        GameState: Existing or newly created game state
+    """
+    sm = get_session_manager(request)
+    return await sm.get_or_create_session(session_id)
 
 
 def build_context(
@@ -282,8 +305,15 @@ class CombatActionResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """Initialize agents on startup."""
+    """Initialize backend, session manager, and agents on startup."""
     global narrator, innkeeper, keeper, jester, character_interviewer, turn_executor
+
+    # Initialize session backend and manager
+    backend = await create_backend()
+    app.state.backend = backend
+    app.state.session_manager = SessionManager(backend)
+
+    # Initialize agents if API key available
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
@@ -296,6 +326,11 @@ async def lifespan(app: FastAPI) -> Any:
             jester=jester,
         )
     yield
+
+    # Shutdown: close backend connection if applicable
+    if hasattr(backend, "close"):
+        await backend.close()
+
     narrator = None
     innkeeper = None
     keeper = None
@@ -330,6 +365,7 @@ async def health_check() -> HealthResponse:
 
 @app.get("/start", response_model=NarrativeResponse)
 async def start_adventure(
+    request: Request,
     shuffle: bool = Query(default=False, description="Shuffle the starter choices"),
     character: str = Query(
         default="", description="Optional character description for personalization"
@@ -345,8 +381,11 @@ async def start_adventure(
     Optionally provide a character description for personalized narrative.
     Use skip_creation=true to skip character creation with a default character.
     """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # Create new session
-    state = get_session(None)
+    state = await get_session(request, None)
 
     if skip_creation:
         # Create default character and skip to exploration
@@ -355,8 +394,8 @@ async def start_adventure(
             race=CharacterRace.HUMAN,
             character_class=CharacterClass.FIGHTER,
         )
-        session_manager.set_character_sheet(state.session_id, default_character)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.set_character_sheet(state.session_id, default_character)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         # Select 3 choices from the adventure pool
         if shuffle:
@@ -364,9 +403,9 @@ async def start_adventure(
         else:
             choices = STARTER_CHOICES_POOL[:3]
 
-        session_manager.set_choices(state.session_id, choices)
+        await sm.set_choices(state.session_id, choices)
         if character:
-            session_manager.set_character_description(state.session_id, character)
+            await sm.set_character_description(state.session_id, character)
 
         return NarrativeResponse(
             narrative=WELCOME_NARRATIVE,
@@ -375,7 +414,7 @@ async def start_adventure(
         )
 
     # Start character creation flow
-    session_manager.set_creation_turn(state.session_id, 1)
+    await sm.set_creation_turn(state.session_id, 1)
 
     # Generate dynamic starter choices using the agent
     if character_interviewer:
@@ -383,10 +422,10 @@ async def start_adventure(
     else:
         starter_choices = CHARACTER_CREATION_CHOICES
 
-    session_manager.set_choices(state.session_id, starter_choices)
+    await sm.set_choices(state.session_id, starter_choices)
 
     if character:
-        session_manager.set_character_description(state.session_id, character)
+        await sm.set_character_description(state.session_id, character)
 
     return NarrativeResponse(
         narrative=CHARACTER_CREATION_NARRATIVE,
@@ -396,28 +435,35 @@ async def start_adventure(
 
 
 @app.post("/action", response_model=NarrativeResponse)
-async def process_action(request: ActionRequest) -> NarrativeResponse:
+async def process_action(
+    request: Request, action_request: ActionRequest
+) -> NarrativeResponse:
     """Process player action and return narrative response."""
-    state = get_session(request.session_id)
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    state = await get_session(request, action_request.session_id)
 
     # Resolve action from choice_index or direct action
-    if request.choice_index is not None:
+    if action_request.choice_index is not None:
         # Use stored choice from session state
         choices = state.current_choices or ["Look around", "Wait", "Leave"]
-        action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
+        action = choices[
+            action_request.choice_index - 1
+        ]  # Convert 1-indexed to 0-indexed
     else:
-        action = request.action or ""
+        action = action_request.action or ""
 
     # Apply content safety filter
     action = filter_content(action)
 
     # Handle CHARACTER_CREATION phase specially
     if state.phase == GamePhase.CHARACTER_CREATION:
-        return await _handle_character_creation(state, action)
+        return await _handle_character_creation(request, state, action)
 
     if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
-        session_manager.set_choices(state.session_id, choices)
+        await sm.set_choices(state.session_id, choices)
         return NarrativeResponse(
             narrative="The narrator is not available. Check ANTHROPIC_API_KEY.",
             session_id=state.session_id,
@@ -444,13 +490,13 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     )
 
     # Store exchange in session (auto-limits to 20)
-    session_manager.add_exchange(state.session_id, action, result.narrative)
+    await sm.add_exchange(state.session_id, action, result.narrative)
 
     # Update recent agents for Jester cooldown tracking
-    session_manager.update_recent_agents(state.session_id, routing.agents)
+    await sm.update_recent_agents(state.session_id, routing.agents)
 
     # Use choices from turn result
-    session_manager.set_choices(state.session_id, result.choices)
+    await sm.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
         narrative=result.narrative, session_id=state.session_id, choices=result.choices
@@ -458,19 +504,23 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
 
 
 async def _handle_character_creation(
-    state: GameState, action: str
+    request: Request, state: GameState, action: str
 ) -> NarrativeResponse:
     """Handle actions during character creation phase.
 
     Args:
+        request: FastAPI Request object (to access app.state)
         state: Current game state
         action: Player's action/response
 
     Returns:
         NarrativeResponse with innkeeper's next question or character sheet
     """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # Increment creation turn
-    new_turn = session_manager.increment_creation_turn(state.session_id)
+    new_turn = await sm.increment_creation_turn(state.session_id)
 
     # Check if user wants to skip
     if "skip" in action.lower():
@@ -480,12 +530,12 @@ async def _handle_character_creation(
             race=CharacterRace.HUMAN,
             character_class=CharacterClass.FIGHTER,
         )
-        session_manager.set_character_sheet(state.session_id, default_character)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.set_character_sheet(state.session_id, default_character)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         choices = STARTER_CHOICES_POOL[:3]
-        session_manager.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
-        session_manager.set_choices(state.session_id, choices)
+        await sm.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
+        await sm.set_choices(state.session_id, choices)
 
         return NarrativeResponse(
             narrative=WELCOME_NARRATIVE,
@@ -496,12 +546,11 @@ async def _handle_character_creation(
     # If we've completed 5 turns, generate character sheet and transition
     if new_turn >= 5:
         # Build character from conversation history (include current action)
-        session_manager.add_exchange(state.session_id, action, "")
-        character_sheet = _generate_character_from_history(
-            session_manager.get_or_create_session(state.session_id)
-        )
-        session_manager.set_character_sheet(state.session_id, character_sheet)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.add_exchange(state.session_id, action, "")
+        updated_state = await sm.get_or_create_session(state.session_id)
+        character_sheet = _generate_character_from_history(updated_state)
+        await sm.set_character_sheet(state.session_id, character_sheet)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         # Generate contextual adventure hooks based on the character
         character_info = (
@@ -517,7 +566,7 @@ async def _handle_character_creation(
         else:
             choices = STARTER_CHOICES_POOL[:3]
 
-        session_manager.set_choices(state.session_id, choices)
+        await sm.set_choices(state.session_id, choices)
 
         narrative = (
             f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
@@ -563,8 +612,8 @@ async def _handle_character_creation(
         ]
 
     # Store the exchange with the actual narrative response
-    session_manager.add_exchange(state.session_id, action, narrative)
-    session_manager.set_choices(state.session_id, choices)
+    await sm.add_exchange(state.session_id, action, narrative)
+    await sm.set_choices(state.session_id, choices)
 
     return NarrativeResponse(
         narrative=narrative,
@@ -674,11 +723,14 @@ async def get_quest(
 
 
 @app.post("/keeper/resolve", response_model=ResolveResponse)
-async def resolve_action(request: ResolveRequest) -> ResolveResponse:
+async def resolve_action(
+    request: Request, resolve_request: ResolveRequest
+) -> ResolveResponse:
     """Resolve game mechanics for a player action.
 
     Args:
-        request: Action resolution request with action, difficulty, and optional session_id
+        request: FastAPI Request object
+        resolve_request: Action resolution request with action, difficulty, and optional session_id
     """
     if keeper is None:
         return ResolveResponse(
@@ -687,8 +739,8 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
 
     # Build context from session if provided
     context = ""
-    if request.session_id:
-        state = get_session(request.session_id)
+    if resolve_request.session_id:
+        state = await get_session(request, resolve_request.session_id)
         context = build_context(
             state.conversation_history,
             character_sheet=state.character_sheet,
@@ -696,17 +748,22 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
         )
 
     result = keeper.resolve_action(
-        action=request.action, context=context, difficulty=request.difficulty
+        action=resolve_request.action,
+        context=context,
+        difficulty=resolve_request.difficulty,
     )
     return ResolveResponse(result=result)
 
 
 @app.post("/jester/complicate", response_model=ComplicateResponse)
-async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
+async def add_complication(
+    request: Request, complicate_request: ComplicateRequest
+) -> ComplicateResponse:
     """Add a complication or meta-commentary to a situation.
 
     Args:
-        request: Complication request with situation and optional session_id
+        request: FastAPI Request object
+        complicate_request: Complication request with situation and optional session_id
     """
     if jester is None:
         return ComplicateResponse(
@@ -715,24 +772,29 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
 
     # Build context from session if provided
     context = ""
-    if request.session_id:
-        state = get_session(request.session_id)
+    if complicate_request.session_id:
+        state = await get_session(request, complicate_request.session_id)
         context = build_context(
             state.conversation_history,
             character_sheet=state.character_sheet,
             character_description=state.character_description,
         )
 
-    complication = jester.add_complication(situation=request.situation, context=context)
+    complication = jester.add_complication(
+        situation=complicate_request.situation, context=context
+    )
     return ComplicateResponse(complication=complication)
 
 
 @app.post("/combat/start", response_model=StartCombatResponse)
-async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
+async def start_combat(
+    request: Request, combat_request: StartCombatRequest
+) -> StartCombatResponse:
     """Start a new combat encounter.
 
     Args:
-        request: Combat start request with session_id and enemy_type
+        request: FastAPI Request object
+        combat_request: Combat start request with session_id and enemy_type
 
     Returns:
         StartCombatResponse with narrative, combat state, and initiative results
@@ -742,8 +804,11 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
     """
     from fastapi import HTTPException
 
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # 1. Get session - validate that this specific session_id exists
-    state = session_manager.get_session(request.session_id)
+    state = await sm.get_session(combat_request.session_id)
     if state is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -759,12 +824,14 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
     try:
         if keeper:
             combat_state, initiative_results = keeper.start_combat(
-                character_sheet=state.character_sheet, enemy_type=request.enemy_type
+                character_sheet=state.character_sheet,
+                enemy_type=combat_request.enemy_type,
             )
         else:
             # Fallback for testing/development without API key
             combat_state, initiative_results = combat_manager.start_combat(
-                character_sheet=state.character_sheet, enemy_type=request.enemy_type
+                character_sheet=state.character_sheet,
+                enemy_type=combat_request.enemy_type,
             )
     except ValueError as e:
         # Invalid enemy type
@@ -818,11 +885,14 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
 
 
 @app.post("/combat/action", response_model=CombatActionResponse)
-async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
+async def combat_action(
+    request: Request, combat_action_request: CombatActionRequest
+) -> CombatActionResponse:
     """Execute a combat action.
 
     Args:
-        request: Combat action request with session_id and action
+        request: FastAPI Request object
+        combat_action_request: Combat action request with session_id and action
 
     Returns:
         CombatActionResponse with result, message, updated combat state, and end status
@@ -832,8 +902,11 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
     """
     from fastapi import HTTPException
 
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # 1. Validate session and active combat
-    state = session_manager.get_session(request.session_id)
+    state = await sm.get_session(combat_action_request.session_id)
     if state is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -853,7 +926,7 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
         )
 
     # 3. Execute player action via keeper
-    action = request.action.lower()
+    action = combat_action_request.action.lower()
     fled = False
 
     if action == "attack":
@@ -974,7 +1047,9 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
 
 
 @app.post("/action/stream")
-async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
+async def process_action_stream(
+    request: Request, action_request: ActionRequest
+) -> EventSourceResponse:
     """Process player action with streaming response via Server-Sent Events.
 
     Streams agent responses as they complete, providing real-time feedback.
@@ -985,21 +1060,24 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
     - complete: Signal that streaming is done
     - error: If something goes wrong
     """
-    state = get_session(request.session_id)
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    state = await get_session(request, action_request.session_id)
 
     # Resolve action from choice_index or direct action
-    if request.choice_index is not None:
+    if action_request.choice_index is not None:
         choices = state.current_choices or ["Look around", "Wait", "Leave"]
-        action = choices[request.choice_index - 1]
+        action = choices[action_request.choice_index - 1]
     else:
-        action = request.action or ""
+        action = action_request.action or ""
 
     # Apply content safety filter
     action = filter_content(action)
 
     # Handle CHARACTER_CREATION phase with character-by-character streaming
     if state.phase == GamePhase.CHARACTER_CREATION:
-        result = await _handle_character_creation(state, action)
+        result = await _handle_character_creation(request, state, action)
 
         async def creation_generator() -> AsyncGenerator[dict[str, Any], None]:
             # Signal agent starting
@@ -1208,9 +1286,9 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
             }
 
             # Update session state
-            session_manager.add_exchange(state.session_id, action, full_narrative)
-            session_manager.update_recent_agents(state.session_id, routing.agents)
-            session_manager.set_choices(state.session_id, choices)
+            await sm.add_exchange(state.session_id, action, full_narrative)
+            await sm.update_recent_agents(state.session_id, routing.agents)
+            await sm.set_choices(state.session_id, choices)
 
             yield {
                 "event": "complete",

@@ -5,20 +5,25 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from src.state.models import GamePhase, GameState
+from src.state.backends.base import SessionBackend
+from src.state.models import CombatState, GamePhase, GameState
 
 if TYPE_CHECKING:
     from src.state.character import CharacterSheet
 
 
 class SessionManager:
-    """Manages game sessions with in-memory storage."""
+    """Manages game sessions using a pluggable async backend."""
 
-    def __init__(self) -> None:
-        """Initialize session manager with empty session storage."""
-        self._sessions: dict[str, GameState] = {}
+    def __init__(self, backend: SessionBackend) -> None:
+        """Initialize session manager with a storage backend.
 
-    def create_session(self) -> GameState:
+        Args:
+            backend: SessionBackend implementation for state persistence
+        """
+        self._backend = backend
+
+    async def create_session(self) -> GameState:
         """Create a new session with default state.
 
         Returns:
@@ -26,10 +31,10 @@ class SessionManager:
         """
         session_id = str(uuid.uuid4())
         state = GameState(session_id=session_id)
-        self._sessions[session_id] = state
+        await self._backend.create(session_id, state)
         return state
 
-    def get_session(self, session_id: str) -> GameState | None:
+    async def get_session(self, session_id: str) -> GameState | None:
         """Get existing session or None.
 
         Args:
@@ -38,9 +43,9 @@ class SessionManager:
         Returns:
             GameState if session exists, None otherwise
         """
-        return self._sessions.get(session_id)
+        return await self._backend.get(session_id)
 
-    def get_or_create_session(self, session_id: str | None) -> GameState:
+    async def get_or_create_session(self, session_id: str | None) -> GameState:
         """Get existing session or create new one.
 
         Args:
@@ -49,11 +54,13 @@ class SessionManager:
         Returns:
             GameState: Existing or newly created game state
         """
-        if session_id and session_id in self._sessions:
-            return self._sessions[session_id]
-        return self.create_session()
+        if session_id:
+            existing = await self._backend.get(session_id)
+            if existing:
+                return existing
+        return await self.create_session()
 
-    def add_exchange(self, session_id: str, action: str, narrative: str) -> None:
+    async def add_exchange(self, session_id: str, action: str, narrative: str) -> None:
         """Add conversation exchange, maintaining history limit of 20.
 
         Args:
@@ -61,15 +68,16 @@ class SessionManager:
             action: Player action text
             narrative: Game narrative response
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.conversation_history.append(
                 {"action": action, "narrative": narrative}
             )
             if len(state.conversation_history) > 20:
                 state.conversation_history = state.conversation_history[-20:]
+            await self._backend.update(session_id, state)
 
-    def update_health(self, session_id: str, damage: int) -> int:
+    async def update_health(self, session_id: str, damage: int) -> int:
         """Apply damage and return remaining health.
 
         Args:
@@ -79,42 +87,47 @@ class SessionManager:
         Returns:
             int: Remaining health after damage (minimum 0)
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.health_current = max(0, state.health_current - damage)
+            await self._backend.update(session_id, state)
             return state.health_current
         return 0
 
-    def set_character_description(self, session_id: str, description: str) -> None:
+    async def set_character_description(
+        self, session_id: str, description: str
+    ) -> None:
         """Set character description for personalization.
 
         Args:
             session_id: Session identifier
             description: Character description text
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.character_description = description
+            await self._backend.update(session_id, state)
 
-    def set_choices(self, session_id: str, choices: list[str]) -> None:
+    async def set_choices(self, session_id: str, choices: list[str]) -> None:
         """Set current choices for the session.
 
         Args:
             session_id: Session identifier
             choices: List of available choice texts
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.current_choices = choices
+            await self._backend.update(session_id, state)
 
-    def update_recent_agents(self, session_id: str, agents: list[str]) -> None:
+    async def update_recent_agents(self, session_id: str, agents: list[str]) -> None:
         """Update recent agents list, keeping last 5.
 
         Args:
             session_id: Session identifier
             agents: List of agent names used in current turn
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.recent_agents.extend(agents)
             # Keep only the last 5 agents for cooldown tracking
@@ -125,19 +138,21 @@ class SessionManager:
                 state.turns_since_jester = 0
             else:
                 state.turns_since_jester += 1
+            await self._backend.update(session_id, state)
 
-    def set_character_sheet(self, session_id: str, sheet: CharacterSheet) -> None:
+    async def set_character_sheet(self, session_id: str, sheet: CharacterSheet) -> None:
         """Set the character sheet for a session.
 
         Args:
             session_id: Session identifier
             sheet: CharacterSheet instance to store
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.character_sheet = sheet
+            await self._backend.update(session_id, state)
 
-    def get_character_sheet(self, session_id: str) -> CharacterSheet | None:
+    async def get_character_sheet(self, session_id: str) -> CharacterSheet | None:
         """Get the character sheet for a session.
 
         Args:
@@ -146,23 +161,24 @@ class SessionManager:
         Returns:
             CharacterSheet if set, None otherwise
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             return state.character_sheet
         return None
 
-    def set_phase(self, session_id: str, phase: GamePhase) -> None:
+    async def set_phase(self, session_id: str, phase: GamePhase) -> None:
         """Set the game phase for a session.
 
         Args:
             session_id: Session identifier
             phase: GamePhase value to set
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.phase = phase
+            await self._backend.update(session_id, state)
 
-    def get_phase(self, session_id: str) -> GamePhase | None:
+    async def get_phase(self, session_id: str) -> GamePhase | None:
         """Get the current game phase for a session.
 
         Args:
@@ -171,23 +187,24 @@ class SessionManager:
         Returns:
             GamePhase if session exists, None otherwise
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             return state.phase
         return None
 
-    def set_creation_turn(self, session_id: str, turn: int) -> None:
+    async def set_creation_turn(self, session_id: str, turn: int) -> None:
         """Set the character creation turn number.
 
         Args:
             session_id: Session identifier
             turn: Turn number (0-5)
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.creation_turn = min(5, max(0, turn))
+            await self._backend.update(session_id, state)
 
-    def increment_creation_turn(self, session_id: str) -> int:
+    async def increment_creation_turn(self, session_id: str) -> int:
         """Increment the character creation turn and return new value.
 
         Args:
@@ -196,13 +213,14 @@ class SessionManager:
         Returns:
             New turn number after incrementing (capped at 5)
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             state.creation_turn = min(5, state.creation_turn + 1)
+            await self._backend.update(session_id, state)
             return state.creation_turn
         return 0
 
-    def get_creation_turn(self, session_id: str) -> int:
+    async def get_creation_turn(self, session_id: str) -> int:
         """Get the current character creation turn.
 
         Args:
@@ -211,7 +229,21 @@ class SessionManager:
         Returns:
             Current turn number (0 if session doesn't exist)
         """
-        state = self._sessions.get(session_id)
+        state = await self._backend.get(session_id)
         if state:
             return state.creation_turn
         return 0
+
+    async def set_combat_state(
+        self, session_id: str, combat_state: CombatState | None
+    ) -> None:
+        """Set the combat state for a session.
+
+        Args:
+            session_id: Session identifier
+            combat_state: CombatState instance or None to clear combat
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.combat_state = combat_state
+            await self._backend.update(session_id, state)
