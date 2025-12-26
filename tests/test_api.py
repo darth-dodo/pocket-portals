@@ -620,8 +620,11 @@ def test_enemy_attacks_after_player(client: TestClient) -> None:
 
 def test_combat_ends_on_enemy_death(client: TestClient) -> None:
     """Test that combat ends when enemy HP reaches 0."""
+    from unittest.mock import patch
+
     from src.api.main import session_manager
     from src.state.models import CombatPhaseEnum
+    from src.utils.dice import DiceRoll
 
     # Setup: Create session with character
     response = client.get("/start?skip_creation=true")
@@ -635,24 +638,31 @@ def test_combat_ends_on_enemy_death(client: TestClient) -> None:
 
     # Get combat state and set enemy HP to 1
     state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        enemy = next(
-            (c for c in state.combat_state.combatants if c.id == "enemy"), None
+    assert state is not None, "Session should exist"
+    assert state.combat_state is not None, "Combat state should exist"
+
+    enemy = next((c for c in state.combat_state.combatants if c.id == "enemy"), None)
+    assert enemy is not None, "Enemy combatant should exist"
+    enemy.current_hp = 1
+    enemy.armor_class = 5  # Low AC to guarantee hit
+
+    # Force player turn for deterministic testing
+    state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
+    state.combat_state.turn_order = ["player", "enemy"]
+    state.combat_state.current_turn_index = 0
+
+    # Mock dice rolls to guarantee hit (roll 20) and damage (10)
+    with patch("src.engine.combat_manager.DiceRoller.roll") as mock_roll:
+        mock_roll.side_effect = [
+            DiceRoll(notation="1d20", rolls=[20], modifier=0, total=20),  # Attack roll
+            DiceRoll(notation="1d8+2", rolls=[8], modifier=2, total=10),  # Damage roll
+        ]
+
+        # Execute attack - should kill enemy
+        action_response = client.post(
+            "/combat/action",
+            json={"session_id": session_id, "action": "attack"},
         )
-        if enemy:
-            enemy.current_hp = 1
-            enemy.armor_class = 5  # Low AC to guarantee hit
-
-        # Force player turn for deterministic testing
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute attack - should kill enemy
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
 
     data = action_response.json()
     assert data["combat_ended"] is True
