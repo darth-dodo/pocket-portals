@@ -620,8 +620,11 @@ def test_enemy_attacks_after_player(client: TestClient) -> None:
 
 def test_combat_ends_on_enemy_death(client: TestClient) -> None:
     """Test that combat ends when enemy HP reaches 0."""
+    from unittest.mock import patch
+
     from src.api.main import session_manager
     from src.state.models import CombatPhaseEnum
+    from src.utils.dice import DiceRoll
 
     # Setup: Create session with character
     response = client.get("/start?skip_creation=true")
@@ -648,11 +651,18 @@ def test_combat_ends_on_enemy_death(client: TestClient) -> None:
     state.combat_state.turn_order = ["player", "enemy"]
     state.combat_state.current_turn_index = 0
 
-    # Execute attack - should kill enemy
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
+    # Mock dice rolls to guarantee hit (roll 20) and damage (10)
+    with patch("src.engine.combat_manager.DiceRoller.roll") as mock_roll:
+        mock_roll.side_effect = [
+            DiceRoll(notation="1d20", rolls=[20], modifier=0, total=20),  # Attack roll
+            DiceRoll(notation="1d8+2", rolls=[8], modifier=2, total=10),  # Damage roll
+        ]
+
+        # Execute attack - should kill enemy
+        action_response = client.post(
+            "/combat/action",
+            json={"session_id": session_id, "action": "attack"},
+        )
 
     data = action_response.json()
     assert data["combat_ended"] is True
