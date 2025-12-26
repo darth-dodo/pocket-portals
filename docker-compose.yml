@@ -3,6 +3,27 @@
 
 services:
   # ============================================================================
+  # Redis Service - Session storage for distributed state management
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: pocket-portals-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - pocket-portals-network
+
+  # ============================================================================
   # API Service - FastAPI application with hot reload for development
   # ============================================================================
   api:
@@ -32,6 +53,9 @@ services:
       - HOST=0.0.0.0
       # Enable hot reload for development
       - UVICORN_RELOAD=true
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379/0
+      - SESSION_BACKEND=redis
 
     # Volume mounts for hot reload
     # Mount source code so changes are reflected immediately without rebuild
@@ -60,10 +84,22 @@ services:
     # Restart container automatically if it crashes (useful for development)
     restart: unless-stopped
 
+    # Depend on Redis being available
+    depends_on:
+      redis:
+        condition: service_healthy
+
     # Network configuration
     # Creates isolated network for potential future services (database, redis, etc.)
     networks:
       - pocket-portals-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  redis-data:
+    name: pocket-portals-redis-data
 
 # ============================================================================
 # Networks
@@ -84,6 +120,7 @@ networks:
 #
 # View logs:
 #   docker-compose logs -f api
+#   docker-compose logs -f redis
 #
 # Rebuild after dependency changes:
 #   docker-compose up --build
@@ -98,3 +135,6 @@ networks:
 #   http://localhost:8888
 #   Health check: http://localhost:8888/health
 #   API docs: http://localhost:8888/docs
+#
+# Access Redis CLI:
+#   docker exec -it pocket-portals-redis redis-cli
