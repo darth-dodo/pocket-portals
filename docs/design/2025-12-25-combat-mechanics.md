@@ -70,6 +70,11 @@ This document specifies the combat mechanics system for Pocket Portals, implemen
 - Tactical positioning on grid
 - Critical hit rules beyond basic damage doubling
 
+**Implemented Beyond Original MVP:**
+- Advantage/disadvantage mechanics (for defend and flee actions)
+- Opportunity attacks (enemy attacks with advantage on failed flee)
+- Five enemy templates (goblin, bandit, skeleton, wolf, orc)
+
 ---
 
 ## 2. Design Principles

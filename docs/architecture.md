@@ -86,6 +86,355 @@ Behavior-Driven Development ensures we build what users actually need:
 
 ---
 
+## 1.1 Multi-Agent System
+
+The Pocket Portals architecture employs a multi-agent system built on CrewAI, where each agent serves a distinct role in the adventure experience.
+
+### Agent Roles and Responsibilities
+
+| Agent | Role | LLM Usage | Key Responsibilities |
+|-------|------|-----------|---------------------|
+| **Narrator** | Scene description, combat summaries | Yes | Generates immersive scene descriptions, adapts narrative tone, provides dramatic combat summaries at encounter end |
+| **Keeper** | D&D 5e rules enforcement, combat mechanics | Minimal | Validates mechanics, orchestrates dice rolls, enforces D&D 5e rules. Uses pure Python for combat. |
+| **Jester** | Comic relief | Yes (15% random) | Injects unexpected complications and humor. Randomly appears in 15% of eligible interactions. |
+| **Innkeeper** | Session management | Yes | Welcomes adventurers, introduces quests, delivers session bookends and epilogue reflections |
+| **Character Interviewer** | Character creation flow | Yes | Guides players through conversational character creation, generates D&D 5e character sheets |
+
+### Agent Interaction Pattern
+
+```
+User Input
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      ROUTING LOGIC                               │
+│  (Determines which agent(s) handle the request based on phase)  │
+└─────────────────────────────────────────────────────────────────┘
+    │
+    ├── CHARACTER_CREATION phase ──► Character Interviewer
+    │
+    ├── EXPLORATION phase ──► Narrator (primary) + Jester (15% chance)
+    │
+    ├── COMBAT phase ──► Keeper (mechanics) + Narrator (summary at end)
+    │
+    └── DIALOGUE phase ──► Narrator + relevant NPC context
+```
+
+### Jester Injection Logic
+
+The Jester agent uses probabilistic injection to keep adventures unpredictable:
+
+- **Trigger Probability**: 15% per eligible turn
+- **Cooldown Tracking**: `turns_since_jester` counter prevents over-saturation
+- **Context Awareness**: Only injects when narratively appropriate
+- **Output Style**: Fourth-wall adjacent, uses `:)` unironically
+
+---
+
+## 1.2 Combat System Architecture
+
+The combat system prioritizes cost efficiency through a "Batched Summary" approach, using pure Python mechanics during combat with a single LLM call for narrative summary at the end.
+
+### Combat Engine Components
+
+```
+src/
+├── engine/
+│   └── combat_manager.py    # CombatManager: Pure Python combat logic
+├── utils/
+│   └── dice.py              # DiceRoller: D&D notation parser
+└── data/
+    └── enemies.py           # Enemy templates (Goblin, Bandit, etc.)
+```
+
+### DiceRoller (`src/utils/dice.py`)
+
+Parses and executes D&D dice notation with full modifier support.
+
+**Supported Notations:**
+- Basic rolls: `1d20`, `2d6`, `1d8`
+- With modifiers: `1d20+5`, `2d6+3`, `1d8-2`
+- Advantage: Roll 2d20, take higher
+- Disadvantage: Roll 2d20, take lower
+
+**Example Usage:**
+```python
+from src.utils.dice import DiceRoller
+
+# Basic roll
+result = DiceRoller.roll("1d20+5")
+print(f"{result.notation}: {result.rolls} + {result.modifier} = {result.total}")
+
+# Advantage roll (for attack with advantage)
+adv_result = DiceRoller.roll_with_advantage()
+print(f"Rolls: {adv_result.rolls}, Taking: {adv_result.total}")
+```
+
+### CombatManager (`src/engine/combat_manager.py`)
+
+Orchestrates turn-based combat with D&D 5e mechanics.
+
+**Core Methods:**
+
+| Method | Purpose |
+|--------|---------|
+| `start_combat(character_sheet, enemy_type)` | Initialize combat, roll initiative, set turn order |
+| `roll_initiative(combatants, dex_modifiers)` | Roll 1d20 + DEX modifier for all combatants |
+| `execute_player_attack(combat_state, character_sheet)` | Resolve player attack action |
+| `execute_enemy_turn(combat_state)` | Process enemy AI turn |
+| `execute_defend(combat_state, character_sheet)` | Set defending stance (enemy gets disadvantage) |
+| `execute_flee(combat_state, character_sheet)` | DEX check vs DC 12, enemy gets advantage attack on failure |
+| `resolve_attack(attacker, defender, ...)` | Core attack resolution with dice rolls |
+| `check_combat_end(combat_state)` | Detect victory, defeat, or escape conditions |
+
+**Combat Action Types:**
+```python
+class CombatAction(str, Enum):
+    ATTACK = "attack"   # Roll to hit, deal damage
+    DEFEND = "defend"   # Enemy gets disadvantage next turn
+    FLEE = "flee"       # DEX check vs DC 12
+```
+
+### Enemy Templates (`src/data/enemies.py`)
+
+Pre-defined enemy stat blocks for common encounters:
+
+| Enemy | HP | AC | Attack Bonus | Damage | Description |
+|-------|----|----|--------------|--------|-------------|
+| Goblin Raider | 7 | 13 | +4 | 1d6+2 | Small, green-skinned with wicked grin |
+| Bandit Outlaw | 11 | 12 | +3 | 1d6+1 | Rough human with scarred face |
+| Skeleton Warrior | 13 | 13 | +4 | 1d6+2 | Animated skeleton with rusty sword |
+| Dire Wolf | 11 | 13 | +5 | 2d4+3 | Large wolf with glowing yellow eyes |
+| Orc Warrior | 15 | 13 | +5 | 1d12+3 | Muscular gray-skinned with tusks |
+
+### Cost-Efficient Design (Batched Summary)
+
+**During Combat (Pure Python - No LLM Calls):**
+1. Initiative rolling (1d20 + DEX modifier)
+2. Attack resolution (1d20 + attack bonus vs AC)
+3. Damage calculation (weapon dice + modifiers)
+4. Defend action (sets disadvantage flag)
+5. Flee action (DEX check vs DC 12)
+6. HP tracking and combat state updates
+
+**At Combat End (Single LLM Call):**
+- Narrator generates dramatic summary of the entire battle
+- References key moments from `combat_log`
+- Describes final blow or escape
+- Transitions back to exploration phase
+
+**Cost Comparison:**
+| Approach | Cost per Combat |
+|----------|-----------------|
+| Batched Summary (current) | ~$0.002 |
+| Full LLM per Turn | ~$0.05 (25x more expensive) |
+
+---
+
+## 1.3 Session Backend Architecture
+
+The session management system uses a Protocol-based design, enabling swappable backends for different deployment environments.
+
+### SessionBackend Protocol (`src/state/backends/base.py`)
+
+Defines the interface all session backends must implement:
+
+```python
+@runtime_checkable
+class SessionBackend(Protocol):
+    """Protocol defining session storage operations."""
+
+    async def create(self, session_id: str, state: GameState) -> None: ...
+    async def get(self, session_id: str) -> GameState | None: ...
+    async def update(self, session_id: str, state: GameState) -> None: ...
+    async def delete(self, session_id: str) -> bool: ...
+    async def exists(self, session_id: str) -> bool: ...
+```
+
+### InMemoryBackend (`src/state/backends/memory.py`)
+
+Dictionary-based storage for development and testing.
+
+**Characteristics:**
+- Zero external dependencies
+- Fast reads/writes (O(1) dictionary operations)
+- No persistence across process restarts
+- Single-process only
+
+**Use Cases:**
+- Local development
+- Unit and integration testing
+- Single-process deployments where persistence is not required
+
+```python
+from src.state.backends.memory import InMemoryBackend
+
+backend = InMemoryBackend()
+await backend.create("session-123", initial_state)
+state = await backend.get("session-123")
+```
+
+### RedisBackend (`src/state/backends/redis.py`)
+
+Redis-backed storage for production deployments.
+
+**Characteristics:**
+- TTL-based automatic session expiration (default: 24 hours)
+- High-performance distributed access
+- Persistence across restarts
+- Multi-process and multi-server compatible
+
+**Key Features:**
+- Key prefix namespacing: `pocket_portals:session:{session_id}`
+- Automatic TTL refresh on update
+- JSON serialization via Pydantic `model_dump_json()`
+
+```python
+from src.state.backends.redis import RedisBackend
+
+backend = RedisBackend(
+    redis_url="redis://localhost:6379/0",
+    ttl=86400  # 24 hours
+)
+await backend.create("session-123", initial_state)
+```
+
+### Configuration via pydantic-settings (`src/config/settings.py`)
+
+Environment-driven configuration for backend selection:
+
+```python
+class Settings(BaseSettings):
+    # Redis Configuration
+    redis_url: str = "redis://localhost:6379/0"
+    redis_session_ttl: int = 86400  # 24 hours
+
+    # Session Backend Selection
+    session_backend: Literal["memory", "redis"] = "redis"
+
+    @property
+    def is_redis_enabled(self) -> bool:
+        return self.session_backend == "redis"
+```
+
+**Environment Variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_BACKEND` | `"redis"` | Backend type: `"memory"` or `"redis"` |
+| `REDIS_URL` | `"redis://localhost:6379/0"` | Redis connection URL |
+| `REDIS_SESSION_TTL` | `86400` | Session TTL in seconds (24 hours) |
+
+### Backend Selection Matrix
+
+| Environment | Recommended Backend | Reason |
+|-------------|---------------------|--------|
+| Development | InMemoryBackend | Zero setup, fast iteration |
+| Testing | InMemoryBackend | Isolated, deterministic |
+| Production (single server) | RedisBackend | Persistence, TTL expiration |
+| Production (multi-server) | RedisBackend | Distributed session sharing |
+
+---
+
+## 1.4 API Layer
+
+FastAPI-based API with SSE streaming support for real-time narrative delivery.
+
+### Core Endpoints
+
+**Session Management:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/session/new` | POST | Create new game session |
+| `/session/{id}` | GET | Retrieve session state |
+| `/session/{id}/action` | POST | Submit player action |
+
+**Combat Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/combat/start` | POST | Initiate combat encounter with enemy type |
+| `/combat/action` | POST | Execute player combat action (attack/defend/flee) |
+
+### SSE Streaming
+
+Real-time narrative delivery via Server-Sent Events:
+
+**Event Types:**
+| Event | Purpose |
+|-------|---------|
+| `agent_chunk` | Character-by-character streaming for narrative text |
+| `agent_complete` | Signals end of agent response |
+| `choices` | Available player choices |
+| `combat_update` | Combat state changes (HP, turn order, etc.) |
+
+**Example SSE Flow:**
+```
+Client                    Server
+  │                         │
+  │  POST /session/action   │
+  │ ─────────────────────►  │
+  │                         │
+  │  SSE: agent_chunk       │
+  │ ◄─────────────────────  │  "The goblin..."
+  │  SSE: agent_chunk       │
+  │ ◄─────────────────────  │  " snarls..."
+  │  SSE: agent_complete    │
+  │ ◄─────────────────────  │
+  │  SSE: choices           │
+  │ ◄─────────────────────  │  ["Attack", "Flee", "Negotiate"]
+  │                         │
+```
+
+### Combat API Details
+
+**POST /combat/start**
+```json
+// Request
+{
+    "session_id": "abc-123",
+    "enemy_type": "goblin"
+}
+
+// Response
+{
+    "combat_state": {
+        "is_active": true,
+        "phase": "player_turn",
+        "round_number": 1,
+        "combatants": [...],
+        "turn_order": ["player", "enemy"]
+    },
+    "initiative_results": [
+        {"id": "player", "roll": 15, "modifier": 2, "total": 17},
+        {"id": "enemy", "roll": 10, "modifier": 0, "total": 10}
+    ]
+}
+```
+
+**POST /combat/action**
+```json
+// Request
+{
+    "session_id": "abc-123",
+    "action": "attack"  // "attack" | "defend" | "flee"
+}
+
+// Response
+{
+    "action_result": {
+        "hit": true,
+        "total_attack": 18,
+        "damage_dealt": 7,
+        "defender_hp": 0,
+        "defender_alive": false
+    },
+    "combat_state": {...},
+    "combat_ended": true,
+    "result": "victory"
+}
+```
+
+---
+
 ## 2. XP Practice: Simple Design
 
 ### The Simplest Thing That Works
@@ -100,10 +449,9 @@ Behavior-Driven Development ensures we build what users actually need:
 
 **What we DON'T build (yet):**
 - Microservices
-- Redis/external cache
 - WebSocket complexity
 - User accounts/auth
-- Database for session state
+- Database for session state (using Redis for production, in-memory for dev)
 - Frontend JavaScript framework
 
 ### Four Rules of Simple Design
@@ -1058,19 +1406,22 @@ pocket-portals/
 - ⚠️ Less ecosystem for complex UI
 - ⚠️ Team must learn HTMX patterns
 
-### ADR-002: In-Memory Session State
+### ADR-002: Swappable Session Backends
 
-**Status:** Accepted
+**Status:** Superseded (updated from in-memory only)
 
-**Context:** Need to track adventure state per user session.
+**Context:** Need to track adventure state per user session with flexibility for different deployment environments.
 
-**Decision:** Use Python dict per session, no external database for MVP.
+**Decision:** Implement Protocol-based SessionBackend with InMemoryBackend (development) and RedisBackend (production).
 
 **Consequences:**
-- ✅ Zero infrastructure (XP: Simplicity)
-- ✅ Fast reads/writes
-- ⚠️ State lost on server restart
-- ⚠️ No horizontal scaling (acceptable for MVP)
+- ✅ InMemoryBackend for fast development (zero infrastructure)
+- ✅ RedisBackend for production (persistence, TTL expiration, horizontal scaling)
+- ✅ Easy backend swapping via environment variable
+- ✅ Protocol pattern enables future backends (PostgreSQL, DynamoDB, etc.)
+- ⚠️ Redis requires infrastructure setup for production
+
+See [Section 1.3: Session Backend Architecture](#13-session-backend-architecture) for implementation details.
 
 ### ADR-003: Model Tiering
 
@@ -1332,6 +1683,8 @@ The Character Interviewer's output feeds directly into other agents:
 ---
 
 ## 16. Combat Architecture
+
+> **Note:** For comprehensive technical details including code examples, API endpoints, and implementation patterns, see [Section 1.2: Combat System Architecture](#12-combat-system-architecture).
 
 ### Overview
 
