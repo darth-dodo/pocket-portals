@@ -162,7 +162,6 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Combat mechanics | ⏳ | Medium priority |
 | Add character sheet display to UI | ⏳ | Show character info in frontend |
 
 ### Up Next
@@ -176,6 +175,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary, 275 tests passing |
 | Dynamic character creation with CharacterInterviewerAgent | ✅ | 148 tests, LLM-powered interview with 5-turn flow |
 | Content safety filtering system | ✅ | Pattern-based filter with safe redirects, blocks inappropriate content |
 | Integrate character creation into /start and /action | ✅ | 136 tests, 74% coverage, `/start` begins CHARACTER_CREATION phase |

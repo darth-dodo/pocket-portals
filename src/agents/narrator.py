@@ -55,3 +55,50 @@ class NarratorAgent:
 
         result = task.execute_sync()
         return str(result)
+
+    def summarize_combat(
+        self,
+        combat_log: list[str],
+        victory: bool,
+        enemy_name: str,
+        player_name: str,
+    ) -> str:
+        """Generate dramatic narrative summary of combat.
+
+        This is the ONE LLM call for the entire combat.
+
+        Args:
+            combat_log: List of mechanical log entries
+            victory: True if player won, False if defeated
+            enemy_name: Name of the enemy fought
+            player_name: Player character name
+
+        Returns:
+            2-4 sentence dramatic summary of the battle
+        """
+        task_config = load_task_config("summarize_combat")
+
+        # Format combat log as numbered lines
+        formatted_log = "\n".join(
+            f"{i+1}. {entry}" for i, entry in enumerate(combat_log)
+        )
+
+        # Determine outcome text
+        outcome = "Victory" if victory else "Defeat"
+
+        # Format the description with all context
+        description = task_config.description.format(
+            player_name=player_name,
+            enemy_name=enemy_name,
+            outcome=outcome,
+            combat_log=formatted_log,
+        )
+
+        task = Task(
+            description=description,
+            expected_output=task_config.expected_output,
+            agent=self.agent,
+        )
+
+        result = task.execute_sync()
+        return str(result)

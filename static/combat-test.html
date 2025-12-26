@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combat System Test - Pocket Portals</title>
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: #212529;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #f7d354;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #1a1a2e;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #92cc41;
+            font-size: 0.7rem;
+            margin-bottom: 15px;
+        }
+        button {
+            margin: 5px;
+        }
+        .info {
+            font-size: 0.55rem;
+            color: #c4c6d0;
+            margin-top: 10px;
+            line-height: 1.8;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f3460;
+            border-radius: 8px;
+            font-size: 0.5rem;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(0,0,0,0.3);
+            border-left: 3px solid #f7d354;
+        }
+        .log-entry.error {
+            border-left-color: #e76e55;
+        }
+        .log-entry.success {
+            border-left-color: #92cc41;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Combat System Test</h1>
+
+        <div class="test-section nes-container is-dark">
+            <h2>1. Setup</h2>
+            <button class="nes-btn is-primary" onclick="startNewGame()">Start New Game</button>
+            <div class="info">
+                Start a new game session and skip character creation to get a session ID.
+            </div>
+        </div>
+
+        <div class="test-section nes-container is-dark">
+            <h2>2. Start Combat</h2>
+            <button class="nes-btn is-error" onclick="startCombat('goblin')">Fight Goblin</button>
+            <button class="nes-btn is-error" onclick="startCombat('bandit')">Fight Bandit</button>
+            <button class="nes-btn is-error" onclick="startCombat('wolf')">Fight Wolf</button>
+            <div class="info">
+                Enemies: goblin (AC 13, 7 HP), bandit (AC 12, 11 HP), wolf (AC 13, 11 HP)
+            </div>
+        </div>
+
+        <div class="test-section nes-container is-dark">
+            <h2>3. Combat HUD</h2>
+            <div class="info">
+                The combat HUD should appear in the top-right corner (or bottom on mobile) when combat starts.
+                It shows:<br>
+                - Turn order with active combatant highlighted<br>
+                - HP bars for player and enemy<br>
+                - Attack/Defend/Flee action buttons<br>
+                - Dice roll animations when attacking
+            </div>
+        </div>
+
+        <div class="test-section nes-container is-dark">
+            <h2>4. Manual API Test</h2>
+            <button class="nes-btn" onclick="checkHealth()">Check API Health</button>
+            <button class="nes-btn is-warning" onclick="clearOutput()">Clear Log</button>
+        </div>
+
+        <div id="output" class="nes-container is-dark"></div>
+    </div>
+
+    <script>
+        let sessionId = null;
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong> - ${message}`;
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                log(`API Health: ${data.status} (${data.environment})`, 'success');
+            } catch (error) {
+                log(`Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function startNewGame() {
+            try {
+                log('Starting new game...');
+                const response = await fetch('/start?skip_creation=true');
+                const data = await response.json();
+                sessionId = data.session_id;
+                log(`Session created: ${sessionId}`, 'success');
+                log(`Ready to start combat!`, 'success');
+            } catch (error) {
+                log(`Failed to start game: ${error.message}`, 'error');
+            }
+        }
+
+        async function startCombat(enemyType) {
+            if (!sessionId) {
+                log('Please start a new game first!', 'error');
+                return;
+            }
+
+            try {
+                log(`Starting combat with ${enemyType}...`);
+                const response = await fetch('/combat/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        enemy_type: enemyType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                log(`Combat started!`, 'success');
+                log(`Narrative: ${data.narrative}`, 'info');
+                log(`Initiative results: ${JSON.stringify(data.initiative_results)}`, 'info');
+                log(`Combat state: ${JSON.stringify(data.combat_state, null, 2)}`, 'info');
+                log(`Check the main game page to see the Combat HUD in action!`, 'success');
+            } catch (error) {
+                log(`Failed to start combat: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-check health on load
+        checkHealth();
+    </script>
+</body>
+</html>

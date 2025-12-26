@@ -61,7 +61,10 @@ add_commentary:
     Provide a brief, witty observation. One to two sentences max.
     Focus on: irony, improbability, or meta-commentary on adventurer life.
     Dry delivery. Never crude or vulgar.
-  expected_output: "A brief witty observation (PG-13, 1-2 sentences)"
+
+    CRITICAL: Output ONLY the quip itself. No explanations. No "This captures..."
+    or "The observation..." analysis. Just the witty line, nothing else.
+  expected_output: "Just the witty observation itself (1-2 sentences, no explanation)"
   agent: jester
 
 present_hook:
@@ -163,3 +166,19 @@ generate_adventure_hooks:
     }}
   expected_output: "Valid JSON with 3 contextual adventure hook choices"
   agent: character_interviewer
+
+summarize_combat:
+  description: |
+    Summarize this combat dramatically in 2-4 sentences.
+
+    Player: {player_name}
+    Enemy: {enemy_name}
+    Outcome: {outcome}
+
+    Combat Log:
+    {combat_log}
+
+    Write a brief, exciting narrative summary. Focus on the key moments.
+    Keep it PG-13 and heroic. No gore.
+  expected_output: "A 2-4 sentence dramatic battle summary"
+  agent: narrator
