@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     redis_session_ttl: int = 86400  # 24 hours in seconds
 
     # Session Backend Configuration
-    session_backend: Literal["memory", "redis"] = "memory"
+    session_backend: Literal["memory", "redis"] = "redis"
 
     @property
     def is_redis_enabled(self) -> bool:
