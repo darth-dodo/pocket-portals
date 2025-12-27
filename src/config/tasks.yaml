@@ -182,3 +182,69 @@ summarize_combat:
     Keep it PG-13 and heroic. No gore.
   expected_output: "A 2-4 sentence dramatic battle summary"
   agent: narrator
+
+generate_quest:
+  description: |
+    Generate a contextual quest for this character.
+
+    CHARACTER INFORMATION:
+    {character_info}
+
+    QUEST HISTORY:
+    {quest_history}
+
+    GAME CONTEXT:
+    {game_context}
+
+    Create a quest that:
+    1. Matches the character's class and abilities
+    2. Gets them into action within 1-2 turns
+    3. Has 1-3 clear objectives (prefer 2)
+    4. Is located nearby and urgent
+    5. Has a concrete reward
+
+    CONTENT SAFETY (MANDATORY): Quests are heroic adventures only.
+    No revenge plots, torture, trauma-based missions, or dark themes.
+    Focus on helping, protecting, recovering. Keep tone hopeful and action-oriented.
+
+    RESPOND WITH VALID JSON ONLY:
+    {
+      "title": "Quest Title (4-6 words max)",
+      "description": "What the NPC wants (30-50 words, specific problem)",
+      "objectives": [
+        {
+          "id": "unique-id",
+          "description": "Clear action (8-12 words, active voice)"
+        }
+      ],
+      "rewards": "Concrete reward (e.g., '50 gold pieces')",
+      "given_by": "NPC name",
+      "location_hint": "Where to go (specific, nearby, urgent)"
+    }
+  expected_output: "Valid JSON with complete quest structure"
+  agent: quest_designer
+
+check_quest_progress:
+  description: |
+    Check if the player's action completed any quest objectives.
+
+    ACTIVE QUEST:
+    {quest_info}
+
+    PLAYER ACTION:
+    {action}
+
+    NARRATIVE RESULT:
+    {narrative}
+
+    Analyze if the action and narrative indicate objective completion.
+    Be generous - if it seems like they've accomplished something, they have.
+
+    RESPOND WITH VALID JSON ONLY:
+    {
+      "objectives_completed": ["objective-id-1", "objective-id-2"],
+      "quest_completed": true/false,
+      "completion_narrative": "Optional celebration text if quest is done"
+    }
+  expected_output: "Valid JSON with quest progress analysis"
+  agent: quest_designer

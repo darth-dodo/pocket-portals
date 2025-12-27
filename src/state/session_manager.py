@@ -6,7 +6,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from src.state.backends.base import SessionBackend
-from src.state.models import CombatState, GamePhase, GameState
+from src.state.models import CombatState, GamePhase, GameState, Quest, QuestStatus
 
 if TYPE_CHECKING:
     from src.state.character import CharacterSheet
@@ -246,4 +246,61 @@ class SessionManager:
         state = await self._backend.get(session_id)
         if state:
             state.combat_state = combat_state
+            await self._backend.update(session_id, state)
+
+    async def set_active_quest(self, session_id: str, quest: Quest | None) -> None:
+        """Set the active quest for a session.
+
+        Args:
+            session_id: Session identifier
+            quest: Quest instance or None to clear active quest
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.active_quest = quest
+            await self._backend.update(session_id, state)
+
+    async def get_active_quest(self, session_id: str) -> Quest | None:
+        """Get the active quest for a session.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            Quest if active, None otherwise
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            return state.active_quest
+        return None
+
+    async def complete_quest(self, session_id: str) -> None:
+        """Complete the active quest and move it to completed quests.
+
+        Args:
+            session_id: Session identifier
+        """
+        state = await self._backend.get(session_id)
+        if state and state.active_quest:
+            state.active_quest.status = QuestStatus.COMPLETED
+            state.completed_quests.append(state.active_quest)
+            state.active_quest = None
+            await self._backend.update(session_id, state)
+
+    async def update_quest_objective(
+        self, session_id: str, objective_id: str, completed: bool = True
+    ) -> None:
+        """Update quest objective completion status.
+
+        Args:
+            session_id: Session identifier
+            objective_id: ID of the objective to update
+            completed: Whether the objective is completed (default True)
+        """
+        state = await self._backend.get(session_id)
+        if state and state.active_quest:
+            for obj in state.active_quest.objectives:
+                if obj.id == objective_id:
+                    obj.is_completed = completed
+                    break
             await self._backend.update(session_id, state)

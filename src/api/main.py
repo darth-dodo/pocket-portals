@@ -22,6 +22,7 @@ from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
+from src.agents.quest_designer import QuestDesignerAgent
 from src.engine import AgentRouter, TurnExecutor
 from src.engine.combat_manager import CombatManager
 from src.state import (
@@ -180,6 +181,7 @@ innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 character_interviewer: CharacterInterviewerAgent | None = None
+quest_designer: QuestDesignerAgent | None = None
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
 combat_manager = CombatManager()
@@ -389,7 +391,14 @@ class CombatActionResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Initialize backend, session manager, and agents on startup."""
-    global narrator, innkeeper, keeper, jester, character_interviewer, turn_executor
+    global \
+        narrator, \
+        innkeeper, \
+        keeper, \
+        jester, \
+        character_interviewer, \
+        quest_designer, \
+        turn_executor
 
     # Initialize session backend and manager
     backend = await create_backend()
@@ -403,6 +412,7 @@ async def lifespan(app: FastAPI) -> Any:
         keeper = KeeperAgent()
         jester = JesterAgent()
         character_interviewer = CharacterInterviewerAgent()
+        quest_designer = QuestDesignerAgent()
         turn_executor = TurnExecutor(
             narrator=narrator,
             keeper=keeper,
@@ -647,28 +657,78 @@ async def _handle_character_creation(
         await sm.set_character_sheet(state.session_id, character_sheet)
         await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
-        # Generate contextual adventure hooks based on the character
-        character_info = (
-            f"Name: {character_sheet.name}\n"
-            f"Race: {character_sheet.race.value}\n"
-            f"Class: {character_sheet.character_class.value}"
-        )
-        if character_sheet.backstory:
-            character_info += f"\nBackstory: {character_sheet.backstory}"
+        # Generate a contextual quest for this character immediately
+        if quest_designer:
+            try:
+                quest = quest_designer.generate_quest(
+                    character_sheet=character_sheet,
+                    quest_history="",  # No quest history yet
+                    game_context="Character just finished creation at the Rusty Tankard tavern.",
+                )
+                await sm.set_active_quest(state.session_id, quest)
 
-        if character_interviewer:
-            choices = character_interviewer.generate_adventure_hooks(character_info)
+                # Create choices from quest objectives
+                if quest.objectives:
+                    choices = [obj.description for obj in quest.objectives[:3]]
+                    # Ensure we have 3 choices
+                    while len(choices) < 3:
+                        choices.append("Ask more about the quest")
+                else:
+                    choices = STARTER_CHOICES_POOL[:3]
+
+                # Build narrative with quest introduction
+                narrative = (
+                    f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                    f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                    f"I've seen your kind before.'\n\n"
+                    f"He leans forward, voice lowering. '{quest.description}'\n\n"
+                    f"**Quest: {quest.title}**\n"
+                    f"Reward: {quest.rewards or 'The satisfaction of a job well done'}"
+                )
+            except Exception:
+                # Fallback if quest generation fails
+                if character_interviewer:
+                    character_info = (
+                        f"Name: {character_sheet.name}\n"
+                        f"Race: {character_sheet.race.value}\n"
+                        f"Class: {character_sheet.character_class.value}"
+                    )
+                    if character_sheet.backstory:
+                        character_info += f"\nBackstory: {character_sheet.backstory}"
+                    choices = character_interviewer.generate_adventure_hooks(
+                        character_info
+                    )
+                else:
+                    choices = STARTER_CHOICES_POOL[:3]
+
+                narrative = (
+                    f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                    f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                    "I've seen your kind before. There's work for those willing to take risks.' "
+                    "He leans closer. 'Choose your path...'"
+                )
         else:
-            choices = STARTER_CHOICES_POOL[:3]
+            # No quest designer available - use adventure hooks
+            if character_interviewer:
+                character_info = (
+                    f"Name: {character_sheet.name}\n"
+                    f"Race: {character_sheet.race.value}\n"
+                    f"Class: {character_sheet.character_class.value}"
+                )
+                if character_sheet.backstory:
+                    character_info += f"\nBackstory: {character_sheet.backstory}"
+                choices = character_interviewer.generate_adventure_hooks(character_info)
+            else:
+                choices = STARTER_CHOICES_POOL[:3]
+
+            narrative = (
+                f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                "I've seen your kind before. There's work for those willing to take risks.' "
+                "He leans closer. 'Choose your path...'"
+            )
 
         await sm.set_choices(state.session_id, choices)
-
-        narrative = (
-            f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
-            f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
-            "I've seen your kind before. There's work for those willing to take risks.' "
-            "He leans closer. 'Choose your path...'"
-        )
 
         return NarrativeResponse(
             narrative=narrative,
