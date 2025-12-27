@@ -74,6 +74,34 @@ BLOCKED_PATTERNS = [
 
 SAFE_REDIRECT = "take a deep breath and focus on the adventure ahead"
 
+# Combat trigger keywords - subset of mechanical keywords for auto-starting combat
+COMBAT_TRIGGER_KEYWORDS = [
+    "attack",
+    "fight",
+    "swing",
+    "shoot",
+    "hit",
+    "strike",
+    "charge",
+    "lunge",
+]
+
+# Enemy keywords to help detect combat context
+ENEMY_KEYWORDS = [
+    "goblin",
+    "orc",
+    "troll",
+    "skeleton",
+    "zombie",
+    "bandit",
+    "wolf",
+    "bear",
+    "dragon",
+    "monster",
+    "enemy",
+    "creature",
+]
+
 
 def filter_content(action: str) -> str:
     """Filter inappropriate content from player actions.
@@ -89,6 +117,61 @@ def filter_content(action: str) -> str:
         if pattern in action_lower:
             return SAFE_REDIRECT
     return action
+
+
+def _detect_combat_trigger(action: str) -> bool:
+    """Detect if action contains combat trigger keywords.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        True if action likely initiates combat
+    """
+    action_lower = action.lower()
+
+    # Check for combat trigger keywords
+    has_combat_keyword = any(
+        keyword in action_lower for keyword in COMBAT_TRIGGER_KEYWORDS
+    )
+
+    # Check for enemy keywords to strengthen signal
+    has_enemy_keyword = any(keyword in action_lower for keyword in ENEMY_KEYWORDS)
+
+    # Combat trigger if both keywords present, or just combat keyword with strong intent
+    return has_combat_keyword and (has_enemy_keyword or len(action_lower.split()) < 5)
+
+
+def _detect_enemy_type(action: str) -> str:
+    """Detect enemy type from action text.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        Enemy type key for ENEMY_TEMPLATES, defaults to "goblin"
+    """
+    action_lower = action.lower()
+
+    # Map keywords to enemy types
+    enemy_map = {
+        "goblin": "goblin",
+        "orc": "orc",
+        "troll": "troll",
+        "skeleton": "skeleton",
+        "zombie": "skeleton",  # Use skeleton template for zombie
+        "bandit": "goblin",  # Use goblin template for bandit
+        "wolf": "goblin",  # Use goblin template for wolf
+        "bear": "orc",  # Use orc template for bear (stronger)
+        "dragon": "troll",  # Use troll template for dragon (strongest available)
+    }
+
+    for keyword, enemy_type in enemy_map.items():
+        if keyword in action_lower:
+            return enemy_type
+
+    # Default to goblin for generic combat
+    return "goblin"
 
 
 # Global state - agents initialized in lifespan
@@ -461,6 +544,18 @@ async def process_action(
     if state.phase == GamePhase.CHARACTER_CREATION:
         return await _handle_character_creation(request, state, action)
 
+    # Handle COMBAT phase or combat triggers
+    if state.phase == GamePhase.COMBAT or (
+        state.combat_state and state.combat_state.is_active
+    ):
+        # Already in combat - route to combat handler
+        return await _handle_combat_action(request, state, action)
+
+    # Check for combat triggers in action
+    if _detect_combat_trigger(action):
+        # Auto-start combat
+        return await _handle_combat_action(request, state, action)
+
     if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
         await sm.set_choices(state.session_id, choices)
@@ -699,6 +794,260 @@ def _generate_character_from_history(state: GameState) -> CharacterSheet:
         name=name,
         race=race,
         character_class=character_class,
+    )
+
+
+async def _handle_combat_action(
+    request: Request, state: GameState, action: str
+) -> NarrativeResponse:
+    """Handle combat-related actions in the main action flow.
+
+    This function:
+    1. Auto-starts combat if combat keywords detected and not in combat
+    2. Routes to combat handler if already in combat
+    3. Handles combat end transitions back to exploration
+
+    Args:
+        request: FastAPI Request object (to access app.state)
+        state: Current game state
+        action: Player's action text
+
+    Returns:
+        NarrativeResponse with combat results
+    """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    # Case 1: Already in combat - route to combat action handler
+    if state.combat_state and state.combat_state.is_active:
+        # Parse action for combat intent (attack/defend/flee)
+        action_lower = action.lower()
+
+        # Handle flee action
+        if "flee" in action_lower or "run" in action_lower or "escape" in action_lower:
+            # End combat, transition back to exploration
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            narrative = (
+                "You turn and flee from the battle! "
+                "The enemy doesn't pursue as you make your escape."
+            )
+            choices = ["Look around", "Catch your breath", "Continue onward"]
+            await sm.add_exchange(state.session_id, action, narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Validate character sheet
+        if not state.character_sheet:
+            narrative = "You need a character to engage in combat!"
+            choices = ["Look around", "Wait", "Leave"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        combat_state = state.combat_state
+
+        # Validate it's player's turn
+        if combat_state.phase != CombatPhaseEnum.PLAYER_TURN:
+            narrative = "Wait for your turn in combat!"
+            choices = ["Wait", "Assess the situation"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Execute player attack
+        if keeper:
+            player_result = keeper.resolve_player_attack(
+                combat_state, state.character_sheet
+            )
+        else:
+            player_result = combat_manager.execute_player_attack(
+                combat_state, state.character_sheet
+            )
+
+        player_message = (
+            combat_manager.format_attack_result(player_result)
+            if combat_manager
+            else player_result["log_entry"]
+        )
+
+        # Check if enemy defeated
+        enemy_hp = player_result.get("enemy_hp", 0)
+        if enemy_hp <= 0:
+            # Combat won! End combat and transition back to exploration
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            victory_narrative = (
+                f"{player_message}\n\n"
+                f"Victory! The enemy falls defeated. "
+                f"You stand victorious and can continue your adventure."
+            )
+            choices = ["Search the area", "Rest briefly", "Continue onward"]
+            await sm.add_exchange(state.session_id, action, victory_narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=victory_narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Enemy turn
+        if keeper:
+            enemy_result = keeper.resolve_enemy_attack(combat_state)
+        else:
+            enemy_result = combat_manager.execute_enemy_turn(combat_state)
+
+        enemy_message = (
+            combat_manager.format_attack_result(enemy_result)
+            if combat_manager
+            else enemy_result["log_entry"]
+        )
+
+        # Check if player defeated
+        player_hp = enemy_result.get("player_hp", state.character_sheet.hit_points)
+        if player_hp <= 0:
+            # Combat lost! End combat
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            defeat_narrative = (
+                f"{player_message}\n\n{enemy_message}\n\n"
+                f"Defeat! You fall unconscious. "
+                f"When you awaken, you find yourself back at the tavern, bruised but alive."
+            )
+            choices = ["Recover", "Plan your next move", "Leave the tavern"]
+            await sm.add_exchange(state.session_id, action, defeat_narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=defeat_narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Combat continues
+        full_narrative = f"{player_message}\n\n{enemy_message}"
+        choices = ["Attack again", "Defend", "Flee"]
+        await sm.add_exchange(state.session_id, action, full_narrative)
+        await sm.set_choices(state.session_id, choices)
+
+        return NarrativeResponse(
+            narrative=full_narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Case 2: Combat keywords detected but not in combat - auto-start combat
+    if _detect_combat_trigger(action):
+        # Validate character sheet
+        if not state.character_sheet:
+            narrative = "You need a character to engage in combat!"
+            choices = ["Look around", "Wait", "Leave"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Detect enemy type from action
+        enemy_type = _detect_enemy_type(action)
+
+        # Start combat using keeper
+        try:
+            if keeper:
+                combat_state, initiative_results = keeper.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type=enemy_type,
+                )
+            else:
+                combat_state, initiative_results = combat_manager.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type=enemy_type,
+                )
+        except ValueError:
+            # Invalid enemy type, fall back to goblin
+            if keeper:
+                combat_state, initiative_results = keeper.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type="goblin",
+                )
+            else:
+                combat_state, initiative_results = combat_manager.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type="goblin",
+                )
+
+        # Format initiative
+        if keeper:
+            initiative_narrative = keeper.format_initiative_result(initiative_results)
+        else:
+            initiative_narrative = "Initiative rolled. Combat begins!"
+
+        # Get scene description
+        scene_narrative = ""
+        if narrator and combat_state.enemy_template:
+            enemy_desc = combat_state.enemy_template.description
+            enemy_name = combat_state.enemy_template.name
+
+            context = build_context(
+                state.conversation_history,
+                character_sheet=state.character_sheet,
+            )
+
+            scene_prompt = (
+                f"A {enemy_name} appears! {enemy_desc}. "
+                f"Describe this combat encounter dramatically in 2-3 sentences."
+            )
+
+            scene_narrative = narrator.respond(action=scene_prompt, context=context)
+        else:
+            enemy_name = (
+                combat_state.enemy_template.name
+                if combat_state.enemy_template
+                else "enemy"
+            )
+            scene_narrative = f"A {enemy_name} appears before you!"
+
+        # Combine narratives
+        full_narrative = f"{scene_narrative}\n\n{initiative_narrative}"
+
+        # Store combat state
+        await sm.set_combat_state(state.session_id, combat_state)
+        await sm.set_phase(state.session_id, GamePhase.COMBAT)
+
+        choices = ["Attack", "Defend", "Flee"]
+        await sm.add_exchange(state.session_id, action, full_narrative)
+        await sm.set_choices(state.session_id, choices)
+
+        return NarrativeResponse(
+            narrative=full_narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Case 3: No combat - this shouldn't be called, but return safe fallback
+    narrative = "The adventure continues..."
+    choices = ["Look around", "Wait", "Leave"]
+    await sm.set_choices(state.session_id, choices)
+    return NarrativeResponse(
+        narrative=narrative,
+        session_id=state.session_id,
+        choices=choices,
     )
 
 
@@ -1031,7 +1380,11 @@ async def combat_action(
         full_message += f"\n\n{enemy_message}"
 
     # 7. Update session combat state
-    state.combat_state = combat_state
+    await sm.set_combat_state(combat_action_request.session_id, combat_state)
+
+    # If combat ended, also update phase back to EXPLORATION
+    if combat_ended:
+        await sm.set_phase(combat_action_request.session_id, GamePhase.EXPLORATION)
 
     # 8. Return response
     return CombatActionResponse(

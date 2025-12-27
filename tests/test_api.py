@@ -783,6 +783,162 @@ def test_combat_end_includes_narrative(
         assert len(data["narrative"]) > 0
 
 
+def test_action_endpoint_auto_starts_combat(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
+    """Test that /action endpoint auto-starts combat with trigger keywords."""
+    # Setup: Create session with character
+    response = client.get("/start?skip_creation=true")
+    session_id = response.json()["session_id"]
+
+    # Trigger combat with action keywords
+    action_response = client.post(
+        "/action",
+        json={"session_id": session_id, "action": "I attack the goblin"},
+    )
+
+    data = action_response.json()
+    assert action_response.status_code == 200
+    assert "narrative" in data
+    assert "Initiative" in data["narrative"] or "combat" in data["narrative"].lower()
+    assert data["choices"] == ["Attack", "Defend", "Flee"]
+
+    # Verify session is now in COMBAT phase
+    state = session_state.get_session(session_id)
+    assert state is not None
+    assert state.phase.value == "combat"
+    assert state.combat_state is not None
+    assert state.combat_state.is_active is True
+
+
+def test_action_endpoint_handles_ongoing_combat(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
+    """Test that /action endpoint routes to combat handler when in combat."""
+    from src.state.models import CombatPhaseEnum
+
+    # Setup: Create session and start combat
+    response = client.get("/start?skip_creation=true")
+    session_id = response.json()["session_id"]
+
+    # Use /action to auto-start combat
+    client.post(
+        "/action",
+        json={"session_id": session_id, "action": "I attack the goblin"},
+    )
+
+    # Set up deterministic combat
+    state = session_state.get_session(session_id)
+    if state and state.combat_state:
+        enemy = next(
+            (c for c in state.combat_state.combatants if c.id == "enemy"), None
+        )
+        if enemy:
+            enemy.current_hp = 5
+            enemy.armor_class = 5
+
+        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
+        session_state.set_combat_state(session_id, state.combat_state)
+
+    # Continue combat via /action endpoint
+    action_response = client.post(
+        "/action",
+        json={"session_id": session_id, "action": "Attack"},
+    )
+
+    data = action_response.json()
+    assert action_response.status_code == 200
+    assert "narrative" in data
+    # Should contain combat results
+    assert any(
+        keyword in data["narrative"].lower()
+        for keyword in ["attack", "hit", "damage", "miss"]
+    )
+
+
+def test_action_endpoint_transitions_after_combat_victory(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
+    """Test that /action endpoint transitions back to exploration after victory."""
+    from src.state.models import CombatPhaseEnum
+
+    # Setup: Create session and start combat
+    response = client.get("/start?skip_creation=true")
+    session_id = response.json()["session_id"]
+
+    client.post(
+        "/action",
+        json={"session_id": session_id, "action": "I fight the goblin"},
+    )
+
+    # Set enemy to 1 HP to guarantee kill
+    state = session_state.get_session(session_id)
+    if state and state.combat_state:
+        enemy = next(
+            (c for c in state.combat_state.combatants if c.id == "enemy"), None
+        )
+        if enemy:
+            enemy.current_hp = 1
+            enemy.armor_class = 5
+
+        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
+        session_state.set_combat_state(session_id, state.combat_state)
+
+    # Attack and kill enemy
+    action_response = client.post(
+        "/action",
+        json={"session_id": session_id, "action": "Attack"},
+    )
+
+    data = action_response.json()
+    assert action_response.status_code == 200
+    assert "Victory" in data["narrative"] or "victorious" in data["narrative"].lower()
+
+    # Verify session transitioned back to EXPLORATION
+    state = session_state.get_session(session_id)
+    assert state is not None
+    assert state.phase.value == "exploration"
+    assert state.combat_state is None
+
+
+def test_action_endpoint_flee_transitions_to_exploration(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
+    """Test that /action endpoint handles flee and transitions to exploration."""
+    from src.state.models import CombatPhaseEnum
+
+    # Setup: Create session and start combat
+    response = client.get("/start?skip_creation=true")
+    session_id = response.json()["session_id"]
+
+    client.post(
+        "/action",
+        json={"session_id": session_id, "action": "I strike the orc"},
+    )
+
+    # Set up combat state
+    state = session_state.get_session(session_id)
+    if state and state.combat_state:
+        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
+        session_state.set_combat_state(session_id, state.combat_state)
+
+    # Flee from combat
+    action_response = client.post(
+        "/action",
+        json={"session_id": session_id, "action": "Flee"},
+    )
+
+    data = action_response.json()
+    assert action_response.status_code == 200
+    assert "flee" in data["narrative"].lower() or "escape" in data["narrative"].lower()
+
+    # Verify session transitioned back to EXPLORATION
+    state = session_state.get_session(session_id)
+    assert state is not None
+    assert state.phase.value == "exploration"
+    assert state.combat_state is None
+
+
 def test_defend_action_works(
     client: TestClient, session_state: "SessionStateHelper"
 ) -> None:
