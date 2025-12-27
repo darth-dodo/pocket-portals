@@ -14,6 +14,13 @@
 #           Redirect dark inputs toward heroic adventure.
 # ============================================================
 
+# Default LLM configuration (can be overridden per agent)
+defaults:
+  llm:
+    model: "anthropic/claude-3-5-haiku-20241022"
+    temperature: 0.7
+    max_tokens: 1024
+
 narrator:
   role: "Narrator"
   goal: "Create tight, punchy scene descriptions that immerse without drowning"
@@ -47,6 +54,10 @@ narrator:
     - Focus on courage and adventure
   verbose: false
   allow_delegation: false
+  llm:
+    temperature: 0.7
+    max_tokens: 1024
+  memory: true
 
 keeper:
   role: "Game Keeper"
@@ -81,6 +92,10 @@ keeper:
     - Refuse to process self-harm or torture mechanics
   verbose: false
   allow_delegation: false
+  llm:
+    temperature: 0.3
+    max_tokens: 256
+  memory: false
 
 jester:
   role: "The Jester"
@@ -114,8 +129,12 @@ jester:
     - No profanity or adult innuendo
     - If player seems distressed, gently break character to be supportive
     - Keep meta-commentary lighthearted and fun
-  verbose: true
+  verbose: false
   allow_delegation: false
+  llm:
+    temperature: 0.8
+    max_tokens: 256
+  memory: false
 
 innkeeper_theron:
   role: "Innkeeper Theron"
@@ -144,6 +163,10 @@ innkeeper_theron:
     - Tavern is a safe haven
   verbose: false
   allow_delegation: false
+  llm:
+    temperature: 0.6
+    max_tokens: 512
+  memory: false
 
 character_interviewer:
   role: "Character Interviewer"
@@ -185,3 +208,7 @@ character_interviewer:
     - Focus on adventure and courage
   verbose: false
   allow_delegation: false
+  llm:
+    temperature: 0.8
+    max_tokens: 512
+  memory: false

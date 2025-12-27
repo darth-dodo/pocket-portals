@@ -13,12 +13,12 @@ class NarratorAgent:
         """Initialize the narrator from YAML config."""
         config = load_agent_config("narrator")
 
-        # CrewAI's native LLM class - no langchain needed
+        # CrewAI's native LLM class - config-driven
         self.llm = LLM(
-            model="anthropic/claude-3-5-haiku-20241022",
+            model=config.llm.model,
             api_key=settings.anthropic_api_key,
-            temperature=0.7,
-            max_tokens=1024,
+            temperature=config.llm.temperature,
+            max_tokens=config.llm.max_tokens,
         )
 
         self.agent = Agent(
