@@ -43,6 +43,20 @@ class CombatPhaseEnum(str, Enum):
     RESOLUTION = "resolution"
 
 
+class QuestStatus(str, Enum):
+    """Quest completion status.
+
+    Attributes:
+        ACTIVE: Quest is currently active
+        COMPLETED: Quest has been completed successfully
+        FAILED: Quest has failed or been abandoned
+    """
+
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class CombatantType(str, Enum):
     """Type of combatant.
 
@@ -67,6 +81,99 @@ class CombatAction(str, Enum):
     ATTACK = "attack"
     DEFEND = "defend"
     FLEE = "flee"
+
+
+class QuestObjective(BaseModel):
+    """Individual quest objective with completion tracking.
+
+    Attributes:
+        id: Unique identifier for the objective
+        description: Text description of what needs to be done
+        is_completed: Whether this objective has been completed
+        target_count: Optional target count for quantity-based objectives
+        current_count: Current progress toward target_count
+    """
+
+    id: str
+    description: str
+    is_completed: bool = False
+    target_count: int | None = None
+    current_count: int = 0
+
+    def check_completion(self) -> bool:
+        """Check if objective is complete based on target count.
+
+        Returns:
+            True if objective is complete, False otherwise
+        """
+        if self.target_count is not None:
+            self.is_completed = self.current_count >= self.target_count
+        return self.is_completed
+
+
+class Quest(BaseModel):
+    """Quest with objectives and rewards.
+
+    Attributes:
+        id: Unique identifier for the quest
+        title: Short quest title
+        description: Detailed quest description
+        objectives: List of quest objectives to complete
+        rewards: Description of quest rewards
+        status: Current quest status
+        given_by: Name of NPC who gave the quest
+        location_hint: Hint about where to find quest objectives
+    """
+
+    id: str
+    title: str
+    description: str
+    objectives: list[QuestObjective] = Field(default_factory=list)
+    rewards: str | None = None
+    status: QuestStatus = QuestStatus.ACTIVE
+    given_by: str = "Innkeeper Theron"
+    location_hint: str | None = None
+
+    @property
+    def is_complete(self) -> bool:
+        """Check if all objectives are completed.
+
+        Returns:
+            True if all objectives are complete, False otherwise
+        """
+        return all(obj.is_completed for obj in self.objectives)
+
+    def complete_objective(self, objective_id: str) -> bool:
+        """Mark an objective as completed.
+
+        Args:
+            objective_id: ID of the objective to complete
+
+        Returns:
+            True if objective was found and completed, False otherwise
+        """
+        for obj in self.objectives:
+            if obj.id == objective_id:
+                obj.is_completed = True
+                return True
+        return False
+
+    def increment_objective(self, objective_id: str, amount: int = 1) -> bool:
+        """Increment progress on a quantity-based objective.
+
+        Args:
+            objective_id: ID of the objective to increment
+            amount: Amount to increment by (default 1)
+
+        Returns:
+            True if objective was found and incremented, False otherwise
+        """
+        for obj in self.objectives:
+            if obj.id == objective_id and obj.target_count is not None:
+                obj.current_count += amount
+                obj.check_completion()
+                return True
+        return False
 
 
 class GameState(BaseModel):
@@ -99,6 +206,8 @@ class GameState(BaseModel):
     recent_agents: list[str] = Field(default_factory=list)
     turns_since_jester: int = 0
     combat_state: CombatState | None = None
+    active_quest: Quest | None = None
+    completed_quests: list[Quest] = Field(default_factory=list)
 
     @field_validator("character_sheet", mode="before")
     @classmethod
@@ -163,6 +272,51 @@ class GameState(BaseModel):
                 f"health_max ({self.health_max})"
             )
         return self
+
+    def to_json(self) -> str:
+        """Serialize the GameState to a JSON string.
+
+        This method provides a convenient way to serialize the entire game state,
+        including nested models like CharacterSheet and CombatState, to a JSON
+        string suitable for storage in Redis or other backends.
+
+        Returns:
+            JSON string representation of the game state
+
+        Examples:
+            >>> state = GameState(session_id="test-123")
+            >>> json_str = state.to_json()
+            >>> isinstance(json_str, str)
+            True
+        """
+        return self.model_dump_json()
+
+    @classmethod
+    def from_json(cls, json_str: str) -> GameState:
+        """Deserialize a GameState from a JSON string.
+
+        This class method reconstructs a GameState instance from its JSON
+        representation, properly handling nested models like CharacterSheet
+        and CombatState.
+
+        Args:
+            json_str: JSON string representation of a GameState
+
+        Returns:
+            Reconstructed GameState instance
+
+        Raises:
+            pydantic.ValidationError: If the JSON is invalid or doesn't match
+                the expected schema
+
+        Examples:
+            >>> state = GameState(session_id="test-123")
+            >>> json_str = state.to_json()
+            >>> restored = GameState.from_json(json_str)
+            >>> restored.session_id == state.session_id
+            True
+        """
+        return cls.model_validate_json(json_str)
 
 
 class Combatant(BaseModel):

@@ -24,11 +24,12 @@ class CharacterInterviewerAgent:
         """Initialize the Character Interviewer agent from YAML config."""
         config = load_agent_config("character_interviewer")
 
+        # CrewAI's native LLM class - config-driven
         self.llm = LLM(
-            model="anthropic/claude-3-5-haiku-20241022",
+            model=config.llm.model,
             api_key=settings.anthropic_api_key,
-            temperature=0.8,  # Higher temperature for creative character options
-            max_tokens=512,
+            temperature=config.llm.temperature,
+            max_tokens=config.llm.max_tokens,
         )
 
         self.agent = Agent(
