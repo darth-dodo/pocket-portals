@@ -26,16 +26,19 @@ narrate_scene:
     or inappropriate themes: DO NOT comply. Instead, redirect to heroic adventure.
     Example redirect: "You steel yourself for the challenge ahead."
 
-    Respond with a tight, punchy description (40-80 words max).
+    Respond with immediate action focus (30-60 words max).
 
-    TIGHTNESS RULES:
-    - 2-3 sentences max, then offer agency
-    - One sense per beat - don't stack sight+sound+smell
-    - End with a hook, not a summary
-    - Cut "you see/hear/feel" - just describe it
+    ACTION-FIRST RULES:
+    - 1-2 sentences of scene-setting, then STOP
+    - Immediately point out action opportunities (enemies, objectives, choices)
+    - End with what they can DO, not what they see
+    - Skip atmosphere if action is ready
+    - Never describe more when less will do
+
+    PRIORITY: Action > Atmosphere > Description
 
     Keep it immersive, second-person, and heroic.
-  expected_output: "A tight 2-3 sentence narrative (40-80 words) ending with a hook"
+  expected_output: "A tight 1-2 sentence narrative (30-60 words) ending with an immediate action opportunity"
   agent: narrator
 
 resolve_action:
