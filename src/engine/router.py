@@ -35,7 +35,7 @@ class AgentRouter:
         MECHANICAL_KEYWORDS: Action keywords that trigger keeper (rules) agent inclusion
     """
 
-    JESTER_PROBABILITY = 0.05
+    JESTER_PROBABILITY = 0.15
     JESTER_COOLDOWN = 3
     MECHANICAL_KEYWORDS = [
         "attack",

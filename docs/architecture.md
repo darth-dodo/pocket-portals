@@ -34,54 +34,40 @@ Behavior-Driven Development ensures we build what users actually need:
 
 ## 1. System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        USER INTERFACE                           │
-│                    HTMX + Jinja2 Templates                      │
-│         (Progressive enhancement, no JS framework)              │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ SSE / HTTP
-                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      FASTAPI BACKEND                            │
-│                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Session    │  │    Stream    │  │    Export    │          │
-│  │   Manager    │  │   Handler    │  │   Service    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                          │                                      │
-└──────────────────────────┼──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      CREWAI LAYER                               │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    TAVERN CREW                           │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │   │
-│  │  │Innkeeper │ │ Narrator │ │  Keeper  │ │  Jester  │  │   │
-│  │  │  Theron  │ │          │ │          │ │          │  │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │   │
-│  │  ┌──────────────────────────┐                          │   │
-│  │  │  Character Interviewer   │                          │   │
-│  │  │   (Character Creation)   │                          │   │
-│  │  └──────────────────────────┘                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                          │                                      │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    SHARED TOOLS                          │   │
-│  │  [DiceRoller] [CharacterSheet] [WorldState]             │   │
-│  │  [CombatManager] [CombatState] [Enemy Templates]        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   ANTHROPIC CLAUDE API                          │
-│                 Claude 3.5 Haiku (all agents)                   │
-│                  claude-3-5-haiku-20241022                      │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph UI["User Interface"]
+        Browser["Browser<br/>NES.css Frontend"]
+    end
+
+    subgraph API["FastAPI Backend"]
+        Session["Session Manager"]
+        Stream["Stream Handler"]
+        Export["Export Service"]
+    end
+
+    subgraph CrewAI["CrewAI Layer"]
+        subgraph Agents["Tavern Crew"]
+            Innkeeper["Innkeeper"]
+            Narrator["Narrator"]
+            Keeper["Keeper"]
+            Jester["Jester"]
+            Interviewer["Character Interviewer"]
+        end
+        subgraph Tools["Shared Tools"]
+            Dice["DiceRoller"]
+            Combat["CombatManager"]
+            State["WorldState"]
+        end
+    end
+
+    subgraph External["Anthropic Claude API"]
+        Claude["Claude 3.5 Haiku"]
+    end
+
+    Browser -->|SSE/HTTP| API
+    API --> CrewAI
+    CrewAI --> Claude
 ```
 
 ---

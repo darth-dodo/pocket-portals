@@ -2,7 +2,7 @@
 
 A best practices guide and template for building production-ready multi-agent AI services using Python, FastAPI, CrewAI, and Redis.
 
-**Based on patterns from Pocket Portals** - a D&D adventure generator with 280+ tests and proven architecture.
+**Based on patterns from Pocket Portals** - a D&D adventure generator with 296 tests and proven architecture.
 
 ---
 
@@ -2480,4 +2480,4 @@ make dev
 
 ---
 
-*This blueprint is based on patterns proven in production with 280+ tests and comprehensive coverage.*
+*This blueprint is based on patterns proven in production with 296 tests and comprehensive coverage.*
