@@ -57,6 +57,24 @@ class QuestStatus(str, Enum):
     FAILED = "failed"
 
 
+class AdventurePhase(str, Enum):
+    """Narrative phases for adventure pacing.
+
+    Each phase has specific narrative characteristics that guide agent output:
+        SETUP: Character introduction, world establishment (turns 1-5)
+        RISING_ACTION: Conflict introduction, stakes building (turns 6-20)
+        MID_POINT: Major revelation, point of no return (turns 21-30)
+        CLIMAX: Maximum tension, confrontation (turns 31-42)
+        DENOUEMENT: Resolution, reflection, closure (turns 43-50)
+    """
+
+    SETUP = "setup"
+    RISING_ACTION = "rising"
+    MID_POINT = "midpoint"
+    CLIMAX = "climax"
+    DENOUEMENT = "denouement"
+
+
 class CombatantType(str, Enum):
     """Type of combatant.
 
@@ -81,6 +99,25 @@ class CombatAction(str, Enum):
     ATTACK = "attack"
     DEFEND = "defend"
     FLEE = "flee"
+
+
+class AdventureMoment(BaseModel):
+    """Significant moment during adventure for epilogue generation.
+
+    Tracks notable events that occurred during the adventure to enable
+    personalized epilogue generation that references the player's journey.
+
+    Attributes:
+        turn: Turn number when moment occurred
+        type: Category of moment (combat_victory, discovery, choice, npc_interaction)
+        summary: Brief description of what happened
+        significance: Weight for epilogue inclusion (0.0-1.0)
+    """
+
+    turn: int
+    type: str
+    summary: str
+    significance: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
 class QuestObjective(BaseModel):
@@ -190,6 +227,12 @@ class GameState(BaseModel):
         phase: Current game phase for routing decisions
         recent_agents: List of recently used agents for Jester cooldown
         turns_since_jester: Number of turns since last Jester appearance
+        adventure_turn: Current turn number in the adventure (0-50)
+        adventure_phase: Current narrative phase for pacing
+        max_turns: Maximum turns for this adventure (default 50)
+        adventure_completed: Whether the adventure has concluded
+        climax_reached: Whether the main conflict has been resolved
+        adventure_moments: Significant moments for epilogue generation
     """
 
     session_id: str
@@ -208,6 +251,14 @@ class GameState(BaseModel):
     combat_state: CombatState | None = None
     active_quest: Quest | None = None
     completed_quests: list[Quest] = Field(default_factory=list)
+
+    # Adventure pacing fields
+    adventure_turn: int = Field(default=0, ge=0, le=50)
+    adventure_phase: AdventurePhase = AdventurePhase.SETUP
+    max_turns: int = Field(default=50, ge=25, le=100)
+    adventure_completed: bool = False
+    climax_reached: bool = False
+    adventure_moments: list[AdventureMoment] = Field(default_factory=list)
 
     @field_validator("character_sheet", mode="before")
     @classmethod

@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Adventure Pacing System**: 50-turn adventure structure with 5-phase narrative arc
+  - AdventurePhase enum: SETUP, RISING_ACTION, MID_POINT, CLIMAX, DENOUEMENT
+  - Turn tracking with automatic phase progression
+  - PacingContext model for agent narrative guidance
+  - Closure triggers: quest completion (after turn 25) or hard cap (turn 50)
+- **EpilogueAgent**: Personalized adventure conclusions
+  - References specific adventure moments
+  - Character-aware epilogue generation
+  - Graceful fallback for LLM failures
+- **Pacing Guidelines**: Narrator receives phase-specific storytelling guidance
+- **Adventure Moments**: Tracking system for significant story events
+- New ADR: `docs/adr/003-adventure-pacing-system.md`
+- New design doc: `docs/design/2025-12-29-adventure-pacing-system.md`
+
+### Changed
+- GameState model extended with adventure_turn, adventure_phase, max_turns fields
+- SessionManager with turn increment and epilogue trigger methods
+- API process_action() integrates pacing context and closure detection
+- Agent configuration updated with pacing guidelines
+
 ## [0.1.0] - 2025-12-21
 
 ### Added
