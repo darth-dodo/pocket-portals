@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
 from src.agents.character_interviewer import CharacterInterviewerAgent
+from src.agents.epilogue import EpilogueAgent, generate_fallback_epilogue
 from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
@@ -25,6 +26,11 @@ from src.agents.narrator import NarratorAgent
 from src.agents.quest_designer import QuestDesignerAgent
 from src.engine import AgentRouter, TurnExecutor
 from src.engine.combat_manager import CombatManager
+from src.engine.pacing import (
+    build_pacing_context,
+    check_closure_triggers,
+    format_pacing_hint,
+)
 from src.state import (
     CharacterClass,
     CharacterRace,
@@ -182,6 +188,7 @@ keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 character_interviewer: CharacterInterviewerAgent | None = None
 quest_designer: QuestDesignerAgent | None = None
+epilogue_agent: EpilogueAgent | None = None
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
 combat_manager = CombatManager()
@@ -252,6 +259,8 @@ def build_context(
     history: list[dict[str, str]],
     character_sheet: Any = None,
     character_description: str = "",
+    state: GameState | None = None,
+    include_pacing: bool = True,
 ) -> str:
     """Format conversation history and character info for LLM context.
 
@@ -259,11 +268,20 @@ def build_context(
         history: List of conversation exchanges
         character_sheet: Optional CharacterSheet with structured character data
         character_description: Optional text description of character
+        state: Optional GameState for pacing context
+        include_pacing: Whether to include pacing hints (default True)
 
     Returns:
         Formatted context string for LLM
     """
     lines = []
+
+    # Prepend pacing hint if state is provided and pacing is enabled
+    if include_pacing and state and state.adventure_turn > 0:
+        pacing_context = build_pacing_context(state)
+        pacing_hint = format_pacing_hint(pacing_context)
+        lines.append(pacing_hint)
+        lines.append("")
 
     # Include character information for continuity
     if character_sheet:
@@ -398,6 +416,7 @@ async def lifespan(app: FastAPI) -> Any:
         jester, \
         character_interviewer, \
         quest_designer, \
+        epilogue_agent, \
         turn_executor
 
     # Initialize session backend and manager
@@ -413,6 +432,7 @@ async def lifespan(app: FastAPI) -> Any:
         jester = JesterAgent()
         character_interviewer = CharacterInterviewerAgent()
         quest_designer = QuestDesignerAgent()
+        epilogue_agent = EpilogueAgent()
         turn_executor = TurnExecutor(
             narrator=narrator,
             keeper=keeper,
@@ -429,6 +449,7 @@ async def lifespan(app: FastAPI) -> Any:
     keeper = None
     jester = None
     character_interviewer = None
+    epilogue_agent = None
     turn_executor = None
 
 
@@ -575,6 +596,62 @@ async def process_action(
             choices=choices,
         )
 
+    # Increment adventure turn before executing agents
+    await sm.increment_adventure_turn(state.session_id)
+    # Refresh state to get updated turn and phase
+    state = await sm.get_or_create_session(state.session_id)
+
+    # Check closure triggers after turn increment
+    closure_status = check_closure_triggers(state)
+    if closure_status.should_trigger_epilogue:
+        # Trigger epilogue and mark adventure complete
+        updated_state = await sm.trigger_epilogue(
+            state.session_id, closure_status.reason or ""
+        )
+        if updated_state is None:
+            # Fallback if state couldn't be updated
+            choices = ["Begin New Adventure", "View Character Sheet"]
+            return NarrativeResponse(
+                narrative="Your adventure has concluded.",
+                session_id=action_request.session_id or "",
+                choices=choices,
+            )
+        state = updated_state
+
+        # Generate epilogue narrative using EpilogueAgent
+        reason = closure_status.reason or "hard_cap"
+        if epilogue_agent:
+            try:
+                # Build context for epilogue generation
+                context = build_context(
+                    state.conversation_history,
+                    character_sheet=state.character_sheet,
+                    character_description=state.character_description,
+                    state=state,
+                    include_pacing=False,
+                )
+                epilogue_narrative = epilogue_agent.generate_epilogue(
+                    state=state,
+                    reason=reason,
+                    context=context,
+                )
+            except Exception:
+                # Fallback to static epilogue if agent fails
+                epilogue_narrative = generate_fallback_epilogue(reason, state)
+        else:
+            # No agent available - use static fallback
+            epilogue_narrative = generate_fallback_epilogue(reason, state)
+
+        choices = ["Begin New Adventure", "View Character Sheet", "Share Story"]
+        await sm.set_choices(state.session_id, choices)
+        await sm.add_exchange(state.session_id, action, epilogue_narrative)
+
+        return NarrativeResponse(
+            narrative=epilogue_narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
     # Route to appropriate agents based on phase and action
     routing = agent_router.route(
         action=action,
@@ -582,11 +659,13 @@ async def process_action(
         recent_agents=state.recent_agents,
     )
 
-    # Execute agents and get aggregated result
+    # Execute agents and get aggregated result (with pacing context)
     context = build_context(
         state.conversation_history,
         character_sheet=state.character_sheet,
         character_description=state.character_description,
+        state=state,
+        include_pacing=True,
     )
     result = await turn_executor.execute_async(
         action=action,

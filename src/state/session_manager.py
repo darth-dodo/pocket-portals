@@ -6,7 +6,15 @@ import uuid
 from typing import TYPE_CHECKING
 
 from src.state.backends.base import SessionBackend
-from src.state.models import CombatState, GamePhase, GameState, Quest, QuestStatus
+from src.state.models import (
+    AdventureMoment,
+    AdventurePhase,
+    CombatState,
+    GamePhase,
+    GameState,
+    Quest,
+    QuestStatus,
+)
 
 if TYPE_CHECKING:
     from src.state.character import CharacterSheet
@@ -304,3 +312,128 @@ class SessionManager:
                     obj.is_completed = completed
                     break
             await self._backend.update(session_id, state)
+
+    # Adventure Pacing Methods
+
+    async def increment_adventure_turn(self, session_id: str) -> int:
+        """Increment the adventure turn counter and recalculate phase.
+
+        Increments the turn counter by 1 (up to max_turns) and automatically
+        recalculates the adventure phase based on the new turn number.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            New turn number after incrementing (capped at max_turns)
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            # Increment turn up to max_turns
+            state.adventure_turn = min(state.max_turns, state.adventure_turn + 1)
+
+            # Recalculate phase based on new turn
+            state.adventure_phase = self._calculate_turn_based_phase(
+                state.adventure_turn
+            )
+
+            await self._backend.update(session_id, state)
+            return state.adventure_turn
+        return 0
+
+    def _calculate_turn_based_phase(self, turn: int) -> AdventurePhase:
+        """Calculate the adventure phase based purely on turn number.
+
+        Phase boundaries follow the standard narrative arc:
+        - SETUP: Turns 1-5 (10%) - Character introduction, world establishment
+        - RISING_ACTION: Turns 6-20 (30%) - Conflict introduction, stakes building
+        - MID_POINT: Turns 21-30 (20%) - Major revelation, point of no return
+        - CLIMAX: Turns 31-42 (24%) - Maximum tension, confrontation
+        - DENOUEMENT: Turns 43-50 (16%) - Resolution, reflection, closure
+
+        Args:
+            turn: Current adventure turn number
+
+        Returns:
+            AdventurePhase corresponding to the turn number
+        """
+        if turn <= 5:
+            return AdventurePhase.SETUP
+        elif turn <= 20:
+            return AdventurePhase.RISING_ACTION
+        elif turn <= 30:
+            return AdventurePhase.MID_POINT
+        elif turn <= 42:
+            return AdventurePhase.CLIMAX
+        else:
+            return AdventurePhase.DENOUEMENT
+
+    async def set_adventure_phase(self, session_id: str, phase: AdventurePhase) -> None:
+        """Set the adventure phase for a session.
+
+        This allows manual override of the automatically calculated phase,
+        useful for quest-driven phase transitions (e.g., quest completion
+        triggering early denouement).
+
+        Args:
+            session_id: Session identifier
+            phase: AdventurePhase value to set
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.adventure_phase = phase
+            await self._backend.update(session_id, state)
+
+    async def set_adventure_completed(self, session_id: str, completed: bool) -> None:
+        """Set the adventure completion status.
+
+        Marks the adventure as completed, triggering epilogue generation
+        and preventing further turn progression.
+
+        Args:
+            session_id: Session identifier
+            completed: Whether the adventure is completed
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.adventure_completed = completed
+            await self._backend.update(session_id, state)
+
+    async def add_adventure_moment(
+        self, session_id: str, moment: AdventureMoment
+    ) -> None:
+        """Add a significant moment to the adventure for epilogue generation.
+
+        Moments are tracked throughout the adventure to enable personalized
+        epilogue generation that references the player's specific journey.
+
+        Args:
+            session_id: Session identifier
+            moment: AdventureMoment instance to add
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.adventure_moments.append(moment)
+            await self._backend.update(session_id, state)
+
+    async def trigger_epilogue(self, session_id: str, reason: str) -> GameState | None:
+        """Trigger adventure epilogue and mark adventure as complete.
+
+        Sets adventure_completed=True and adventure_phase=DENOUEMENT,
+        signaling that the adventure has concluded and epilogue should
+        be generated.
+
+        Args:
+            session_id: Session identifier
+            reason: Reason for epilogue trigger (quest_complete, hard_cap)
+
+        Returns:
+            Updated GameState if session exists, None otherwise
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.adventure_completed = True
+            state.adventure_phase = AdventurePhase.DENOUEMENT
+            await self._backend.update(session_id, state)
+            return state
+        return None

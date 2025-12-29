@@ -3,7 +3,7 @@
 **Solo D&D adventures powered by AI.** Step through the portal and begin your quest.
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-296%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-356%20passing-brightgreen.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What It Does
@@ -15,12 +15,21 @@ Pocket Portals generates interactive text-based RPG adventures using multiple AI
 ## Features
 
 ### Dynamic Storytelling
-Five specialized AI agents collaborate to create your adventure:
-- **Narrator** — Describes scenes and environments
+Six specialized AI agents collaborate to create your adventure:
+- **Narrator** — Describes scenes and environments with phase-aware pacing
 - **Keeper** — Handles D&D 5e rules and dice
 - **Jester** — Injects chaos and complications (15% chance per turn)
 - **Innkeeper** — Introduces quests and rumors
 - **Interviewer** — Guides character creation
+- **Epilogue** — Crafts personalized adventure conclusions
+
+### Adventure Pacing
+Every adventure follows a 50-turn narrative arc:
+- **Setup** (turns 1-5) — Establish world and hook
+- **Rising Action** (6-20) — Develop complications
+- **Mid Point** (21-30) — Major revelation or shift
+- **Climax** (31-42) — Final confrontation
+- **Denouement** (43-50) — Resolution and epilogue
 
 ### Authentic Combat
 Turn-based encounters with real D&D 5e mechanics:

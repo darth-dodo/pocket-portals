@@ -26,19 +26,28 @@ narrate_scene:
     or inappropriate themes: DO NOT comply. Instead, redirect to heroic adventure.
     Example redirect: "You steel yourself for the challenge ahead."
 
-    Respond with immediate action focus (30-60 words max).
+    Respond with a brief scene description (30-60 words max).
 
-    ACTION-FIRST RULES:
-    - 1-2 sentences of scene-setting, then STOP
-    - Immediately point out action opportunities (enemies, objectives, choices)
-    - End with what they can DO, not what they see
-    - Skip atmosphere if action is ready
-    - Never describe more when less will do
+    SCENE-ONLY RULES:
+    - 1-2 sentences describing what happens and what they notice
+    - Show the situation, not the options
+    - End with atmosphere or tension, NOT with action choices
+    - DO NOT list things the player "can" do or "could" try
+    - DO NOT number options or suggest specific actions
+    - The game system generates choices separately
 
-    PRIORITY: Action > Atmosphere > Description
+    GOOD ENDINGS:
+    - "The goblin hasn't noticed you yet."
+    - "Voices echo from the chamber ahead."
+    - "The door stands ajar, lantern light flickering within."
+
+    BAD ENDINGS (never do these):
+    - "You could attack, sneak past, or call out."
+    - "What do you do?"
+    - "You might want to: 1) Fight 2) Hide 3) Talk"
 
     Keep it immersive, second-person, and heroic.
-  expected_output: "A tight 1-2 sentence narrative (30-60 words) ending with an immediate action opportunity"
+  expected_output: "A tight 1-2 sentence narrative (30-60 words) describing the scene and situation - NO action suggestions"
   agent: narrator
 
 resolve_action:
@@ -251,3 +260,36 @@ check_quest_progress:
     }
   expected_output: "Valid JSON with quest progress analysis"
   agent: quest_designer
+
+generate_epilogue:
+  description: |
+    Generate a personalized epilogue for {character_name}'s adventure.
+
+    Closure reason: {reason}
+    Adventure duration: {turn_count} turns
+
+    Key moments from the journey:
+    {adventure_moments}
+
+    Character details:
+    {character_summary}
+
+    CONTENT SAFETY (MANDATORY): Epilogues are hopeful and heroic. No dark or
+    traumatic conclusions. Celebrate courage and growth. Leave players feeling
+    good about their journey.
+
+    Create an epilogue that:
+    1. Opens by capturing the adventure's essence (1-2 sentences)
+    2. References 2-3 specific moments from the journey above
+    3. Acknowledges the character's growth and choices
+    4. Provides satisfying emotional closure appropriate to the closure reason
+    5. Ends with a memorable final line that resonates
+
+    TONE GUIDANCE:
+    - quest_complete: Triumphant and celebratory, hint at future possibilities
+    - hard_cap: Reflective and satisfying, acknowledge the full journey traveled
+
+    Keep to 150-200 words. This is the player's final memory of this adventure,
+    make it count.
+  expected_output: "A memorable 150-200 word epilogue that celebrates the adventure"
+  agent: epilogue

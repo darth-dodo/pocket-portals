@@ -162,7 +162,18 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Adventure Pacing System - 50 Turn Structure | ✅ | All phases complete, 356 tests passing |
 | Add character sheet display to UI | ⏳ | Show character info in frontend |
+
+### Adventure Pacing Implementation Progress
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Core turn tracking | ✅ | AdventurePhase enum, turn fields in GameState, SessionManager methods |
+| Phase 2: Pacing context | ✅ | PacingContext model, agent integration, narrator pacing guidelines |
+| Phase 3: Closure triggers | ✅ | check_closure_triggers(), ClosureStatus model, hard cap at turn 50 |
+| Phase 4: EpilogueAgent | ✅ | EpilogueAgent class, YAML config, fallback epilogues, 17 new tests |
+| Phase 5: Tests & validation | ✅ | 356 tests passing, 72% coverage |
 
 ### Up Next
 
@@ -175,6 +186,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 356 tests |
 | Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary, 275 tests passing |
 | Dynamic character creation with CharacterInterviewerAgent | ✅ | 148 tests, LLM-powered interview with 5-turn flow |
 | Content safety filtering system | ✅ | Pattern-based filter with safe redirects, blocks inappropriate content |
@@ -416,6 +428,40 @@ gantt
 
 ## Task History Archive
 
+### Session Log: 2025-12-29
+
+**Session Focus**: Adventure Pacing System - 50-turn narrative structure with EpilogueAgent
+
+**Key Decisions**:
+1. Chose Option B (Quest-Driven with Turn Budget) over pure turn-based or elastic length
+2. 5-phase narrative arc: SETUP, RISING_ACTION, MID_POINT, CLIMAX, DENOUEMENT
+3. Minimum 25 turns before quest can trigger ending, hard cap at 50 turns
+4. PacingContext provides urgency and directive hints to agents
+5. EpilogueAgent generates personalized conclusions with fallback support
+
+**Artifacts Created**:
+- `docs/adr/003-adventure-pacing-system.md` - Architecture decision record
+- `docs/design/2025-12-29-adventure-pacing-system.md` - Design document
+- `src/engine/pacing.py` - PacingContext, ClosureStatus, pacing functions
+- `src/agents/epilogue.py` - EpilogueAgent with fallback generation
+- `scripts/demo_adventure_pacing.py` - Interactive demo script
+- `tests/test_epilogue.py` - 17 tests for epilogue functionality
+
+**Files Modified**:
+- `src/state/models.py` - Added AdventurePhase, AdventureMoment, turn tracking fields
+- `src/state/session_manager.py` - Added increment_adventure_turn, trigger_epilogue
+- `src/api/main.py` - Integrated pacing context and closure detection
+- `src/config/agents.yaml` - Added epilogue agent config, narrator pacing guidelines
+- `src/config/tasks.yaml` - Added generate_epilogue task
+
+**Quality Gates Passed**:
+- 356 tests passing (increased from 339)
+- 72% test coverage
+- All linting checks passing
+- Demo script validates all pacing features
+
+---
+
 ### Session Log: 2025-12-24
 
 **Session Focus**: Character creation enhancement with dynamic LLM agent and content safety
@@ -485,11 +531,12 @@ gantt
 ### Agent Integration Status
 | Agent | In Conversation Flow | Standalone Endpoint | Notes |
 |-------|---------------------|---------------------|-------|
-| Narrator | ✅ Always | - | Base agent for all turns |
+| Narrator | ✅ Always | - | Base agent for all turns, phase-aware pacing |
 | Keeper | ✅ Mechanical/Combat | `/keeper/resolve` | Triggered by action keywords |
 | Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
 | Innkeeper | ✅ Quest Introduction | `/innkeeper/quest` | Integrated for quest hooks |
 | CharacterInterviewer | ✅ Character Creation | - | Dynamic 5-turn interview with LLM |
+| Epilogue | ✅ Adventure End | - | Personalized conclusions on closure triggers |
 
 ### Character Creation Flow
 - `/start` begins in CHARACTER_CREATION phase with CharacterInterviewer
