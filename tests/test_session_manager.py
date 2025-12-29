@@ -358,3 +358,414 @@ class TestSessionManagerCharacterSheet:
         result = await manager.get_phase("invalid-session-id")
 
         assert result is None
+
+
+class TestSessionManagerQuests:
+    """Test suite for SessionManager quest management."""
+
+    @pytest.mark.asyncio
+    async def test_set_active_quest_stores_quest(self, manager: SessionManager) -> None:
+        """Test that set_active_quest stores the quest in session."""
+        from src.state.models import Quest, QuestObjective, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Initially no active quest
+        assert session.active_quest is None
+
+        # Set active quest
+        quest = Quest(
+            id="quest-1",
+            title="The Lost Artifact",
+            description="Find the ancient artifact.",
+            objectives=[QuestObjective(id="obj-1", description="Enter the dungeon")],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.active_quest is not None
+        assert updated.active_quest.title == "The Lost Artifact"
+
+    @pytest.mark.asyncio
+    async def test_set_active_quest_can_clear_quest(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that set_active_quest can clear the active quest."""
+        from src.state.models import Quest, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Set a quest first
+        quest = Quest(
+            id="quest-1",
+            title="Test Quest",
+            description="Test description.",
+            objectives=[],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        # Clear the quest
+        await manager.set_active_quest(session_id, None)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.active_quest is None
+
+    @pytest.mark.asyncio
+    async def test_get_active_quest_returns_quest_if_set(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that get_active_quest returns the quest if set."""
+        from src.state.models import Quest, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        quest = Quest(
+            id="quest-1",
+            title="Find the Dragon",
+            description="Locate the dragon's lair.",
+            objectives=[],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        result = await manager.get_active_quest(session_id)
+
+        assert result is not None
+        assert result.title == "Find the Dragon"
+
+    @pytest.mark.asyncio
+    async def test_get_active_quest_returns_none_if_not_set(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that get_active_quest returns None if no quest is set."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        result = await manager.get_active_quest(session_id)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_active_quest_returns_none_for_invalid_session(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that get_active_quest returns None for invalid session."""
+        result = await manager.get_active_quest("invalid-session-id")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_complete_quest_moves_to_completed_list(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that complete_quest moves quest to completed list."""
+        from src.state.models import Quest, QuestObjective, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Set active quest
+        quest = Quest(
+            id="quest-1",
+            title="Slay the Dragon",
+            description="Defeat the dragon.",
+            objectives=[
+                QuestObjective(id="obj-1", description="Find dragon", is_completed=True)
+            ],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        # Complete the quest
+        await manager.complete_quest(session_id)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+
+        # Active quest should be cleared
+        assert updated.active_quest is None
+
+        # Quest should be in completed list
+        assert len(updated.completed_quests) == 1
+        assert updated.completed_quests[0].title == "Slay the Dragon"
+        assert updated.completed_quests[0].status == QuestStatus.COMPLETED
+
+    @pytest.mark.asyncio
+    async def test_complete_quest_does_nothing_if_no_active_quest(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that complete_quest does nothing if no active quest."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # No active quest
+        await manager.complete_quest(session_id)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert len(updated.completed_quests) == 0
+
+    @pytest.mark.asyncio
+    async def test_update_quest_objective_marks_complete(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that update_quest_objective marks objective as complete."""
+        from src.state.models import Quest, QuestObjective, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Set quest with objectives
+        quest = Quest(
+            id="quest-1",
+            title="Multi Objective Quest",
+            description="Multiple things to do.",
+            objectives=[
+                QuestObjective(
+                    id="obj-1", description="First task", is_completed=False
+                ),
+                QuestObjective(
+                    id="obj-2", description="Second task", is_completed=False
+                ),
+            ],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        # Complete first objective
+        await manager.update_quest_objective(session_id, "obj-1", completed=True)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.active_quest is not None
+        assert updated.active_quest.objectives[0].is_completed is True
+        assert updated.active_quest.objectives[1].is_completed is False
+
+    @pytest.mark.asyncio
+    async def test_update_quest_objective_does_nothing_for_nonexistent_objective(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that update_quest_objective handles nonexistent objective gracefully."""
+        from src.state.models import Quest, QuestObjective, QuestStatus
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        quest = Quest(
+            id="quest-1",
+            title="Test Quest",
+            description="Test.",
+            objectives=[
+                QuestObjective(id="obj-1", description="Task", is_completed=False),
+            ],
+            status=QuestStatus.ACTIVE,
+        )
+        await manager.set_active_quest(session_id, quest)
+
+        # Try to update non-existent objective
+        await manager.update_quest_objective(
+            session_id, "nonexistent-obj", completed=True
+        )
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.active_quest is not None
+        # Original objective should still be incomplete
+        assert updated.active_quest.objectives[0].is_completed is False
+
+
+class TestSessionManagerCreationTurn:
+    """Test suite for SessionManager character creation turn management."""
+
+    @pytest.mark.asyncio
+    async def test_set_creation_turn_updates_turn(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that set_creation_turn updates the turn number."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Initially at turn 0
+        assert session.creation_turn == 0
+
+        # Set to turn 3
+        await manager.set_creation_turn(session_id, 3)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.creation_turn == 3
+
+    @pytest.mark.asyncio
+    async def test_set_creation_turn_caps_at_5(self, manager: SessionManager) -> None:
+        """Test that set_creation_turn caps at 5."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        await manager.set_creation_turn(session_id, 10)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.creation_turn == 5
+
+    @pytest.mark.asyncio
+    async def test_set_creation_turn_floors_at_0(self, manager: SessionManager) -> None:
+        """Test that set_creation_turn floors at 0."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        await manager.set_creation_turn(session_id, -5)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.creation_turn == 0
+
+    @pytest.mark.asyncio
+    async def test_increment_creation_turn_increases_by_one(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that increment_creation_turn increases by one."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Increment from 0
+        result = await manager.increment_creation_turn(session_id)
+        assert result == 1
+
+        # Increment again
+        result = await manager.increment_creation_turn(session_id)
+        assert result == 2
+
+    @pytest.mark.asyncio
+    async def test_increment_creation_turn_caps_at_5(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that increment_creation_turn caps at 5."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Set to 4, then increment twice
+        await manager.set_creation_turn(session_id, 4)
+
+        result = await manager.increment_creation_turn(session_id)
+        assert result == 5
+
+        # Should stay at 5
+        result = await manager.increment_creation_turn(session_id)
+        assert result == 5
+
+    @pytest.mark.asyncio
+    async def test_increment_creation_turn_returns_zero_for_invalid_session(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that increment_creation_turn returns 0 for invalid session."""
+        result = await manager.increment_creation_turn("invalid-session")
+        assert result == 0
+
+
+class TestSessionManagerChoicesAndAgents:
+    """Test suite for SessionManager choices and recent agents management."""
+
+    @pytest.mark.asyncio
+    async def test_set_choices_updates_current_choices(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that set_choices updates current choices."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        choices = ["Go north", "Go south", "Stay here"]
+        await manager.set_choices(session_id, choices)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.current_choices == choices
+
+    @pytest.mark.asyncio
+    async def test_set_choices_replaces_previous_choices(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that set_choices replaces previous choices."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        await manager.set_choices(session_id, ["Option A", "Option B"])
+        await manager.set_choices(session_id, ["Option C", "Option D"])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.current_choices == ["Option C", "Option D"]
+
+    @pytest.mark.asyncio
+    async def test_update_recent_agents_adds_agents(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that update_recent_agents adds agents to list."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        await manager.update_recent_agents(session_id, ["narrator"])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert "narrator" in updated.recent_agents
+
+    @pytest.mark.asyncio
+    async def test_update_recent_agents_keeps_last_5(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that update_recent_agents keeps only last 5 agents."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Add 7 agents one by one
+        agents = ["agent1", "agent2", "agent3", "agent4", "agent5", "agent6", "agent7"]
+        for agent in agents:
+            await manager.update_recent_agents(session_id, [agent])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert len(updated.recent_agents) == 5
+        # Should have the last 5 agents
+        assert updated.recent_agents == [
+            "agent3",
+            "agent4",
+            "agent5",
+            "agent6",
+            "agent7",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_update_recent_agents_tracks_jester_turns(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that update_recent_agents tracks turns since jester."""
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Add narrator (not jester)
+        await manager.update_recent_agents(session_id, ["narrator"])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.turns_since_jester == 1  # Incremented
+
+        # Add jester
+        await manager.update_recent_agents(session_id, ["jester"])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.turns_since_jester == 0  # Reset
+
+        # Add narrator again
+        await manager.update_recent_agents(session_id, ["narrator"])
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert updated.turns_since_jester == 1  # Incremented again
