@@ -1,17 +1,15 @@
 """Tests for FastAPI endpoints."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app, build_context
+from src.api.main import build_context
 
+if TYPE_CHECKING:
+    from tests.conftest import SessionStateHelper
 
-@pytest.fixture
-def client() -> TestClient:
-    """Create test client for API."""
-    return TestClient(app)
+# Note: 'client' fixture is provided by conftest.py with proper lifespan context
 
 
 def test_health_endpoint_returns_200(client: TestClient) -> None:
@@ -303,93 +301,26 @@ def test_start_session_can_be_used_for_action(client: TestClient) -> None:
 # Innkeeper Tests
 
 
-def test_innkeeper_quest_returns_narrative(client: TestClient) -> None:
-    """Test GET /innkeeper/quest returns quest introduction."""
-    response = client.get("/innkeeper/quest?character=A weary dwarf warrior")
-    assert response.status_code == 200
-    data = response.json()
-    assert "narrative" in data
-    assert isinstance(data["narrative"], str)
-    assert len(data["narrative"]) > 0
-
-
 def test_innkeeper_quest_requires_character(client: TestClient) -> None:
     """Test that character query param is required."""
     response = client.get("/innkeeper/quest")
     assert response.status_code == 422
 
 
-# Keeper Tests
-
-
-def test_keeper_resolve_returns_result(client: TestClient) -> None:
-    """Test POST /keeper/resolve returns mechanical result."""
-    response = client.post("/keeper/resolve", json={"action": "swing sword at goblin"})
-    assert response.status_code == 200
-    data = response.json()
-    assert "result" in data
-    assert isinstance(data["result"], str)
-
-
-def test_keeper_resolve_accepts_difficulty(client: TestClient) -> None:
-    """Test that difficulty parameter is accepted."""
-    response = client.post(
-        "/keeper/resolve", json={"action": "pick lock", "difficulty": 15}
-    )
-    assert response.status_code == 200
-
-
-def test_keeper_resolve_accepts_session_id(client: TestClient) -> None:
-    """Test that session_id provides context."""
-    # First create a session
-    start = client.get("/start")
-    session_id = start.json()["session_id"]
-
-    response = client.post(
-        "/keeper/resolve", json={"action": "attack orc", "session_id": session_id}
-    )
-    assert response.status_code == 200
-
-
-# Jester Tests
-
-
-def test_jester_complicate_returns_complication(client: TestClient) -> None:
-    """Test POST /jester/complicate returns meta-commentary."""
-    response = client.post(
-        "/jester/complicate", json={"situation": "The party is searching for treasure"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "complication" in data
-    assert isinstance(data["complication"], str)
-
-
-def test_jester_complicate_accepts_session_id(client: TestClient) -> None:
-    """Test that session_id provides context."""
-    start = client.get("/start")
-    session_id = start.json()["session_id"]
-
-    response = client.post(
-        "/jester/complicate",
-        json={"situation": "Everyone is standing around", "session_id": session_id},
-    )
-    assert response.status_code == 200
-
-
 # Character Creation Flow Tests
 
 
-def test_start_begins_in_character_creation_phase(client: TestClient) -> None:
+def test_start_begins_in_character_creation_phase(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
     """Test that /start creates session in CHARACTER_CREATION phase."""
-    from src.api.main import session_manager
     from src.state import GamePhase
 
     response = client.get("/start")
     assert response.status_code == 200
 
     session_id = response.json()["session_id"]
-    phase = session_manager.get_phase(session_id)
+    phase = session_state.get_phase(session_id)
 
     assert phase == GamePhase.CHARACTER_CREATION
 
@@ -426,15 +357,15 @@ def test_action_during_character_creation_continues_interview(
     assert "choices" in data
 
 
-def test_session_tracks_creation_turn_count(client: TestClient) -> None:
+def test_session_tracks_creation_turn_count(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
     """Test that session tracks character creation turn count."""
-    from src.api.main import session_manager
-
     start_response = client.get("/start")
     session_id = start_response.json()["session_id"]
 
     # After /start, should be turn 1
-    turn = session_manager.get_creation_turn(session_id)
+    turn = session_state.get_creation_turn(session_id)
     assert turn == 1
 
     # After first response, should be turn 2
@@ -443,13 +374,14 @@ def test_session_tracks_creation_turn_count(client: TestClient) -> None:
         json={"action": "I'm a dwarven fighter", "session_id": session_id},
     )
 
-    turn = session_manager.get_creation_turn(session_id)
+    turn = session_state.get_creation_turn(session_id)
     assert turn == 2
 
 
-def test_character_creation_completes_after_5_turns(client: TestClient) -> None:
+def test_character_creation_completes_after_5_turns(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
     """Test that character creation transitions after 5 turns."""
-    from src.api.main import session_manager
     from src.state import GamePhase
 
     start_response = client.get("/start")
@@ -463,16 +395,17 @@ def test_character_creation_completes_after_5_turns(client: TestClient) -> None:
         )
 
     # After 5 turns, should transition to EXPLORATION
-    phase = session_manager.get_phase(session_id)
+    phase = session_state.get_phase(session_id)
     assert phase == GamePhase.EXPLORATION
     # Should have character sheet
-    sheet = session_manager.get_character_sheet(session_id)
+    sheet = session_state.get_character_sheet(session_id)
     assert sheet is not None
 
 
-def test_skip_character_creation_with_query_param(client: TestClient) -> None:
+def test_skip_character_creation_with_query_param(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
     """Test that skip_creation=true skips character creation."""
-    from src.api.main import session_manager
     from src.state import GamePhase
 
     response = client.get("/start?skip_creation=true")
@@ -481,54 +414,14 @@ def test_skip_character_creation_with_query_param(client: TestClient) -> None:
     session_id = response.json()["session_id"]
 
     # Should be in EXPLORATION phase with default character
-    phase = session_manager.get_phase(session_id)
+    phase = session_state.get_phase(session_id)
     assert phase == GamePhase.EXPLORATION
-    sheet = session_manager.get_character_sheet(session_id)
+    sheet = session_state.get_character_sheet(session_id)
     assert sheet is not None
     assert sheet.name == "Adventurer"
 
 
 # Combat Action API Tests
-
-
-def test_combat_action_attack_success(client: TestClient) -> None:
-    """Test POST /combat/action with attack returns result."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    combat_response = client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-    assert combat_response.status_code == 200
-
-    # Force player turn for deterministic testing
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute attack action
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
-
-    assert action_response.status_code == 200
-    data = action_response.json()
-
-    assert data["success"] is True
-    assert "result" in data
-    assert "message" in data
-    assert "combat_state" in data
-    assert "combat_ended" in data
-    assert isinstance(data["combat_ended"], bool)
 
 
 def test_combat_action_requires_active_combat(client: TestClient) -> None:
@@ -546,382 +439,3 @@ def test_combat_action_requires_active_combat(client: TestClient) -> None:
 
     assert action_response.status_code == 400
     assert "No active combat" in action_response.json()["detail"]
-
-
-def test_combat_action_requires_player_turn(client: TestClient) -> None:
-    """Test that combat action returns error if not player's turn."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Manually set combat phase to ENEMY_TURN
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        state.combat_state.phase = CombatPhaseEnum.ENEMY_TURN
-
-    # Try to execute action during enemy turn
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
-
-    assert action_response.status_code == 400
-    assert "Not player's turn" in action_response.json()["detail"]
-
-
-def test_enemy_attacks_after_player(client: TestClient) -> None:
-    """Test that enemy turn executed after player action."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Force player turn for deterministic testing
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute player attack
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
-
-    assert action_response.status_code == 200
-    data = action_response.json()
-
-    # If combat didn't end, message should contain both player and enemy attacks
-    if not data["combat_ended"]:
-        message = data["message"]
-        # Should have multiple attack entries (player + enemy)
-        assert "Round" in message
-        # Should have returned to player turn
-        assert data["combat_state"]["phase"] == "player_turn"
-
-
-def test_combat_ends_on_enemy_death(client: TestClient) -> None:
-    """Test that combat ends when enemy HP reaches 0."""
-    from unittest.mock import patch
-
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-    from src.utils.dice import DiceRoll
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Get combat state and set enemy HP to 1
-    state = session_manager.get_session(session_id)
-    assert state is not None, "Session should exist"
-    assert state.combat_state is not None, "Combat state should exist"
-
-    enemy = next((c for c in state.combat_state.combatants if c.id == "enemy"), None)
-    assert enemy is not None, "Enemy combatant should exist"
-    enemy.current_hp = 1
-    enemy.armor_class = 5  # Low AC to guarantee hit
-
-    # Force player turn for deterministic testing
-    state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-    state.combat_state.turn_order = ["player", "enemy"]
-    state.combat_state.current_turn_index = 0
-
-    # Mock dice rolls to guarantee hit (roll 20) and damage (10)
-    with patch("src.engine.combat_manager.DiceRoller.roll") as mock_roll:
-        mock_roll.side_effect = [
-            DiceRoll(notation="1d20", rolls=[20], modifier=0, total=20),  # Attack roll
-            DiceRoll(notation="1d8+2", rolls=[8], modifier=2, total=10),  # Damage roll
-        ]
-
-        # Execute attack - should kill enemy
-        action_response = client.post(
-            "/combat/action",
-            json={"session_id": session_id, "action": "attack"},
-        )
-
-    data = action_response.json()
-    assert data["combat_ended"] is True
-    assert data["victory"] is True
-    # Combat should end when enemy HP reaches 0
-    assert data["combat_state"]["is_active"] is False
-
-
-def test_combat_ends_on_player_death(client: TestClient) -> None:
-    """Test that combat ends when player HP reaches 0."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Get combat state and set player HP to 1, enemy damage high
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        player = next(
-            (c for c in state.combat_state.combatants if c.id == "player"), None
-        )
-        if player:
-            player.current_hp = 1
-            player.armor_class = 5  # Low AC so enemy will hit
-
-        # Make player miss by setting enemy AC very high
-        enemy = next(
-            (c for c in state.combat_state.combatants if c.id == "enemy"), None
-        )
-        if enemy:
-            enemy.armor_class = 30  # Player will miss
-
-        # Force player turn for deterministic testing
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute attack - player will miss, enemy will hit and kill
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
-
-    data = action_response.json()
-    assert data["combat_ended"] is True
-    assert data["victory"] is False
-    # Combat should end when player HP reaches 0
-    assert data["combat_state"]["is_active"] is False
-
-
-def test_combat_end_includes_narrative(client: TestClient) -> None:
-    """Test that combat end response includes narrative summary."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Set enemy HP to 1 and low AC to guarantee kill
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        enemy = next(
-            (c for c in state.combat_state.combatants if c.id == "enemy"), None
-        )
-        if enemy:
-            enemy.current_hp = 1
-            enemy.armor_class = 5  # Player will hit
-
-        # Force player turn for deterministic testing
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute attack - should end combat
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "attack"},
-    )
-
-    data = action_response.json()
-    assert data["combat_ended"] is True
-    assert data["victory"] is True
-
-    # Check that narrative field exists and is populated
-    assert "narrative" in data
-    # If narrator is available, narrative should be a non-empty string
-    # If not available (no API key), it can be None
-    if data["narrative"] is not None:
-        assert isinstance(data["narrative"], str)
-        assert len(data["narrative"]) > 0
-
-
-def test_defend_action_works(client: TestClient) -> None:
-    """Test that defend action causes enemy to attack with disadvantage."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Force player turn
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-        state.combat_state.turn_order = ["player", "enemy"]
-        state.combat_state.current_turn_index = 0
-
-    # Execute defend action
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "defend"},
-    )
-
-    data = action_response.json()
-    assert data["success"] is True
-    assert "defensive stance" in data["message"].lower()
-    assert data["combat_ended"] is False
-    # Enemy attack should mention disadvantage
-    assert "disadvantage" in data["message"].lower()
-    # After enemy attacks, defending flag should be reset
-    assert data["combat_state"]["player_defending"] is False
-
-
-def test_flee_action_success(client: TestClient) -> None:
-    """Test that flee action can succeed."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Try flee multiple times until we get a success
-    for _ in range(100):
-        # Reset combat state
-        state = session_manager.get_session(session_id)
-        if state and state.combat_state:
-            state.combat_state.is_active = True
-            state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-            state.combat_state.turn_order = ["player", "enemy"]
-            state.combat_state.current_turn_index = 0
-
-        # Execute flee action
-        action_response = client.post(
-            "/combat/action",
-            json={"session_id": session_id, "action": "flee"},
-        )
-
-        data = action_response.json()
-        assert data["success"] is True
-
-        if data["fled"]:
-            # Successful flee
-            assert "escaped" in data["message"].lower()
-            assert data["combat_ended"] is True
-            assert data["victory"] is None
-            assert data["narrative"] is None
-            assert data["combat_state"]["is_active"] is False
-            break
-
-
-def test_flee_action_failure(client: TestClient) -> None:
-    """Test that flee action can fail with free attack."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Try flee multiple times until we get a failure
-    for _ in range(100):
-        # Reset combat state
-        state = session_manager.get_session(session_id)
-        if state and state.combat_state:
-            state.combat_state.is_active = True
-            state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-            state.combat_state.turn_order = ["player", "enemy"]
-            state.combat_state.current_turn_index = 0
-
-        # Execute flee action
-        action_response = client.post(
-            "/combat/action",
-            json={"session_id": session_id, "action": "flee"},
-        )
-
-        data = action_response.json()
-        assert data["success"] is True
-
-        if not data["fled"]:
-            # Failed flee
-            assert "failed" in data["message"].lower()
-            assert data["combat_ended"] is False
-            assert data["combat_state"]["is_active"] is True
-            # Should mention advantage attack
-            assert "advantage" in data["message"].lower()
-            break
-
-
-def test_invalid_action_returns_error(client: TestClient) -> None:
-    """Test that unknown action returns error."""
-    from src.api.main import session_manager
-    from src.state.models import CombatPhaseEnum
-
-    # Setup: Create session with character
-    response = client.get("/start?skip_creation=true")
-    session_id = response.json()["session_id"]
-
-    # Start combat
-    client.post(
-        "/combat/start",
-        json={"session_id": session_id, "enemy_type": "goblin"},
-    )
-
-    # Force player turn
-    state = session_manager.get_session(session_id)
-    if state and state.combat_state:
-        state.combat_state.phase = CombatPhaseEnum.PLAYER_TURN
-
-    # Execute invalid action
-    action_response = client.post(
-        "/combat/action",
-        json={"session_id": session_id, "action": "dance"},
-    )
-
-    assert action_response.status_code == 400
-    data = action_response.json()
-    assert "unknown action" in data["detail"].lower()

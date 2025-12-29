@@ -1,10 +1,218 @@
-# Agent Onboarding Guide
+# Pocket Portals Onboarding Guide
 
-**Purpose**: Get AI agents productive quickly on Pocket Portals with clear workflows, quality standards, and task tracking.
+**Purpose**: Get new developers and AI agents productive quickly on Pocket Portals with clear setup instructions, workflows, quality standards, and task tracking.
 
 ---
 
-## 🚀 Quick Start Checklist
+## Developer Setup
+
+This section covers environment setup for new developers joining the project.
+
+### Prerequisites
+
+Before starting, ensure you have the following installed:
+
+| Requirement | Version | Verification Command | Notes |
+|-------------|---------|---------------------|-------|
+| Python | 3.12+ | `python --version` | Python 3.11 minimum, 3.12 recommended |
+| uv | Latest | `uv --version` | Fast Python package manager |
+| Docker | Latest | `docker --version` | Required for Redis (optional if using memory backend) |
+| Docker Compose | v2+ | `docker compose version` | Included with Docker Desktop |
+| Git | Latest | `git --version` | Version control |
+
+**Installing uv** (if not already installed):
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+
+# Or with Homebrew (macOS)
+brew install uv
+```
+
+### Quick Start
+
+Follow these steps to get a working development environment:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/darth-dodo/pocket-portals.git
+cd pocket-portals
+
+# 2. Install dependencies with uv
+uv sync
+
+# 3. Set up environment variables
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+
+# 4. Start Redis (optional - can use memory backend instead)
+docker compose up -d redis
+
+# 5. Run the development server
+uv run uvicorn src.api.main:app --reload
+
+# 6. Verify the setup
+curl http://localhost:8000/health
+# Expected: {"status": "healthy", ...}
+```
+
+**Without Docker (using memory backend)**:
+
+If you prefer not to run Redis locally, you can use the in-memory session backend:
+
+```bash
+# In your .env file, set:
+SESSION_BACKEND=memory
+```
+
+This is suitable for development and testing but sessions will not persist across server restarts.
+
+### Development Workflow
+
+#### Pre-commit Hooks
+
+Set up pre-commit hooks to ensure code quality before each commit:
+
+```bash
+uv run pre-commit install
+```
+
+This automatically runs linting and formatting checks on staged files.
+
+#### Running Tests
+
+```bash
+# Run all tests with coverage
+uv run pytest
+
+# Run specific test file
+uv run pytest tests/test_api.py
+
+# Run with verbose output
+uv run pytest -v
+
+# Stop on first failure (useful during TDD)
+uv run pytest -x
+```
+
+#### Code Formatting
+
+```bash
+# Format code with Ruff
+uv run ruff format src/ tests/
+
+# Check for linting issues
+uv run ruff check src/ tests/
+
+# Auto-fix linting issues
+uv run ruff check --fix src/ tests/
+```
+
+#### Type Checking
+
+```bash
+# Run mypy for type checking
+uv run mypy src/
+```
+
+### Project Structure
+
+```
+pocket-portals/
+├── src/
+│   ├── agents/           # AI agent implementations (Narrator, Keeper, etc.)
+│   ├── api/              # FastAPI application and endpoints
+│   ├── config/           # YAML configuration for agents and tasks
+│   ├── data/             # Static data files
+│   ├── engine/           # Game engine (combat, mechanics)
+│   ├── state/            # State management (sessions, combat state)
+│   ├── utils/            # Utility functions (dice rolling, etc.)
+│   └── settings.py       # Application settings
+├── static/               # Static web files (HTML, CSS, JS)
+├── tests/                # Test files
+├── docs/                 # Documentation
+│   ├── adr/              # Architecture Decision Records
+│   └── guides/           # Onboarding and development guides
+├── .env.example          # Example environment configuration
+├── docker-compose.yml    # Docker services configuration
+├── pyproject.toml        # Python project configuration
+└── tasks.md              # Current project tasks and status
+```
+
+### Key Configuration
+
+Environment variables are configured in the `.env` file:
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key for Claude | - | Yes |
+| `SESSION_BACKEND` | Session storage backend | `redis` | No |
+| `REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` | No (only if using Redis) |
+| `REDIS_SESSION_TTL` | Session TTL in seconds | `86400` (24 hours) | No |
+| `ENVIRONMENT` | Runtime environment | `development` | No |
+| `HOST` | Server host | `0.0.0.0` | No |
+| `PORT` | Server port | `8000` | No |
+
+### Testing the Combat System
+
+The combat system has a dedicated test page for manual testing:
+
+```bash
+# Start the server
+uv run uvicorn src.api.main:app --reload
+
+# Open in browser
+open http://localhost:8000/static/combat-test.html
+```
+
+This provides an interactive UI for testing:
+- Combat initiation with different enemy types
+- Attack, defend, and flee actions
+- HP tracking and combat resolution
+- Dice roll visualization
+
+### Makefile Commands
+
+The project includes a Makefile for common operations:
+
+```bash
+make install          # Install dependencies with uv
+make dev              # Run development server (port 8888)
+make test             # Run all tests with coverage
+make test-fast        # Stop on first failure
+make lint             # Run linting and formatting
+make check            # Run all quality gates
+make docker-build     # Build Docker image
+make docker-run       # Run in Docker container
+make clean            # Remove build artifacts
+```
+
+### Troubleshooting
+
+**Tests fail with "ANTHROPIC_API_KEY not set"**:
+- Ensure your `.env` file contains a valid `ANTHROPIC_API_KEY`
+- The key should start with `sk-ant-`
+
+**Redis connection errors**:
+- Start Redis with `docker compose up -d redis`
+- Or switch to memory backend: `SESSION_BACKEND=memory` in `.env`
+
+**Port already in use**:
+- Default port is 8000 for uvicorn, 8888 for make dev
+- Check for existing processes: `lsof -i :8000`
+- Or specify a different port: `uv run uvicorn src.api.main:app --port 8001`
+
+**Import errors**:
+- Ensure you ran `uv sync` to install dependencies
+- Check you are running commands with `uv run` prefix
+
+---
+
+## Agent Quick Start Checklist
 
 **Do these 5 things first, in order**:
 
@@ -411,10 +619,21 @@ echo "========================"
 
 ## Table of Contents
 
-- [Quick Start Checklist](#-quick-start-checklist)
+### Developer Setup
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Development Workflow](#development-workflow)
+- [Project Structure](#project-structure)
+- [Key Configuration](#key-configuration)
+- [Testing the Combat System](#testing-the-combat-system)
+- [Makefile Commands](#makefile-commands)
+- [Troubleshooting](#troubleshooting)
+
+### Agent Workflows
+- [Agent Quick Start Checklist](#agent-quick-start-checklist)
 - [What's New (Recent Changes)](#whats-new-recent-changes)
 - [Decision Trees](#-decision-trees)
-- [Common Pitfalls](#️-common-pitfalls)
+- [Common Pitfalls](#-common-pitfalls)
 - [Session Recovery](#-session-recovery)
 - [Success Metrics](#-success-metrics)
 - [Project Context](#project-context)
@@ -422,7 +641,7 @@ echo "========================"
 - [Agent Workflow](#agent-workflow)
 - [Session Lifecycle](#session-lifecycle)
 - [API Request Flow](#api-request-flow)
-- [Development Commands](#development-commands)
+- [Development Commands](#development-commands-1)
 - [Task Tracking](#task-tracking)
 - [Code Patterns](#code-patterns)
   - [Context Building with Character Sheets](#context-building-with-character-sheets)

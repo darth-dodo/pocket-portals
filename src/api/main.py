@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +22,7 @@ from src.agents.innkeeper import InnkeeperAgent
 from src.agents.jester import JesterAgent
 from src.agents.keeper import KeeperAgent
 from src.agents.narrator import NarratorAgent
+from src.agents.quest_designer import QuestDesignerAgent
 from src.engine import AgentRouter, TurnExecutor
 from src.engine.combat_manager import CombatManager
 from src.state import (
@@ -32,6 +33,7 @@ from src.state import (
     GameState,
     SessionManager,
 )
+from src.state.backends import create_backend
 from src.state.models import CombatPhaseEnum, CombatState
 
 load_dotenv()
@@ -73,6 +75,34 @@ BLOCKED_PATTERNS = [
 
 SAFE_REDIRECT = "take a deep breath and focus on the adventure ahead"
 
+# Combat trigger keywords - subset of mechanical keywords for auto-starting combat
+COMBAT_TRIGGER_KEYWORDS = [
+    "attack",
+    "fight",
+    "swing",
+    "shoot",
+    "hit",
+    "strike",
+    "charge",
+    "lunge",
+]
+
+# Enemy keywords to help detect combat context
+ENEMY_KEYWORDS = [
+    "goblin",
+    "orc",
+    "troll",
+    "skeleton",
+    "zombie",
+    "bandit",
+    "wolf",
+    "bear",
+    "dragon",
+    "monster",
+    "enemy",
+    "creature",
+]
+
 
 def filter_content(action: str) -> str:
     """Filter inappropriate content from player actions.
@@ -90,16 +120,73 @@ def filter_content(action: str) -> str:
     return action
 
 
-# Global state
+def _detect_combat_trigger(action: str) -> bool:
+    """Detect if action contains combat trigger keywords.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        True if action likely initiates combat
+    """
+    action_lower = action.lower()
+
+    # Check for combat trigger keywords
+    has_combat_keyword = any(
+        keyword in action_lower for keyword in COMBAT_TRIGGER_KEYWORDS
+    )
+
+    # Check for enemy keywords to strengthen signal
+    has_enemy_keyword = any(keyword in action_lower for keyword in ENEMY_KEYWORDS)
+
+    # Combat trigger if both keywords present, or just combat keyword with strong intent
+    return has_combat_keyword and (has_enemy_keyword or len(action_lower.split()) < 5)
+
+
+def _detect_enemy_type(action: str) -> str:
+    """Detect enemy type from action text.
+
+    Args:
+        action: Player's action text
+
+    Returns:
+        Enemy type key for ENEMY_TEMPLATES, defaults to "goblin"
+    """
+    action_lower = action.lower()
+
+    # Map keywords to enemy types
+    enemy_map = {
+        "goblin": "goblin",
+        "orc": "orc",
+        "troll": "troll",
+        "skeleton": "skeleton",
+        "zombie": "skeleton",  # Use skeleton template for zombie
+        "bandit": "goblin",  # Use goblin template for bandit
+        "wolf": "goblin",  # Use goblin template for wolf
+        "bear": "orc",  # Use orc template for bear (stronger)
+        "dragon": "troll",  # Use troll template for dragon (strongest available)
+    }
+
+    for keyword, enemy_type in enemy_map.items():
+        if keyword in action_lower:
+            return enemy_type
+
+    # Default to goblin for generic combat
+    return "goblin"
+
+
+# Global state - agents initialized in lifespan
 narrator: NarratorAgent | None = None
 innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 character_interviewer: CharacterInterviewerAgent | None = None
-session_manager = SessionManager()
+quest_designer: QuestDesignerAgent | None = None
 agent_router = AgentRouter()
 turn_executor: TurnExecutor | None = None
 combat_manager = CombatManager()
+
+# Note: session_manager is now initialized via FastAPI lifespan and accessed via app.state
 
 # Starter choices pool - adventure hooks to begin the journey
 STARTER_CHOICES_POOL = [
@@ -135,9 +222,30 @@ CHARACTER_CREATION_CHOICES = [
 ]
 
 
-def get_session(session_id: str | None) -> GameState:
-    """Get existing session or create new one."""
-    return session_manager.get_or_create_session(session_id)
+def get_session_manager(request: Request) -> SessionManager:
+    """FastAPI dependency to get session manager from app state.
+
+    Args:
+        request: FastAPI Request object
+
+    Returns:
+        SessionManager: The session manager instance from app.state
+    """
+    return request.app.state.session_manager
+
+
+async def get_session(request: Request, session_id: str | None) -> GameState:
+    """Get existing session or create new one.
+
+    Args:
+        request: FastAPI Request object (to access app.state)
+        session_id: Optional existing session ID
+
+    Returns:
+        GameState: Existing or newly created game state
+    """
+    sm = get_session_manager(request)
+    return await sm.get_or_create_session(session_id)
 
 
 def build_context(
@@ -282,20 +390,40 @@ class CombatActionResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """Initialize agents on startup."""
-    global narrator, innkeeper, keeper, jester, character_interviewer, turn_executor
+    """Initialize backend, session manager, and agents on startup."""
+    global \
+        narrator, \
+        innkeeper, \
+        keeper, \
+        jester, \
+        character_interviewer, \
+        quest_designer, \
+        turn_executor
+
+    # Initialize session backend and manager
+    backend = await create_backend()
+    app.state.backend = backend
+    app.state.session_manager = SessionManager(backend)
+
+    # Initialize agents if API key available
     if os.getenv("ANTHROPIC_API_KEY"):
         narrator = NarratorAgent()
         innkeeper = InnkeeperAgent()
         keeper = KeeperAgent()
         jester = JesterAgent()
         character_interviewer = CharacterInterviewerAgent()
+        quest_designer = QuestDesignerAgent()
         turn_executor = TurnExecutor(
             narrator=narrator,
             keeper=keeper,
             jester=jester,
         )
     yield
+
+    # Shutdown: close backend connection if applicable
+    if hasattr(backend, "close"):
+        await backend.close()
+
     narrator = None
     innkeeper = None
     keeper = None
@@ -330,6 +458,7 @@ async def health_check() -> HealthResponse:
 
 @app.get("/start", response_model=NarrativeResponse)
 async def start_adventure(
+    request: Request,
     shuffle: bool = Query(default=False, description="Shuffle the starter choices"),
     character: str = Query(
         default="", description="Optional character description for personalization"
@@ -345,8 +474,11 @@ async def start_adventure(
     Optionally provide a character description for personalized narrative.
     Use skip_creation=true to skip character creation with a default character.
     """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # Create new session
-    state = get_session(None)
+    state = await get_session(request, None)
 
     if skip_creation:
         # Create default character and skip to exploration
@@ -355,8 +487,8 @@ async def start_adventure(
             race=CharacterRace.HUMAN,
             character_class=CharacterClass.FIGHTER,
         )
-        session_manager.set_character_sheet(state.session_id, default_character)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.set_character_sheet(state.session_id, default_character)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         # Select 3 choices from the adventure pool
         if shuffle:
@@ -364,9 +496,9 @@ async def start_adventure(
         else:
             choices = STARTER_CHOICES_POOL[:3]
 
-        session_manager.set_choices(state.session_id, choices)
+        await sm.set_choices(state.session_id, choices)
         if character:
-            session_manager.set_character_description(state.session_id, character)
+            await sm.set_character_description(state.session_id, character)
 
         return NarrativeResponse(
             narrative=WELCOME_NARRATIVE,
@@ -375,7 +507,7 @@ async def start_adventure(
         )
 
     # Start character creation flow
-    session_manager.set_creation_turn(state.session_id, 1)
+    await sm.set_creation_turn(state.session_id, 1)
 
     # Generate dynamic starter choices using the agent
     if character_interviewer:
@@ -383,10 +515,10 @@ async def start_adventure(
     else:
         starter_choices = CHARACTER_CREATION_CHOICES
 
-    session_manager.set_choices(state.session_id, starter_choices)
+    await sm.set_choices(state.session_id, starter_choices)
 
     if character:
-        session_manager.set_character_description(state.session_id, character)
+        await sm.set_character_description(state.session_id, character)
 
     return NarrativeResponse(
         narrative=CHARACTER_CREATION_NARRATIVE,
@@ -396,28 +528,47 @@ async def start_adventure(
 
 
 @app.post("/action", response_model=NarrativeResponse)
-async def process_action(request: ActionRequest) -> NarrativeResponse:
+async def process_action(
+    request: Request, action_request: ActionRequest
+) -> NarrativeResponse:
     """Process player action and return narrative response."""
-    state = get_session(request.session_id)
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    state = await get_session(request, action_request.session_id)
 
     # Resolve action from choice_index or direct action
-    if request.choice_index is not None:
+    if action_request.choice_index is not None:
         # Use stored choice from session state
         choices = state.current_choices or ["Look around", "Wait", "Leave"]
-        action = choices[request.choice_index - 1]  # Convert 1-indexed to 0-indexed
+        action = choices[
+            action_request.choice_index - 1
+        ]  # Convert 1-indexed to 0-indexed
     else:
-        action = request.action or ""
+        action = action_request.action or ""
 
     # Apply content safety filter
     action = filter_content(action)
 
     # Handle CHARACTER_CREATION phase specially
     if state.phase == GamePhase.CHARACTER_CREATION:
-        return await _handle_character_creation(state, action)
+        return await _handle_character_creation(request, state, action)
+
+    # Handle COMBAT phase or combat triggers
+    if state.phase == GamePhase.COMBAT or (
+        state.combat_state and state.combat_state.is_active
+    ):
+        # Already in combat - route to combat handler
+        return await _handle_combat_action(request, state, action)
+
+    # Check for combat triggers in action
+    if _detect_combat_trigger(action):
+        # Auto-start combat
+        return await _handle_combat_action(request, state, action)
 
     if turn_executor is None:
         choices = ["Look around", "Wait", "Leave"]
-        session_manager.set_choices(state.session_id, choices)
+        await sm.set_choices(state.session_id, choices)
         return NarrativeResponse(
             narrative="The narrator is not available. Check ANTHROPIC_API_KEY.",
             session_id=state.session_id,
@@ -444,13 +595,13 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
     )
 
     # Store exchange in session (auto-limits to 20)
-    session_manager.add_exchange(state.session_id, action, result.narrative)
+    await sm.add_exchange(state.session_id, action, result.narrative)
 
     # Update recent agents for Jester cooldown tracking
-    session_manager.update_recent_agents(state.session_id, routing.agents)
+    await sm.update_recent_agents(state.session_id, routing.agents)
 
     # Use choices from turn result
-    session_manager.set_choices(state.session_id, result.choices)
+    await sm.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
         narrative=result.narrative, session_id=state.session_id, choices=result.choices
@@ -458,19 +609,23 @@ async def process_action(request: ActionRequest) -> NarrativeResponse:
 
 
 async def _handle_character_creation(
-    state: GameState, action: str
+    request: Request, state: GameState, action: str
 ) -> NarrativeResponse:
     """Handle actions during character creation phase.
 
     Args:
+        request: FastAPI Request object (to access app.state)
         state: Current game state
         action: Player's action/response
 
     Returns:
         NarrativeResponse with innkeeper's next question or character sheet
     """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # Increment creation turn
-    new_turn = session_manager.increment_creation_turn(state.session_id)
+    new_turn = await sm.increment_creation_turn(state.session_id)
 
     # Check if user wants to skip
     if "skip" in action.lower():
@@ -480,12 +635,12 @@ async def _handle_character_creation(
             race=CharacterRace.HUMAN,
             character_class=CharacterClass.FIGHTER,
         )
-        session_manager.set_character_sheet(state.session_id, default_character)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.set_character_sheet(state.session_id, default_character)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
         choices = STARTER_CHOICES_POOL[:3]
-        session_manager.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
-        session_manager.set_choices(state.session_id, choices)
+        await sm.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
+        await sm.set_choices(state.session_id, choices)
 
         return NarrativeResponse(
             narrative=WELCOME_NARRATIVE,
@@ -496,35 +651,84 @@ async def _handle_character_creation(
     # If we've completed 5 turns, generate character sheet and transition
     if new_turn >= 5:
         # Build character from conversation history (include current action)
-        session_manager.add_exchange(state.session_id, action, "")
-        character_sheet = _generate_character_from_history(
-            session_manager.get_or_create_session(state.session_id)
-        )
-        session_manager.set_character_sheet(state.session_id, character_sheet)
-        session_manager.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.add_exchange(state.session_id, action, "")
+        updated_state = await sm.get_or_create_session(state.session_id)
+        character_sheet = _generate_character_from_history(updated_state)
+        await sm.set_character_sheet(state.session_id, character_sheet)
+        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
 
-        # Generate contextual adventure hooks based on the character
-        character_info = (
-            f"Name: {character_sheet.name}\n"
-            f"Race: {character_sheet.race.value}\n"
-            f"Class: {character_sheet.character_class.value}"
-        )
-        if character_sheet.backstory:
-            character_info += f"\nBackstory: {character_sheet.backstory}"
+        # Generate a contextual quest for this character immediately
+        if quest_designer:
+            try:
+                quest = quest_designer.generate_quest(
+                    character_sheet=character_sheet,
+                    quest_history="",  # No quest history yet
+                    game_context="Character just finished creation at the Rusty Tankard tavern.",
+                )
+                await sm.set_active_quest(state.session_id, quest)
 
-        if character_interviewer:
-            choices = character_interviewer.generate_adventure_hooks(character_info)
+                # Create choices from quest objectives
+                if quest.objectives:
+                    choices = [obj.description for obj in quest.objectives[:3]]
+                    # Ensure we have 3 choices
+                    while len(choices) < 3:
+                        choices.append("Ask more about the quest")
+                else:
+                    choices = STARTER_CHOICES_POOL[:3]
+
+                # Build narrative with quest introduction
+                narrative = (
+                    f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                    f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                    f"I've seen your kind before.'\n\n"
+                    f"He leans forward, voice lowering. '{quest.description}'\n\n"
+                    f"**Quest: {quest.title}**\n"
+                    f"Reward: {quest.rewards or 'The satisfaction of a job well done'}"
+                )
+            except Exception:
+                # Fallback if quest generation fails
+                if character_interviewer:
+                    character_info = (
+                        f"Name: {character_sheet.name}\n"
+                        f"Race: {character_sheet.race.value}\n"
+                        f"Class: {character_sheet.character_class.value}"
+                    )
+                    if character_sheet.backstory:
+                        character_info += f"\nBackstory: {character_sheet.backstory}"
+                    choices = character_interviewer.generate_adventure_hooks(
+                        character_info
+                    )
+                else:
+                    choices = STARTER_CHOICES_POOL[:3]
+
+                narrative = (
+                    f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                    f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                    "I've seen your kind before. There's work for those willing to take risks.' "
+                    "He leans closer. 'Choose your path...'"
+                )
         else:
-            choices = STARTER_CHOICES_POOL[:3]
+            # No quest designer available - use adventure hooks
+            if character_interviewer:
+                character_info = (
+                    f"Name: {character_sheet.name}\n"
+                    f"Race: {character_sheet.race.value}\n"
+                    f"Class: {character_sheet.character_class.value}"
+                )
+                if character_sheet.backstory:
+                    character_info += f"\nBackstory: {character_sheet.backstory}"
+                choices = character_interviewer.generate_adventure_hooks(character_info)
+            else:
+                choices = STARTER_CHOICES_POOL[:3]
 
-        session_manager.set_choices(state.session_id, choices)
+            narrative = (
+                f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
+                f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
+                "I've seen your kind before. There's work for those willing to take risks.' "
+                "He leans closer. 'Choose your path...'"
+            )
 
-        narrative = (
-            f"The innkeeper nods slowly, studying you. 'So, {character_sheet.name} - "
-            f"a {character_sheet.race.value} {character_sheet.character_class.value}. "
-            "I've seen your kind before. There's work for those willing to take risks.' "
-            "He leans closer. 'Choose your path...'"
-        )
+        await sm.set_choices(state.session_id, choices)
 
         return NarrativeResponse(
             narrative=narrative,
@@ -563,8 +767,8 @@ async def _handle_character_creation(
         ]
 
     # Store the exchange with the actual narrative response
-    session_manager.add_exchange(state.session_id, action, narrative)
-    session_manager.set_choices(state.session_id, choices)
+    await sm.add_exchange(state.session_id, action, narrative)
+    await sm.set_choices(state.session_id, choices)
 
     return NarrativeResponse(
         narrative=narrative,
@@ -653,6 +857,260 @@ def _generate_character_from_history(state: GameState) -> CharacterSheet:
     )
 
 
+async def _handle_combat_action(
+    request: Request, state: GameState, action: str
+) -> NarrativeResponse:
+    """Handle combat-related actions in the main action flow.
+
+    This function:
+    1. Auto-starts combat if combat keywords detected and not in combat
+    2. Routes to combat handler if already in combat
+    3. Handles combat end transitions back to exploration
+
+    Args:
+        request: FastAPI Request object (to access app.state)
+        state: Current game state
+        action: Player's action text
+
+    Returns:
+        NarrativeResponse with combat results
+    """
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    # Case 1: Already in combat - route to combat action handler
+    if state.combat_state and state.combat_state.is_active:
+        # Parse action for combat intent (attack/defend/flee)
+        action_lower = action.lower()
+
+        # Handle flee action
+        if "flee" in action_lower or "run" in action_lower or "escape" in action_lower:
+            # End combat, transition back to exploration
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            narrative = (
+                "You turn and flee from the battle! "
+                "The enemy doesn't pursue as you make your escape."
+            )
+            choices = ["Look around", "Catch your breath", "Continue onward"]
+            await sm.add_exchange(state.session_id, action, narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Validate character sheet
+        if not state.character_sheet:
+            narrative = "You need a character to engage in combat!"
+            choices = ["Look around", "Wait", "Leave"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        combat_state = state.combat_state
+
+        # Validate it's player's turn
+        if combat_state.phase != CombatPhaseEnum.PLAYER_TURN:
+            narrative = "Wait for your turn in combat!"
+            choices = ["Wait", "Assess the situation"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Execute player attack
+        if keeper:
+            player_result = keeper.resolve_player_attack(
+                combat_state, state.character_sheet
+            )
+        else:
+            player_result = combat_manager.execute_player_attack(
+                combat_state, state.character_sheet
+            )
+
+        player_message = (
+            combat_manager.format_attack_result(player_result)
+            if combat_manager
+            else player_result["log_entry"]
+        )
+
+        # Check if enemy defeated
+        enemy_hp = player_result.get("enemy_hp", 0)
+        if enemy_hp <= 0:
+            # Combat won! End combat and transition back to exploration
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            victory_narrative = (
+                f"{player_message}\n\n"
+                f"Victory! The enemy falls defeated. "
+                f"You stand victorious and can continue your adventure."
+            )
+            choices = ["Search the area", "Rest briefly", "Continue onward"]
+            await sm.add_exchange(state.session_id, action, victory_narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=victory_narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Enemy turn
+        if keeper:
+            enemy_result = keeper.resolve_enemy_attack(combat_state)
+        else:
+            enemy_result = combat_manager.execute_enemy_turn(combat_state)
+
+        enemy_message = (
+            combat_manager.format_attack_result(enemy_result)
+            if combat_manager
+            else enemy_result["log_entry"]
+        )
+
+        # Check if player defeated
+        player_hp = enemy_result.get("player_hp", state.character_sheet.hit_points)
+        if player_hp <= 0:
+            # Combat lost! End combat
+            await sm.set_combat_state(state.session_id, None)
+            await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+            defeat_narrative = (
+                f"{player_message}\n\n{enemy_message}\n\n"
+                f"Defeat! You fall unconscious. "
+                f"When you awaken, you find yourself back at the tavern, bruised but alive."
+            )
+            choices = ["Recover", "Plan your next move", "Leave the tavern"]
+            await sm.add_exchange(state.session_id, action, defeat_narrative)
+            await sm.set_choices(state.session_id, choices)
+
+            return NarrativeResponse(
+                narrative=defeat_narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Combat continues
+        full_narrative = f"{player_message}\n\n{enemy_message}"
+        choices = ["Attack again", "Defend", "Flee"]
+        await sm.add_exchange(state.session_id, action, full_narrative)
+        await sm.set_choices(state.session_id, choices)
+
+        return NarrativeResponse(
+            narrative=full_narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Case 2: Combat keywords detected but not in combat - auto-start combat
+    if _detect_combat_trigger(action):
+        # Validate character sheet
+        if not state.character_sheet:
+            narrative = "You need a character to engage in combat!"
+            choices = ["Look around", "Wait", "Leave"]
+            await sm.set_choices(state.session_id, choices)
+            return NarrativeResponse(
+                narrative=narrative,
+                session_id=state.session_id,
+                choices=choices,
+            )
+
+        # Detect enemy type from action
+        enemy_type = _detect_enemy_type(action)
+
+        # Start combat using keeper
+        try:
+            if keeper:
+                combat_state, initiative_results = keeper.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type=enemy_type,
+                )
+            else:
+                combat_state, initiative_results = combat_manager.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type=enemy_type,
+                )
+        except ValueError:
+            # Invalid enemy type, fall back to goblin
+            if keeper:
+                combat_state, initiative_results = keeper.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type="goblin",
+                )
+            else:
+                combat_state, initiative_results = combat_manager.start_combat(
+                    character_sheet=state.character_sheet,
+                    enemy_type="goblin",
+                )
+
+        # Format initiative
+        if keeper:
+            initiative_narrative = keeper.format_initiative_result(initiative_results)
+        else:
+            initiative_narrative = "Initiative rolled. Combat begins!"
+
+        # Get scene description
+        scene_narrative = ""
+        if narrator and combat_state.enemy_template:
+            enemy_desc = combat_state.enemy_template.description
+            enemy_name = combat_state.enemy_template.name
+
+            context = build_context(
+                state.conversation_history,
+                character_sheet=state.character_sheet,
+            )
+
+            scene_prompt = (
+                f"A {enemy_name} appears! {enemy_desc}. "
+                f"Describe this combat encounter dramatically in 2-3 sentences."
+            )
+
+            scene_narrative = narrator.respond(action=scene_prompt, context=context)
+        else:
+            enemy_name = (
+                combat_state.enemy_template.name
+                if combat_state.enemy_template
+                else "enemy"
+            )
+            scene_narrative = f"A {enemy_name} appears before you!"
+
+        # Combine narratives
+        full_narrative = f"{scene_narrative}\n\n{initiative_narrative}"
+
+        # Store combat state
+        await sm.set_combat_state(state.session_id, combat_state)
+        await sm.set_phase(state.session_id, GamePhase.COMBAT)
+
+        choices = ["Attack", "Defend", "Flee"]
+        await sm.add_exchange(state.session_id, action, full_narrative)
+        await sm.set_choices(state.session_id, choices)
+
+        return NarrativeResponse(
+            narrative=full_narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Case 3: No combat - this shouldn't be called, but return safe fallback
+    narrative = "The adventure continues..."
+    choices = ["Look around", "Wait", "Leave"]
+    await sm.set_choices(state.session_id, choices)
+    return NarrativeResponse(
+        narrative=narrative,
+        session_id=state.session_id,
+        choices=choices,
+    )
+
+
 @app.get("/innkeeper/quest", response_model=QuestResponse)
 async def get_quest(
     character: str = Query(
@@ -674,11 +1132,14 @@ async def get_quest(
 
 
 @app.post("/keeper/resolve", response_model=ResolveResponse)
-async def resolve_action(request: ResolveRequest) -> ResolveResponse:
+async def resolve_action(
+    request: Request, resolve_request: ResolveRequest
+) -> ResolveResponse:
     """Resolve game mechanics for a player action.
 
     Args:
-        request: Action resolution request with action, difficulty, and optional session_id
+        request: FastAPI Request object
+        resolve_request: Action resolution request with action, difficulty, and optional session_id
     """
     if keeper is None:
         return ResolveResponse(
@@ -687,8 +1148,8 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
 
     # Build context from session if provided
     context = ""
-    if request.session_id:
-        state = get_session(request.session_id)
+    if resolve_request.session_id:
+        state = await get_session(request, resolve_request.session_id)
         context = build_context(
             state.conversation_history,
             character_sheet=state.character_sheet,
@@ -696,17 +1157,22 @@ async def resolve_action(request: ResolveRequest) -> ResolveResponse:
         )
 
     result = keeper.resolve_action(
-        action=request.action, context=context, difficulty=request.difficulty
+        action=resolve_request.action,
+        context=context,
+        difficulty=resolve_request.difficulty,
     )
     return ResolveResponse(result=result)
 
 
 @app.post("/jester/complicate", response_model=ComplicateResponse)
-async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
+async def add_complication(
+    request: Request, complicate_request: ComplicateRequest
+) -> ComplicateResponse:
     """Add a complication or meta-commentary to a situation.
 
     Args:
-        request: Complication request with situation and optional session_id
+        request: FastAPI Request object
+        complicate_request: Complication request with situation and optional session_id
     """
     if jester is None:
         return ComplicateResponse(
@@ -715,24 +1181,29 @@ async def add_complication(request: ComplicateRequest) -> ComplicateResponse:
 
     # Build context from session if provided
     context = ""
-    if request.session_id:
-        state = get_session(request.session_id)
+    if complicate_request.session_id:
+        state = await get_session(request, complicate_request.session_id)
         context = build_context(
             state.conversation_history,
             character_sheet=state.character_sheet,
             character_description=state.character_description,
         )
 
-    complication = jester.add_complication(situation=request.situation, context=context)
+    complication = jester.add_complication(
+        situation=complicate_request.situation, context=context
+    )
     return ComplicateResponse(complication=complication)
 
 
 @app.post("/combat/start", response_model=StartCombatResponse)
-async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
+async def start_combat(
+    request: Request, combat_request: StartCombatRequest
+) -> StartCombatResponse:
     """Start a new combat encounter.
 
     Args:
-        request: Combat start request with session_id and enemy_type
+        request: FastAPI Request object
+        combat_request: Combat start request with session_id and enemy_type
 
     Returns:
         StartCombatResponse with narrative, combat state, and initiative results
@@ -742,8 +1213,11 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
     """
     from fastapi import HTTPException
 
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # 1. Get session - validate that this specific session_id exists
-    state = session_manager.get_session(request.session_id)
+    state = await sm.get_session(combat_request.session_id)
     if state is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -759,12 +1233,14 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
     try:
         if keeper:
             combat_state, initiative_results = keeper.start_combat(
-                character_sheet=state.character_sheet, enemy_type=request.enemy_type
+                character_sheet=state.character_sheet,
+                enemy_type=combat_request.enemy_type,
             )
         else:
             # Fallback for testing/development without API key
             combat_state, initiative_results = combat_manager.start_combat(
-                character_sheet=state.character_sheet, enemy_type=request.enemy_type
+                character_sheet=state.character_sheet,
+                enemy_type=combat_request.enemy_type,
             )
     except ValueError as e:
         # Invalid enemy type
@@ -818,11 +1294,14 @@ async def start_combat(request: StartCombatRequest) -> StartCombatResponse:
 
 
 @app.post("/combat/action", response_model=CombatActionResponse)
-async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
+async def combat_action(
+    request: Request, combat_action_request: CombatActionRequest
+) -> CombatActionResponse:
     """Execute a combat action.
 
     Args:
-        request: Combat action request with session_id and action
+        request: FastAPI Request object
+        combat_action_request: Combat action request with session_id and action
 
     Returns:
         CombatActionResponse with result, message, updated combat state, and end status
@@ -832,8 +1311,11 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
     """
     from fastapi import HTTPException
 
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
     # 1. Validate session and active combat
-    state = session_manager.get_session(request.session_id)
+    state = await sm.get_session(combat_action_request.session_id)
     if state is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -853,7 +1335,7 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
         )
 
     # 3. Execute player action via keeper
-    action = request.action.lower()
+    action = combat_action_request.action.lower()
     fled = False
 
     if action == "attack":
@@ -958,7 +1440,11 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
         full_message += f"\n\n{enemy_message}"
 
     # 7. Update session combat state
-    state.combat_state = combat_state
+    await sm.set_combat_state(combat_action_request.session_id, combat_state)
+
+    # If combat ended, also update phase back to EXPLORATION
+    if combat_ended:
+        await sm.set_phase(combat_action_request.session_id, GamePhase.EXPLORATION)
 
     # 8. Return response
     return CombatActionResponse(
@@ -974,7 +1460,9 @@ async def combat_action(request: CombatActionRequest) -> CombatActionResponse:
 
 
 @app.post("/action/stream")
-async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
+async def process_action_stream(
+    request: Request, action_request: ActionRequest
+) -> EventSourceResponse:
     """Process player action with streaming response via Server-Sent Events.
 
     Streams agent responses as they complete, providing real-time feedback.
@@ -985,21 +1473,24 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
     - complete: Signal that streaming is done
     - error: If something goes wrong
     """
-    state = get_session(request.session_id)
+    # Get session manager from app state
+    sm = get_session_manager(request)
+
+    state = await get_session(request, action_request.session_id)
 
     # Resolve action from choice_index or direct action
-    if request.choice_index is not None:
+    if action_request.choice_index is not None:
         choices = state.current_choices or ["Look around", "Wait", "Leave"]
-        action = choices[request.choice_index - 1]
+        action = choices[action_request.choice_index - 1]
     else:
-        action = request.action or ""
+        action = action_request.action or ""
 
     # Apply content safety filter
     action = filter_content(action)
 
     # Handle CHARACTER_CREATION phase with character-by-character streaming
     if state.phase == GamePhase.CHARACTER_CREATION:
-        result = await _handle_character_creation(state, action)
+        result = await _handle_character_creation(request, state, action)
 
         async def creation_generator() -> AsyncGenerator[dict[str, Any], None]:
             # Signal agent starting
@@ -1208,9 +1699,9 @@ async def process_action_stream(request: ActionRequest) -> EventSourceResponse:
             }
 
             # Update session state
-            session_manager.add_exchange(state.session_id, action, full_narrative)
-            session_manager.update_recent_agents(state.session_id, routing.agents)
-            session_manager.set_choices(state.session_id, choices)
+            await sm.add_exchange(state.session_id, action, full_narrative)
+            await sm.update_recent_agents(state.session_id, routing.agents)
+            await sm.set_choices(state.session_id, choices)
 
             yield {
                 "event": "complete",

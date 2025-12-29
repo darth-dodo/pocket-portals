@@ -62,13 +62,13 @@ class TestAgentRouter:
         recent_agents: list[str] = []
 
         # Test when random roll triggers jester (< 0.15)
-        with patch("random.random", return_value=0.10):
+        with patch("src.engine.router.random.random", return_value=0.10):
             decision = router.route(action, phase, recent_agents)
             assert decision.include_jester is True
             assert "jester" in decision.reason.lower()
 
         # Test when random roll doesn't trigger jester (>= 0.15)
-        with patch("random.random", return_value=0.20):
+        with patch("src.engine.router.random.random", return_value=0.20):
             decision = router.route(action, phase, recent_agents)
             assert decision.include_jester is False
 
@@ -81,7 +81,7 @@ class TestAgentRouter:
         recent_with_jester = ["narrator", "jester", "narrator"]
 
         # Even with favorable random roll, jester should not appear
-        with patch("random.random", return_value=0.10):
+        with patch("src.engine.router.random.random", return_value=0.10):
             decision = router.route(action, phase, recent_with_jester)
             assert decision.include_jester is False
             assert "cooldown" in decision.reason.lower()
@@ -98,7 +98,7 @@ class TestAgentRouter:
         recent_agents = ["jester", "narrator", "keeper", "narrator"]
 
         # Jester should be able to appear again
-        with patch("random.random", return_value=0.10):
+        with patch("src.engine.router.random.random", return_value=0.10):
             decision = router.route(action, phase, recent_agents)
             assert decision.include_jester is True
 
