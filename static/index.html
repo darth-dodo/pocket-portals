@@ -1327,6 +1327,8 @@
                             } else if (currentEventType === 'agent_start') {
                                 // Start streaming message for this agent
                                 startStreamingMessage(data.agent);
+                                // Hide loading indicator once streaming begins
+                                setLoading(false);
                             } else if (currentEventType === 'agent_chunk') {
                                 // Append character to streaming message
                                 appendStreamingChar(data.chunk);

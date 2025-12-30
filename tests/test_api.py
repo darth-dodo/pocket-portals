@@ -439,3 +439,174 @@ def test_combat_action_requires_active_combat(client: TestClient) -> None:
 
     assert action_response.status_code == 400
     assert "No active combat" in action_response.json()["detail"]
+
+
+# Streaming Endpoint Tests
+
+
+def test_stream_endpoint_returns_sse_response(client: TestClient) -> None:
+    """Test that /action/stream returns Server-Sent Events format."""
+    # Skip character creation to get to exploration
+    start_response = client.get("/start?skip_creation=true")
+    session_id = start_response.json()["session_id"]
+
+    # Make streaming request
+    with client.stream(
+        "POST",
+        "/action/stream",
+        json={"action": "look around", "session_id": session_id},
+    ) as response:
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+
+def test_stream_emits_agent_start_before_chunks(client: TestClient) -> None:
+    """Test that agent_start event is emitted before agent_chunk events.
+
+    This is critical for the frontend to hide loading indicator when
+    streaming begins, not when streaming completes.
+    """
+    # Skip character creation to get to exploration
+    start_response = client.get("/start?skip_creation=true")
+    session_id = start_response.json()["session_id"]
+
+    events: list[str] = []
+
+    # Make streaming request and collect events
+    with client.stream(
+        "POST",
+        "/action/stream",
+        json={"action": "examine the room", "session_id": session_id},
+    ) as response:
+        assert response.status_code == 200
+
+        current_event = ""
+        for line in response.iter_lines():
+            if line.startswith("event:"):
+                current_event = line[6:].strip()
+            elif line.startswith("data:") and current_event:
+                events.append(current_event)
+                current_event = ""
+
+    # Verify event sequence: agent_start must come before any agent_chunk
+    assert "agent_start" in events, "agent_start event must be emitted"
+
+    # Find first agent_start and first agent_chunk indices
+    first_start_idx = events.index("agent_start")
+    chunk_indices = [i for i, e in enumerate(events) if e == "agent_chunk"]
+
+    if chunk_indices:
+        first_chunk_idx = chunk_indices[0]
+        assert first_start_idx < first_chunk_idx, (
+            "agent_start must be emitted before first agent_chunk "
+            f"(start at {first_start_idx}, chunk at {first_chunk_idx})"
+        )
+
+
+def test_stream_emits_routing_event_first(client: TestClient) -> None:
+    """Test that routing event is emitted first in the stream."""
+    # Skip character creation to get to exploration
+    start_response = client.get("/start?skip_creation=true")
+    session_id = start_response.json()["session_id"]
+
+    events: list[str] = []
+
+    # Make streaming request and collect events
+    with client.stream(
+        "POST",
+        "/action/stream",
+        json={"action": "look around", "session_id": session_id},
+    ) as response:
+        for line in response.iter_lines():
+            if line.startswith("event:"):
+                events.append(line[6:].strip())
+            # Only collect a few events to keep test fast
+            if len(events) >= 5:
+                break
+
+    # First event should be routing
+    assert len(events) > 0, "Should receive at least one event"
+    assert events[0] == "routing", f"First event should be 'routing', got '{events[0]}'"
+
+
+def test_stream_ends_with_complete_event(client: TestClient) -> None:
+    """Test that streaming ends with a complete event containing session_id."""
+    import json
+
+    # Skip character creation to get to exploration
+    start_response = client.get("/start?skip_creation=true")
+    session_id = start_response.json()["session_id"]
+
+    last_event = ""
+    last_data = ""
+
+    # Make streaming request
+    with client.stream(
+        "POST",
+        "/action/stream",
+        json={"action": "wait", "session_id": session_id},
+    ) as response:
+        current_event = ""
+        for line in response.iter_lines():
+            if line.startswith("event:"):
+                current_event = line[6:].strip()
+            elif line.startswith("data:") and current_event:
+                last_event = current_event
+                last_data = line[5:].strip()
+                current_event = ""
+
+    assert (
+        last_event == "complete"
+    ), f"Last event should be 'complete', got '{last_event}'"
+    complete_data = json.loads(last_data)
+    assert "session_id" in complete_data
+    assert complete_data["session_id"] == session_id
+
+
+def test_stream_agent_start_precedes_each_agent_response(client: TestClient) -> None:
+    """Test that each agent_response is preceded by an agent_start for the same agent."""
+    import json
+
+    # Skip character creation to get to exploration
+    start_response = client.get("/start?skip_creation=true")
+    session_id = start_response.json()["session_id"]
+
+    events: list[tuple[str, dict[str, Any]]] = []
+
+    # Make streaming request
+    with client.stream(
+        "POST",
+        "/action/stream",
+        json={"action": "look around carefully", "session_id": session_id},
+    ) as response:
+        current_event = ""
+        for line in response.iter_lines():
+            if line.startswith("event:"):
+                current_event = line[6:].strip()
+            elif line.startswith("data:") and current_event:
+                try:
+                    data = json.loads(line[5:].strip())
+                    events.append((current_event, data))
+                except json.JSONDecodeError:
+                    pass
+                current_event = ""
+
+    # Check that each agent_response has a preceding agent_start for same agent
+    for i, (event_type, data) in enumerate(events):
+        if event_type == "agent_response" and "agent" in data:
+            agent_name = data["agent"]
+            # Look backwards for matching agent_start
+            found_start = False
+            for j in range(i - 1, -1, -1):
+                prev_event, prev_data = events[j]
+                if prev_event == "agent_start" and prev_data.get("agent") == agent_name:
+                    found_start = True
+                    break
+                # Stop if we hit another agent_response (different agent's section)
+                if prev_event == "agent_response":
+                    break
+
+            assert found_start, (
+                f"agent_response for '{agent_name}' at index {i} "
+                f"has no preceding agent_start"
+            )
