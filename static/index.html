@@ -420,76 +420,38 @@
             padding: 14px 24px !important;
         }
 
-        /* Loading */
+        /* Loading - minimal */
         .loading {
             display: none;
             text-align: center;
-            padding: 30px;
-            color: #f7d354;
-            background: rgba(26, 26, 46, 0.5);
-            border-radius: 8px;
-            margin-top: 16px;
+            padding: 12px 16px;
+            color: #8a8a9a;
+            margin-top: 8px;
         }
 
         .loading.visible {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .loading-text {
-            font-size: 0.55rem;
-            animation: pulse 1.5s ease-in-out infinite;
+            font-size: 0.75rem;
+            font-style: italic;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.2s steps(4, end) infinite;
         }
 
-        .loading i {
-            font-size: 2rem;
-            animation: bounce 0.6s ease-in-out infinite;
-            display: block;
-            margin-bottom: 16px;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-12px); }
-        }
-
-        /* Agent indicator */
-        .agent-indicator {
-            display: none;
-            text-align: center;
-            padding: 16px;
-            margin-top: 16px;
-            background: rgba(26, 26, 46, 0.5);
-            border-radius: 8px;
-            border: 2px solid #444;
-        }
-
-        .agent-indicator.visible {
-            display: block;
-        }
-
-        .agent-indicator-text {
-            font-size: 0.55rem;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        .agent-indicator.narrator { border-color: #f7d354; }
-        .agent-indicator.narrator .agent-indicator-text { color: #f7d354; }
-
-        .agent-indicator.keeper { border-color: #209cee; }
-        .agent-indicator.keeper .agent-indicator-text { color: #209cee; }
-
-        .agent-indicator.jester { border-color: #f2711c; }
-        .agent-indicator.jester .agent-indicator-text { color: #f2711c; }
-
-        .agent-indicator i {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-            display: block;
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
         }
 
         /* Error */
@@ -747,20 +709,11 @@
 
             /* Loading indicator */
             .loading {
-                padding: 24px;
+                padding: 10px 12px;
             }
 
             .loading-text {
-                font-size: 0.6rem;
-            }
-
-            /* Agent indicator */
-            .agent-indicator {
-                padding: 14px;
-            }
-
-            .agent-indicator-text {
-                font-size: 0.6rem;
+                font-size: 0.7rem;
             }
 
             /* Session bar */
@@ -1090,15 +1043,9 @@
 
             <!-- Loading -->
             <div class="loading" id="loading">
-                <i class="ra ra-crystal-ball"></i>
-                <span class="loading-text">The narrator consults the fates...</span>
+                <span class="loading-text" id="loading-text">Adventuring</span><span class="loading-dots"></span>
             </div>
 
-            <!-- Agent Indicator -->
-            <div class="agent-indicator" id="agent-indicator">
-                <i class="ra ra-scroll-unfurled"></i>
-                <span class="agent-indicator-text" id="agent-indicator-text">Narrator is speaking...</span>
-            </div>
 
             <!-- Error -->
             <div class="nes-container is-rounded is-error error-box" id="error"></div>
@@ -1170,8 +1117,6 @@
         const actionInput = document.getElementById('action-input');
         const submitBtn = document.getElementById('submit-btn');
         const loadingDiv = document.getElementById('loading');
-        const agentIndicator = document.getElementById('agent-indicator');
-        const agentIndicatorText = document.getElementById('agent-indicator-text');
         const errorDiv = document.getElementById('error');
         const sessionDisplay = document.getElementById('session-display');
         const newGameBtn = document.getElementById('new-game-btn');
@@ -1290,30 +1235,29 @@
             }
         }
 
+        const loadingPhrases = [
+            'Adventuring',
+            'Rolling dice',
+            'Consulting the fates',
+            'Weaving the tale',
+            'Charting the path',
+            'Summoning words',
+        ];
+
         function setLoading(loading) {
             isLoading = loading;
             loadingDiv.classList.toggle('visible', loading);
             submitBtn.disabled = loading;
             actionInput.disabled = loading;
 
+            if (loading) {
+                const phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
+                document.getElementById('loading-text').textContent = phrase;
+            }
+
             document.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.disabled = loading;
             });
-        }
-
-        function showAgentIndicator(agent) {
-            const agentNames = {
-                narrator: 'Narrator is speaking...',
-                keeper: 'Keeper is rolling the dice...',
-                jester: 'Jester is intervening...'
-            };
-
-            agentIndicator.className = `agent-indicator ${agent} visible`;
-            agentIndicatorText.textContent = agentNames[agent] || 'Agent is responding...';
-        }
-
-        function hideAgentIndicator() {
-            agentIndicator.classList.remove('visible');
         }
 
         function showError(message) {
@@ -1381,14 +1325,14 @@
                             if (currentEventType === 'routing') {
                                 console.log('Routing:', data);
                             } else if (currentEventType === 'agent_start') {
-                                showAgentIndicator(data.agent);
                                 // Start streaming message for this agent
                                 startStreamingMessage(data.agent);
+                                // Hide loading indicator once streaming begins
+                                setLoading(false);
                             } else if (currentEventType === 'agent_chunk') {
                                 // Append character to streaming message
                                 appendStreamingChar(data.chunk);
                             } else if (currentEventType === 'agent_response') {
-                                hideAgentIndicator();
                                 // If we were streaming, just clean up (message already shown)
                                 // If not streaming, add the full message
                                 if (streamingMessageEl) {
@@ -1419,7 +1363,6 @@
                 console.error('Error:', err);
                 showError(`Quest failed: ${err.message}`);
             } finally {
-                hideAgentIndicator();
                 setLoading(false);
                 actionInput.focus();
             }
