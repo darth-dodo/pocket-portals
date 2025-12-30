@@ -90,8 +90,9 @@ class ConversationFlow(Flow[ConversationFlowState]):
     def execute_agents(self) -> ConversationFlowState:
         """Execute each routed agent and collect responses.
 
-        Executes agents in the order specified by the routing decision,
-        calling each agent's respond method with the current action and context.
+        Executes agents in the order specified by the routing decision.
+        The narrator uses respond_with_choices() to get both narrative and
+        contextual choices in a single LLM call. Other agents use respond().
         Context is accumulated so later agents can see earlier responses.
         If jester inclusion is flagged, executes jester last.
 
@@ -105,10 +106,22 @@ class ConversationFlow(Flow[ConversationFlowState]):
             # Execute main routed agents
             for agent_name in self.state.agents_to_invoke:
                 agent = self.agents[agent_name]
-                content = agent.respond(
-                    action=self.state.action,
-                    context=accumulated_context,
-                )
+
+                # Narrator uses structured response with choices
+                if agent_name == "narrator" and hasattr(agent, "respond_with_choices"):
+                    response = agent.respond_with_choices(
+                        action=self.state.action,
+                        context=accumulated_context,
+                    )
+                    content = response.narrative
+                    # Store choices from narrator's structured response
+                    self.state.choices = response.choices
+                else:
+                    content = agent.respond(
+                        action=self.state.action,
+                        context=accumulated_context,
+                    )
+
                 self.state.responses[agent_name] = content
 
                 # Accumulate context for subsequent agents
@@ -215,36 +228,19 @@ class ConversationFlow(Flow[ConversationFlowState]):
 
     @listen(aggregate_responses)
     def generate_choices(self) -> ConversationFlowState:
-        """Generate contextual player choices based on the narrative.
+        """Ensure player choices are set.
 
-        Asks the narrator agent to suggest 3 contextual choices based on
-        the current narrative. Falls back to default choices on error.
+        If the narrator already provided choices via respond_with_choices(),
+        those are used. Otherwise, falls back to default choices.
 
         Returns:
             Updated state with player choices set
         """
-        try:
-            # Ask narrator for contextual choices based on the narrative
-            narrator = self.agents.get("narrator")
-            if narrator and self.state.narrative:
-                choice_prompt = (
-                    f"Based on this scene:\n\n{self.state.narrative}\n\n"
-                    "Suggest exactly 3 short action choices (max 6 words each) "
-                    "the player could take next. Format as a simple numbered list:\n"
-                    "1. [action]\n2. [action]\n3. [action]"
-                )
-                response = narrator.respond(action=choice_prompt, context="")
+        # If narrator already provided choices, use them
+        if self.state.choices and len(self.state.choices) >= 3:
+            return self.state
 
-                # Parse the response to extract choices
-                choices = self._parse_choices(response)
-                if len(choices) >= 3:
-                    self.state.choices = choices[:3]
-                    return self.state
-
-        except Exception:
-            # Fall back to defaults on any error
-            pass
-
+        # Otherwise use defaults
         self.state.choices = self.DEFAULT_CHOICES
         return self.state
 
