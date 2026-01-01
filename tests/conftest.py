@@ -3,10 +3,12 @@
 import asyncio
 from collections.abc import Generator
 from typing import Any, TypeVar
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from src.agents.narrator import NarratorResponse
 from src.api.main import app
 from src.state import GamePhase, SessionManager
 from src.state.backends.memory import InMemoryBackend
@@ -16,14 +18,76 @@ from src.state.models import CombatState, GameState
 T = TypeVar("T")
 
 
+# ============================================================================
+# Mock LLM Calls - Single Point of Control
+# ============================================================================
+
+
+class MockTaskResult:
+    """Mock CrewAI TaskOutput that mimics real LLM responses."""
+
+    def __init__(self, raw: str, pydantic: Any = None):
+        self.raw = raw
+        self.pydantic = pydantic
+
+    def __str__(self) -> str:
+        return self.raw
+
+
+def mock_task_execute_sync(self: Any) -> MockTaskResult:
+    """Mock Task.execute_sync() to return deterministic responses.
+
+    This is the single point where all LLM calls are intercepted.
+    """
+    # Check if this task expects Pydantic output (narrator with choices)
+    if hasattr(self, "output_pydantic") and self.output_pydantic == NarratorResponse:
+        return MockTaskResult(
+            raw="The ancient door creaks open...",
+            pydantic=NarratorResponse(
+                narrative=(
+                    "The ancient door creaks open, revealing a dimly lit chamber. "
+                    "Dust motes dance in the flickering torchlight as you step inside. "
+                    "The air is thick with the scent of forgotten secrets."
+                ),
+                choices=[
+                    "Examine the dusty tomes on the shelf",
+                    "Light another torch from the wall sconce",
+                    "Listen for sounds in the darkness ahead",
+                ],
+            ),
+        )
+
+    # Default narrative response for all other tasks
+    return MockTaskResult(
+        raw=(
+            "The ancient door creaks open, revealing a dimly lit chamber. "
+            "Dust motes dance in the flickering torchlight as you step inside."
+        )
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_crewai_tasks() -> Generator[MagicMock, None, None]:
+    """Mock all CrewAI Task executions to avoid real LLM calls.
+
+    This single fixture intercepts all LLM calls at the Task.execute_sync level,
+    making tests fast (~3s vs ~3min) and deterministic.
+    """
+    with patch(
+        "crewai.Task.execute_sync",
+        mock_task_execute_sync,
+    ) as mock:
+        yield mock
+
+
+# ============================================================================
+# Test Fixtures
+# ============================================================================
+
+
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
-    """Create test client for API with lifespan context.
-
-    This fixture uses the lifespan context manager to properly initialize
-    the session backend and manager before tests run.
-    """
-    # Use lifespan context to initialize app.state
+    """Create test client for API with lifespan context."""
     with TestClient(app, raise_server_exceptions=True) as test_client:
         yield test_client
 
@@ -36,11 +100,7 @@ def session_manager() -> SessionManager:
 
 
 def run_async(coro: Any) -> Any:
-    """Helper to run async code in sync tests.
-
-    Since TestClient creates its own event loop, we need to use
-    asyncio.get_event_loop() or create a new one.
-    """
+    """Helper to run async code in sync tests."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -50,50 +110,37 @@ def run_async(coro: Any) -> Any:
 
 
 class SessionStateHelper:
-    """Helper class to access session state in sync tests.
-
-    This provides sync wrappers around the async SessionManager methods
-    for use in sync test functions.
-    """
+    """Helper class to access session state in sync tests."""
 
     def __init__(self, sm: SessionManager):
         self._sm = sm
 
     def get_phase(self, session_id: str) -> GamePhase | None:
-        """Get the game phase for a session."""
         result: GamePhase | None = run_async(self._sm.get_phase(session_id))
         return result
 
     def get_character_sheet(self, session_id: str) -> CharacterSheet | None:
-        """Get the character sheet for a session."""
         result: CharacterSheet | None = run_async(
             self._sm.get_character_sheet(session_id)
         )
         return result
 
     def get_creation_turn(self, session_id: str) -> int:
-        """Get the character creation turn for a session."""
         result: int = run_async(self._sm.get_creation_turn(session_id))
         return result
 
     def get_session(self, session_id: str) -> GameState | None:
-        """Get a session by ID."""
         result: GameState | None = run_async(self._sm.get_session(session_id))
         return result
 
     def set_combat_state(
         self, session_id: str, combat_state: CombatState | None
     ) -> None:
-        """Set combat state for a session."""
         run_async(self._sm.set_combat_state(session_id, combat_state))
 
 
 @pytest.fixture
 def session_state(client: TestClient) -> SessionStateHelper:
-    """Provide sync access to session state through the app's session manager.
-
-    This fixture provides a helper that wraps the async SessionManager methods
-    in sync functions for use in tests that need to verify session state.
-    """
+    """Provide sync access to session state through the app's session manager."""
     sm = client.app.state.session_manager
     return SessionStateHelper(sm)
