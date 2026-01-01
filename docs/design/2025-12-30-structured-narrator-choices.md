@@ -176,3 +176,27 @@ If structured output fails:
 - **Tests**: All passing (368 tests)
 - **Coverage**: 75%
 - **Linting**: All checks pass
+
+### Test Infrastructure Improvement
+
+Added LLM mocking to make tests fast and deterministic:
+
+```python
+# tests/conftest.py - Single point of LLM interception
+@pytest.fixture(autouse=True)
+def mock_crewai_tasks():
+    """Mock CrewAI Task.execute_sync() for all tests."""
+    with patch("crewai.Task.execute_sync", mock_task_execute_sync):
+        yield
+```
+
+**Benefits:**
+- Tests run in **~30s** instead of **~3min** (10x faster)
+- No API calls = no flaky failures
+- Automatically applies to all tests via `autouse=True`
+- Returns proper `NarratorResponse` for structured output tests
+
+| File | Changes |
+|------|---------|
+| `tests/conftest.py` | Added `MockTaskResult` class and `mock_crewai_tasks` fixture |
+| `.pre-commit-config.yaml` | Updated ruff to v0.14.0 to align with project version |

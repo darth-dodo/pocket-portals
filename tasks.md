@@ -438,6 +438,8 @@ gantt
 2. Added choice quality analysis to detect generic vs contextual choices
 3. Enabled CrewAI built-in tracing via `CREWAI_TRACING_ENABLED` environment variable
 4. Fixed frontend to hide choices during loading for better UX
+5. Added LLM mocking at `crewai.Task.execute_sync` level for fast, reliable tests
+6. Updated pre-commit ruff to v0.14.0 to align with project version
 
 **Artifacts Created/Modified**:
 - `src/agents/narrator.py` - Added `NarratorResponse`, `ChoiceQuality`, `_analyze_choice_quality()`, observability logging
@@ -445,12 +447,15 @@ gantt
 - `static/index.html` - Hide choices section when loading starts
 - `.env` / `.env.example` - Added `CREWAI_TRACING_ENABLED=true`
 - `tests/test_narrator.py` - Added `TestChoiceQualityAnalysis` test suite (5 tests)
-- `docs/design/2025-12-30-structured-narrator-choices.md` - Updated status to Complete
+- `tests/conftest.py` - Added `MockTaskResult` class and `mock_crewai_tasks` autouse fixture
+- `.pre-commit-config.yaml` - Updated ruff-pre-commit to v0.14.0
+- `docs/design/2025-12-30-structured-narrator-choices.md` - Updated status to Complete with test infrastructure section
 
 **Quality Gates Passed**:
 - 368 tests passing
 - 75% test coverage
 - All linting checks passing
+- Tests run in ~30s (previously ~3min with real LLM calls)
 - Manual E2E testing confirmed choices hide during loading
 
 ---
