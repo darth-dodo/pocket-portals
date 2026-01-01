@@ -1,0 +1,44 @@
+/* ===== CSS Custom Properties ===== */
+:root {
+    /* Colors */
+    --color-gold: #f7d354;
+    --color-gold-dark: #c9a227;
+    --color-green: #92cc41;
+    --color-green-dark: #6b9e32;
+    --color-blue: #209cee;
+    --color-orange: #f2711c;
+    --color-bg-dark: #212529;
+    --color-bg-darker: #1a1a2e;
+    --color-bg-darkest: #0d0d1a;
+    --color-bg-accent: #16213e;
+    --color-bg-blue: #0f3460;
+    --color-text: #f5f5f5;
+    --color-text-muted: #c4c6d0;
+    --color-text-dim: #8a8a9a;
+    --color-border: #444;
+
+    /* Spacing */
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+    --safe-area-left: env(safe-area-inset-left);
+    --safe-area-right: env(safe-area-inset-right);
+
+    /* Touch targets */
+    --touch-target-min: 44px;
+    --touch-target-comfortable: 48px;
+
+    /* Z-indices */
+    --z-header: 100;
+    --z-bottom-sheet: 200;
+    --z-overlay: 150;
+    --z-toast: 300;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 300ms ease;
+
+    /* Bottom sheet */
+    --bottom-sheet-peek: 180px;
+    --bottom-sheet-max: 70vh;
+}

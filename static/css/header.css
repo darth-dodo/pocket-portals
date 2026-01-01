@@ -1,0 +1,215 @@
+/* ===== COMPACT HEADER WITH PROGRESS BAR ===== */
+.game-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    background: linear-gradient(180deg, rgba(26,26,46,0.98) 0%, rgba(26,26,46,0.95) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 12px 16px;
+    padding-top: max(12px, var(--safe-area-top));
+    margin: -20px -20px 16px -20px;
+    border-bottom: 3px solid var(--color-border);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.game-header.scrolled {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.game-header.hidden {
+    transform: translateY(-100%);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.turn-counter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--color-bg-darkest);
+    box-shadow: 0 2px 8px rgba(247, 211, 84, 0.3);
+}
+
+.quest-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.quest-title {
+    font-size: 0.65rem;
+    color: var(--color-gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.quest-subtitle {
+    font-size: 0.5rem;
+    color: var(--color-text-muted);
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.header-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.header-btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: var(--color-text);
+}
+
+.header-btn:active {
+    transform: scale(0.95);
+}
+
+.header-btn i {
+    font-size: 1.1rem;
+}
+
+/* Progress Bar */
+.progress-container {
+    margin-top: 10px;
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.progress-bar-wrapper {
+    position: relative;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: visible;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-green) 0%, var(--color-gold) 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: var(--color-gold);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(247, 211, 84, 0.6);
+}
+
+.progress-milestones {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding: 0 2px;
+}
+
+.milestone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.milestone-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--color-border);
+    border-radius: 50%;
+    transition: all var(--transition-normal);
+}
+
+.milestone.reached .milestone-dot {
+    background: var(--color-green);
+    box-shadow: 0 0 6px rgba(146, 204, 65, 0.5);
+}
+
+.milestone.current .milestone-dot {
+    background: var(--color-gold);
+    box-shadow: 0 0 8px rgba(247, 211, 84, 0.6);
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.milestone-label {
+    font-size: 0.4rem;
+    color: var(--color-text-dim);
+    white-space: nowrap;
+}
+
+.milestone.reached .milestone-label,
+.milestone.current .milestone-label {
+    color: var(--color-text-muted);
+}
+
+/* Legacy header - hidden on mobile, shown as fallback */
+header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(26,26,46,0.8) 0%, transparent 100%);
+    border-radius: 8px;
+}
+
+.title {
+    color: var(--color-gold);
+    font-size: 1.8rem;
+    text-shadow:
+        4px 4px 0 var(--color-gold-dark),
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    color: var(--color-green);
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+}

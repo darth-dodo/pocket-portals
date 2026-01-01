@@ -1,0 +1,720 @@
+/* ===== RESPONSIVE.CSS - All Responsive Breakpoints ===== */
+
+/* ===== TABLET (max-width: 768px) ===== */
+@media (max-width: 768px) {
+    .reading-mode-toggle {
+        top: 12px;
+        right: 12px;
+        padding: 10px 14px;
+    }
+
+    .message-text {
+        font-size: 1.15rem;
+        line-height: 1.95;
+    }
+
+    .choice-btn {
+        min-height: 52px;
+        font-size: 0.85rem !important;
+    }
+
+    /* Combat HUD on tablet - bottom positioned */
+    .combat-hud {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .combat-actions button {
+        font-size: 0.6rem !important;
+        padding: 12px 10px !important;
+        min-height: var(--touch-target-min);
+    }
+
+    /* Improve touch targets */
+    .header-btn {
+        min-width: var(--touch-target-min);
+        min-height: var(--touch-target-min);
+    }
+}
+
+/* ===== MOBILE (max-width: 600px) ===== */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+        padding-top: 0; /* Header handles top padding */
+    }
+
+    /* Hide legacy header on mobile - use compact header */
+    header {
+        display: none !important;
+    }
+
+    /* Show compact header */
+    .game-header {
+        display: block;
+        margin: 0 -10px 12px -10px;
+    }
+
+    .header-content {
+        padding: 0 6px;
+    }
+
+    .turn-counter {
+        width: 36px;
+        height: 36px;
+        font-size: 0.7rem;
+    }
+
+    .quest-title {
+        font-size: 0.55rem;
+        max-width: 140px;
+    }
+
+    .quest-subtitle {
+        font-size: 0.45rem;
+    }
+
+    .header-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .progress-milestones {
+        display: none; /* Hide milestones on small screens */
+    }
+
+    /* Reading mode toggle - FAB style above bottom sheet */
+    .reading-mode-toggle {
+        position: fixed;
+        bottom: calc(var(--bottom-sheet-peek) + 20px);
+        right: max(20px, var(--safe-area-right));
+        top: auto;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        z-index: 99;
+    }
+
+    .reading-mode-toggle i {
+        font-size: 1.4rem;
+    }
+
+    /* Story area adjustments for mobile */
+    .story-box {
+        min-height: 280px;
+        max-height: none;
+        padding: 16px;
+        margin-bottom: 0;
+        /* Account for bottom sheet peek */
+        padding-bottom: calc(var(--bottom-sheet-peek) + 20px);
+    }
+
+    /* Messages */
+    .message {
+        padding: 18px 16px;
+        margin-bottom: 24px;
+        border-radius: 6px;
+    }
+
+    .message-text {
+        font-size: 1.125rem;
+        line-height: 1.9;
+        letter-spacing: 0.02em;
+    }
+
+    .message-label {
+        font-size: 0.65rem;
+        margin-bottom: 10px;
+    }
+
+    .message-narrator .message-text p:first-child::first-letter {
+        font-size: 1.6em;
+        margin-right: 6px;
+    }
+
+    .message-keeper .message-text {
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+
+    .message-player .message-text {
+        font-size: 1rem;
+    }
+
+    /* Welcome screen */
+    .welcome {
+        padding: 28px 20px;
+    }
+
+    .welcome p {
+        font-size: 1rem;
+        font-family: 'Crimson Pro', Georgia, serif;
+        line-height: 1.8;
+        color: #d8d8d8;
+    }
+
+    .welcome i {
+        font-size: 2.5rem;
+    }
+
+    .welcome h2 {
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+    }
+
+    .welcome .begin-btn {
+        font-size: 0.75rem !important;
+        padding: 18px 36px !important;
+        min-height: 56px;
+    }
+
+    /* Hide legacy choices on mobile - use bottom sheet */
+    .choices-section {
+        display: none !important;
+    }
+
+    /* Hide legacy input on mobile - use bottom sheet */
+    .input-section {
+        display: none !important;
+    }
+
+    /* Loading indicator */
+    .loading {
+        padding: 10px 12px;
+    }
+
+    .loading-text {
+        font-size: 0.7rem;
+    }
+
+    /* Session bar */
+    .session-bar {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+        padding: 14px 16px;
+        margin-top: 16px;
+        /* Account for bottom sheet */
+        margin-bottom: calc(var(--bottom-sheet-peek) + 20px);
+    }
+
+    .session-info {
+        font-size: 0.5rem;
+    }
+
+    .new-game-btn {
+        font-size: 0.5rem !important;
+        min-height: var(--touch-target-min);
+        padding: 12px 20px !important;
+    }
+
+    /* Footer */
+    footer {
+        margin-top: 20px;
+        padding: 14px;
+        font-size: 0.5rem;
+        margin-bottom: calc(var(--bottom-sheet-peek) + 40px);
+    }
+
+    /* Error box */
+    .error-box {
+        font-size: 0.6rem;
+        padding: 14px;
+    }
+
+    /* Response indicator - compact on mobile */
+    .response-indicator {
+        padding: 10px 14px;
+        gap: 10px;
+    }
+
+    .agent-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .agent-name {
+        font-size: 0.6rem;
+    }
+
+    /* Combat HUD mobile */
+    .combat-hud {
+        padding: 12px;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .combat-hud .hp-bar label {
+        font-size: 0.45rem;
+    }
+
+    .initiative-tracker li {
+        font-size: 0.45rem;
+    }
+
+    .combat-actions {
+        flex-wrap: nowrap;
+    }
+
+    .combat-actions button {
+        flex: 1;
+        min-width: auto;
+        font-size: 0.45rem !important;
+        padding: 10px 4px !important;
+    }
+}
+
+/* ===== EXTRA SMALL MOBILE (max-width: 380px) ===== */
+@media (max-width: 380px) {
+    body {
+        padding: 8px;
+    }
+
+    .turn-counter {
+        width: 32px;
+        height: 32px;
+        font-size: 0.6rem;
+    }
+
+    .quest-title {
+        font-size: 0.5rem;
+        max-width: 100px;
+    }
+
+    .header-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .story-box {
+        padding: 14px;
+    }
+
+    .message {
+        padding: 14px 12px;
+    }
+
+    .message-text {
+        font-size: 1.0625rem;
+    }
+
+    .welcome h2 {
+        font-size: 0.75rem;
+    }
+
+    .welcome p {
+        font-size: 0.9375rem;
+    }
+
+    .welcome .begin-btn {
+        font-size: 0.65rem !important;
+        padding: 16px 28px !important;
+    }
+
+    /* Bottom sheet adjustments */
+    .sheet-choice-btn {
+        padding: 14px 16px;
+        font-size: 0.9375rem;
+    }
+
+    .sheet-choice-btn i {
+        margin-right: 12px;
+        font-size: 1rem;
+    }
+
+    .bottom-sheet-content {
+        padding: 14px 16px;
+    }
+
+    /* Reading mode FAB smaller */
+    .reading-mode-toggle {
+        width: 48px;
+        height: 48px;
+    }
+
+    .reading-mode-toggle i {
+        font-size: 1.2rem;
+    }
+
+    /* Combat HUD extra small */
+    .combat-hud {
+        padding: 10px;
+    }
+
+    .initiative-tracker h4 {
+        font-size: 0.5rem;
+    }
+
+    .combat-actions button {
+        font-size: 0.4rem !important;
+        padding: 8px 2px !important;
+    }
+
+    .dice-display .dice-icon {
+        font-size: 22px;
+    }
+
+    .dice-display span {
+        font-size: 0.45rem;
+    }
+}
+
+/* ===== DESKTOP (min-width: 601px) ===== */
+@media (min-width: 601px) {
+    /* Hide bottom sheet on desktop - show legacy UI */
+    .bottom-sheet,
+    .bottom-sheet-overlay {
+        display: none !important;
+    }
+
+    /* Hide compact header on desktop */
+    .game-header {
+        display: none;
+    }
+
+    /* Show legacy header */
+    header {
+        display: block;
+    }
+
+    /* Show legacy choices */
+    .choices-section {
+        display: block !important;
+    }
+
+    .choices-section.hidden {
+        display: none !important;
+    }
+
+    /* Show legacy input */
+    .input-section {
+        display: block !important;
+    }
+
+    /* Combat HUD positioned on right side */
+    .combat-hud {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        bottom: auto;
+        left: auto;
+        width: 280px;
+        border-radius: 8px;
+    }
+}
+
+/* ===== LARGE DESKTOP (min-width: 1200px) ===== */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1000px;
+    }
+
+    .combat-hud {
+        width: 320px;
+        right: calc((100vw - 1000px) / 2 - 340px);
+    }
+
+    .story-box {
+        max-height: 600px;
+    }
+
+    .message-text {
+        font-size: 1.2rem;
+        line-height: 2;
+    }
+}
+
+/* ===== ACCESSIBILITY: REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .bottom-sheet {
+        transition: none;
+    }
+
+    .game-header {
+        transition: none;
+    }
+
+    .choice-btn:hover,
+    .sheet-choice-btn:hover {
+        transform: none;
+    }
+
+    .dice-display .dice-icon {
+        animation: none;
+    }
+
+    .expand-hint i {
+        animation: none;
+    }
+
+    .streaming-text::after {
+        animation: none;
+        opacity: 1;
+    }
+
+    .typing-dot {
+        animation: none;
+        opacity: 1;
+    }
+
+    .milestone.current .milestone-dot {
+        animation: none;
+    }
+
+    .welcome .begin-btn {
+        animation: none;
+    }
+}
+
+/* ===== ACCESSIBILITY: HIGH CONTRAST ===== */
+@media (prefers-contrast: high) {
+    :root {
+        --color-border: #888;
+    }
+
+    body {
+        background: #000;
+    }
+
+    .message-text {
+        color: #ffffff;
+    }
+
+    .message-label {
+        font-weight: bold;
+    }
+
+    .choice-btn,
+    .sheet-choice-btn {
+        border-width: 3px;
+        border-color: #888;
+    }
+
+    .choice-btn:focus,
+    .sheet-choice-btn:focus {
+        outline-width: 3px;
+    }
+
+    .bottom-sheet {
+        border-top: 3px solid var(--color-text);
+    }
+
+    .game-header {
+        border-bottom-width: 4px;
+    }
+
+    .combat-hud {
+        border-width: 4px;
+    }
+
+    .hp-bar progress {
+        border: 2px solid #888;
+    }
+
+    /* Increase color contrast */
+    .message-narrator {
+        border-left-width: 6px;
+    }
+
+    .message-keeper {
+        border-left-width: 6px;
+    }
+
+    .message-jester {
+        border-left-width: 6px;
+    }
+
+    .message-player {
+        border-left-width: 6px;
+    }
+
+    /* Focus indicators more visible */
+    *:focus {
+        outline: 3px solid #fff !important;
+        outline-offset: 3px !important;
+    }
+}
+
+/* ===== ACCESSIBILITY: FORCED COLORS ===== */
+@media (forced-colors: active) {
+    .choice-btn,
+    .sheet-choice-btn,
+    .header-btn,
+    .reading-mode-toggle,
+    .sheet-submit-btn,
+    .combat-actions button {
+        border: 2px solid ButtonText;
+    }
+
+    .choice-btn:focus,
+    .sheet-choice-btn:focus,
+    .header-btn:focus {
+        outline: 3px solid Highlight;
+    }
+
+    .progress-bar-fill,
+    .hp-bar progress::-webkit-progress-value {
+        background: Highlight;
+    }
+}
+
+/* ===== READING MODE STYLES ===== */
+body.reading-mode .message-text {
+    font-size: 1.25rem !important;
+    line-height: 2 !important;
+}
+
+body.reading-mode .story-box {
+    max-height: 600px !important;
+}
+
+body.reading-mode .message {
+    padding: 24px 28px !important;
+    margin-bottom: 28px !important;
+}
+
+/* Reading mode on mobile */
+@media (max-width: 600px) {
+    body.reading-mode .message-text {
+        font-size: 1.25rem !important;
+        line-height: 2.1 !important;
+    }
+
+    body.reading-mode .message {
+        padding: 22px 18px !important;
+    }
+
+    body.reading-mode .story-box {
+        padding: 20px;
+        max-height: none !important;
+    }
+}
+
+/* Reading mode on extra small screens */
+@media (max-width: 380px) {
+    body.reading-mode .message-text {
+        font-size: 1.125rem !important;
+        line-height: 2 !important;
+    }
+
+    body.reading-mode .message {
+        padding: 18px 14px !important;
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .game-header,
+    .reading-mode-toggle,
+    .bottom-sheet,
+    .bottom-sheet-overlay,
+    .choices-section,
+    .input-section,
+    .session-bar,
+    .combat-hud,
+    .response-indicator,
+    .loading,
+    .error-box {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        color: black;
+        padding: 20px;
+    }
+
+    .story-box {
+        max-height: none;
+        overflow: visible;
+        background: white;
+    }
+
+    .message {
+        break-inside: avoid;
+        border-left-color: #333;
+        background: #f5f5f5;
+    }
+
+    .message-text {
+        color: black;
+        font-size: 12pt;
+        line-height: 1.6;
+    }
+
+    .message-label {
+        color: #333;
+    }
+}
+
+/* ===== LANDSCAPE ORIENTATION ===== */
+@media (max-height: 500px) and (orientation: landscape) {
+    .game-header {
+        padding: 8px 16px;
+    }
+
+    .progress-container {
+        display: none;
+    }
+
+    .story-box {
+        min-height: 200px;
+        padding-bottom: calc(var(--bottom-sheet-peek) + 10px);
+    }
+
+    .bottom-sheet {
+        --bottom-sheet-peek: 120px;
+        --bottom-sheet-max: 60vh;
+    }
+
+    .welcome {
+        padding: 16px;
+    }
+
+    .welcome i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .welcome p {
+        margin-bottom: 16px;
+    }
+}
+
+/* ===== SAFE AREA INSETS (Notched devices) ===== */
+@supports (padding: max(0px)) {
+    .game-header {
+        padding-left: max(16px, var(--safe-area-left));
+        padding-right: max(16px, var(--safe-area-right));
+    }
+
+    .bottom-sheet {
+        padding-left: max(20px, var(--safe-area-left));
+        padding-right: max(20px, var(--safe-area-right));
+    }
+
+    .bottom-sheet-content {
+        padding-left: max(20px, var(--safe-area-left));
+        padding-right: max(20px, var(--safe-area-right));
+    }
+}
