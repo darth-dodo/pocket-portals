@@ -116,3 +116,71 @@ class TestNarratorCombat:
         assert "victory" in description.lower() or "won" in description.lower()
         # Combat log should be included
         assert any(log_entry in description for log_entry in combat_log)
+
+
+class TestChoiceQualityAnalysis:
+    """Test suite for choice quality analysis."""
+
+    def test_all_generic_choices_score_zero(self) -> None:
+        """All generic choices should result in quality score of 0."""
+        from src.agents.narrator import _analyze_choice_quality
+
+        choices = ["Look around", "Wait", "Leave"]
+        quality = _analyze_choice_quality(choices)
+
+        assert quality.quality_score == 0.0
+        assert quality.generic_count == 3
+        assert quality.contextual_count == 0
+        assert len(quality.generic_choices) == 3
+
+    def test_all_contextual_choices_score_one(self) -> None:
+        """All contextual choices should result in quality score of 1."""
+        from src.agents.narrator import _analyze_choice_quality
+
+        choices = [
+            "Examine the glowing runes",
+            "Speak to the hooded stranger",
+            "Touch the ancient artifact",
+        ]
+        quality = _analyze_choice_quality(choices)
+
+        assert quality.quality_score == 1.0
+        assert quality.generic_count == 0
+        assert quality.contextual_count == 3
+        assert len(quality.generic_choices) == 0
+
+    def test_mixed_choices_partial_score(self) -> None:
+        """Mixed choices should result in partial quality score."""
+        from src.agents.narrator import _analyze_choice_quality
+
+        choices = [
+            "Examine the glowing runes",
+            "Wait",
+            "Touch the ancient artifact",
+        ]
+        quality = _analyze_choice_quality(choices)
+
+        assert quality.quality_score == pytest.approx(0.67, rel=0.1)
+        assert quality.generic_count == 1
+        assert quality.contextual_count == 2
+        assert quality.generic_choices == ["Wait"]
+
+    def test_case_insensitive_matching(self) -> None:
+        """Generic choice matching should be case insensitive."""
+        from src.agents.narrator import _analyze_choice_quality
+
+        choices = ["LOOK AROUND", "wAiT", "LeAvE"]
+        quality = _analyze_choice_quality(choices)
+
+        assert quality.generic_count == 3
+        assert quality.quality_score == 0.0
+
+    def test_empty_choices_returns_zero_score(self) -> None:
+        """Empty choices list should return zero score without error."""
+        from src.agents.narrator import _analyze_choice_quality
+
+        quality = _analyze_choice_quality([])
+
+        assert quality.quality_score == 0.0
+        assert quality.generic_count == 0
+        assert quality.contextual_count == 0

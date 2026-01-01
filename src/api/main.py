@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import random
 from collections.abc import AsyncGenerator
@@ -43,6 +44,12 @@ from src.state.backends import create_backend
 from src.state.models import CombatPhaseEnum, CombatState
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+)
 
 # Content safety filter - redirects inappropriate input
 BLOCKED_PATTERNS = [

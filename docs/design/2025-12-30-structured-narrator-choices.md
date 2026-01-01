@@ -1,7 +1,7 @@
 # Design: Structured Narrator Choices
 
-**Date**: 2025-12-30
-**Status**: In Progress
+**Date**: 2026-01-01
+**Status**: Complete
 **Author**: AI Assistant
 **Branch**: `fix/structured-narrator-choices`
 
@@ -135,3 +135,44 @@ If structured output fails:
 2. Gradually transition callers to structured method
 3. Monitor choice quality and fallback rates
 4. Remove duplicate choice generation code once stable
+
+## Implementation Complete (2026-01-01)
+
+### Features Implemented
+
+1. **Structured Pydantic Output**
+   - `NarratorResponse` model with `narrative` and `choices` fields
+   - Improved Field descriptions to guide LLM toward contextual choices
+   - `min_length=3, max_length=3` constraint enforces exactly 3 choices
+
+2. **Choice Quality Observability**
+   - `ChoiceQuality` dataclass tracks generic vs contextual choice counts
+   - `_analyze_choice_quality()` function detects generic choices like "Look around", "Wait", "Leave"
+   - Quality score (0.0-1.0) logged for every narrator response
+   - Warning logged when quality score < 0.67 (less than 2/3 contextual)
+
+3. **CrewAI Tracing**
+   - `CREWAI_TRACING_ENABLED=true` in `.env` enables built-in tracing
+   - Traces visible at https://aop.crewai.com
+
+4. **Frontend UX Improvement**
+   - Choices section now **hides** while narrator generates new options
+   - Prevents user confusion from stale choices during loading
+   - New choices appear only after narrator response completes
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `src/agents/narrator.py` | Added `NarratorResponse`, `ChoiceQuality`, `_analyze_choice_quality()`, observability logging |
+| `src/api/main.py` | Added logging configuration |
+| `static/index.html` | Hide choices section during loading |
+| `.env` | Added `CREWAI_TRACING_ENABLED=true` |
+| `.env.example` | Documented CrewAI tracing option |
+| `tests/test_narrator.py` | Added `TestChoiceQualityAnalysis` test suite |
+
+### Quality Metrics
+
+- **Tests**: All passing (368 tests)
+- **Coverage**: 75%
+- **Linting**: All checks pass

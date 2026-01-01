@@ -1253,6 +1253,8 @@
             if (loading) {
                 const phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
                 document.getElementById('loading-text').textContent = phrase;
+                // Hide choices while loading - narrator will provide new ones
+                choicesSection.classList.add('hidden');
             }
 
             document.querySelectorAll('.choice-btn').forEach(btn => {

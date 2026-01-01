@@ -186,6 +186,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Structured Narrator Choices | ✅ | Single LLM call for narrative+choices, quality observability, CrewAI tracing, UI fix for hiding choices during loading |
 | Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 356 tests |
 | Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary, 275 tests passing |
 | Dynamic character creation with CharacterInterviewerAgent | ✅ | 148 tests, LLM-powered interview with 5-turn flow |
@@ -427,6 +428,32 @@ gantt
 ---
 
 ## Task History Archive
+
+### Session Log: 2026-01-01
+
+**Session Focus**: Structured Narrator Choices - Single LLM call for narrative and choices with observability
+
+**Key Decisions**:
+1. Use CrewAI's `output_pydantic` for structured responses instead of separate LLM calls
+2. Added choice quality analysis to detect generic vs contextual choices
+3. Enabled CrewAI built-in tracing via `CREWAI_TRACING_ENABLED` environment variable
+4. Fixed frontend to hide choices during loading for better UX
+
+**Artifacts Created/Modified**:
+- `src/agents/narrator.py` - Added `NarratorResponse`, `ChoiceQuality`, `_analyze_choice_quality()`, observability logging
+- `src/api/main.py` - Added logging configuration with `logging.basicConfig()`
+- `static/index.html` - Hide choices section when loading starts
+- `.env` / `.env.example` - Added `CREWAI_TRACING_ENABLED=true`
+- `tests/test_narrator.py` - Added `TestChoiceQualityAnalysis` test suite (5 tests)
+- `docs/design/2025-12-30-structured-narrator-choices.md` - Updated status to Complete
+
+**Quality Gates Passed**:
+- 368 tests passing
+- 75% test coverage
+- All linting checks passing
+- Manual E2E testing confirmed choices hide during loading
+
+---
 
 ### Session Log: 2025-12-29
 
