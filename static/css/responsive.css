@@ -37,118 +37,133 @@
         min-height: var(--touch-target-min);
     }
 
-    /* Improve touch targets */
-    .header-btn {
-        min-width: var(--touch-target-min);
-        min-height: var(--touch-target-min);
-    }
 }
 
 /* ===== MOBILE (max-width: 600px) ===== */
 @media (max-width: 600px) {
     body {
-        padding: 10px;
-        padding-top: 0; /* Header handles top padding */
+        padding: 0;
+        margin: 0;
     }
 
-    /* Hide legacy header on mobile - use compact header */
-    header {
-        display: none !important;
+    .container {
+        padding: 0;
+        max-width: 100%;
     }
 
-    /* Show compact header */
-    .game-header {
-        display: block;
-        margin: 0 -10px 12px -10px;
-    }
-
-    .header-content {
-        padding: 0 6px;
-    }
-
-    .turn-counter {
-        width: 36px;
-        height: 36px;
-        font-size: 0.7rem;
-    }
-
-    .quest-title {
-        font-size: 0.55rem;
-        max-width: 140px;
-    }
-
-    .quest-subtitle {
-        font-size: 0.45rem;
-    }
-
-    .header-btn {
-        width: 36px;
-        height: 36px;
-    }
-
-    .progress-milestones {
-        display: none; /* Hide milestones on small screens */
-    }
-
-    /* Reading mode toggle - FAB style above bottom sheet */
+    /* Hide reading mode toggle on mobile - use settings instead */
     .reading-mode-toggle {
-        position: fixed;
-        bottom: calc(var(--bottom-sheet-peek) + 20px);
-        right: max(20px, var(--safe-area-right));
-        top: auto;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        z-index: 99;
+        display: none;
     }
 
-    .reading-mode-toggle i {
-        font-size: 1.4rem;
-    }
-
-    /* Story area adjustments for mobile */
+    /* ===== FULL-BLEED STORY AREA ===== */
     .story-box {
-        min-height: 280px;
+        min-height: 100vh;
+        min-height: 100dvh;
         max-height: none;
-        padding: 16px;
-        margin-bottom: 0;
-        /* Account for bottom sheet peek */
-        padding-bottom: calc(var(--bottom-sheet-peek) + 20px);
+        padding: 56px 16px calc(var(--bottom-sheet-peek) + 12px) 16px;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        overflow-y: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
-    /* Messages - Inter is clean and readable */
+    .story-box::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ===== MODERN MESSAGE STYLING ===== */
     .message {
-        padding: 14px 12px;
-        margin-bottom: 16px;
-        border-radius: 6px;
+        padding: 0;
+        margin-bottom: 24px;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+    }
+
+    /* Hide message labels */
+    .message-label {
+        display: none;
     }
 
     .message-text {
-        font-size: 0.95rem;
-        line-height: 1.6;
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.9);
     }
 
-    .message-label {
-        font-size: 0.55rem;
-        margin-bottom: 8px;
+    .message-text p {
+        margin: 0 0 16px 0;
     }
 
-    .message-narrator .message-text p:first-child::first-letter {
-        font-size: 1.8em;
-        margin-right: 4px;
+    .message-text p:last-child {
+        margin-bottom: 0;
     }
 
-    .message-keeper .message-text {
-        font-size: 0.9rem;
-        line-height: 1.6;
+    /* Narrator - clean, readable */
+    .message-narrator {
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+
+    .message-narrator .message-text {
+        color: rgba(255, 255, 255, 0.92);
+        font-style: normal;
+    }
+
+    /* Drop cap for narrator */
+    .message-narrator .message-text p:first-of-type::first-letter {
+        float: left;
+        font-size: 2.6em;
+        line-height: 0.85;
+        font-weight: 600;
+        color: var(--color-gold);
+        margin-right: 8px;
+        margin-top: 4px;
+    }
+
+    /* Player - subtle accent */
+    .message-player {
+        background: transparent;
+        border-left: 2px solid var(--color-green);
+        padding-left: 16px;
+        margin-left: 0;
     }
 
     .message-player .message-text {
-        font-size: 0.9rem;
+        color: var(--color-green);
+        font-style: italic;
+    }
+
+    .message-player .message-text::before,
+    .message-player .message-text::after {
+        content: none;
+    }
+
+    /* Keeper */
+    .message-keeper {
+        background: transparent;
+        border-left: 2px solid var(--color-blue);
+        padding-left: 16px;
+    }
+
+    .message-keeper .message-text {
+        color: rgba(200, 220, 255, 0.92);
+    }
+
+    /* Jester */
+    .message-jester {
+        background: transparent;
+        border-left: 2px solid var(--color-orange);
+        padding-left: 16px;
+    }
+
+    .message-jester .message-text {
+        color: rgba(255, 220, 180, 0.92);
     }
 
     /* Welcome screen */
@@ -279,22 +294,6 @@
         padding: 8px;
     }
 
-    .turn-counter {
-        width: 32px;
-        height: 32px;
-        font-size: 0.6rem;
-    }
-
-    .quest-title {
-        font-size: 0.5rem;
-        max-width: 100px;
-    }
-
-    .header-btn {
-        width: 32px;
-        height: 32px;
-    }
-
     .story-box {
         padding: 14px;
     }
@@ -370,23 +369,13 @@
 
 /* ===== DESKTOP (min-width: 601px) ===== */
 @media (min-width: 601px) {
-    /* Hide bottom sheet on desktop - show legacy UI */
+    /* Hide bottom sheet on desktop - use inline choices/input */
     .bottom-sheet,
     .bottom-sheet-overlay {
         display: none !important;
     }
 
-    /* Hide compact header on desktop */
-    .game-header {
-        display: none;
-    }
-
-    /* Show legacy header */
-    header {
-        display: block;
-    }
-
-    /* Show legacy choices */
+    /* Show inline choices on desktop */
     .choices-section {
         display: block !important;
     }
@@ -395,7 +384,7 @@
         display: none !important;
     }
 
-    /* Show legacy input */
+    /* Show inline input on desktop */
     .input-section {
         display: block !important;
     }

@@ -1,0 +1,460 @@
+/* ===== THEMES.CSS - Selectable UI Themes ===== */
+
+/* Theme 1: Light Refresh (Default RPG) */
+[data-theme="rpg"] {
+    --theme-bg-primary: #212529;
+    --theme-bg-secondary: #1a1a2e;
+    --theme-bg-tertiary: #0d0d1a;
+    --theme-bg-card: rgba(13, 13, 26, 0.9);
+    --theme-text-primary: #f5f5f5;
+    --theme-text-secondary: #c4c6d0;
+    --theme-text-muted: #8a8a9a;
+    --theme-accent: #f7d354;
+    --theme-accent-dark: #c9a227;
+    --theme-border: #444;
+    --theme-choice-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    --theme-choice-hover: linear-gradient(135deg, rgba(247, 211, 84, 0.15) 0%, rgba(247, 211, 84, 0.08) 100%);
+    --theme-input-bg: rgba(255, 255, 255, 0.03);
+    --theme-font-heading: 'Press Start 2P', cursive;
+    --theme-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --theme-border-radius: 8px;
+    --theme-choice-radius: 10px;
+}
+
+/* Theme: Midnight Minimal */
+[data-theme="midnight"] {
+    --theme-bg-primary: #1a1a1a;
+    --theme-bg-secondary: #141414;
+    --theme-bg-tertiary: #0a0a0a;
+    --theme-bg-card: rgba(20, 20, 20, 0.95);
+    --theme-text-primary: #e8e8e8;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-text-muted: rgba(255, 255, 255, 0.4);
+    --theme-accent: #ffffff;
+    --theme-accent-dark: #cccccc;
+    --theme-border: rgba(255, 255, 255, 0.08);
+    --theme-choice-bg: transparent;
+    --theme-choice-hover: rgba(255, 255, 255, 0.05);
+    --theme-input-bg: rgba(255, 255, 255, 0.03);
+    --theme-font-heading: 'Playfair Display', Georgia, serif;
+    --theme-font-body: 'Source Sans Pro', -apple-system, sans-serif;
+    --theme-border-radius: 0;
+    --theme-choice-radius: 0;
+}
+
+/* Theme 7: Monospace Clean */
+[data-theme="mono"] {
+    --theme-bg-primary: #0f0f0f;
+    --theme-bg-secondary: #0a0a0a;
+    --theme-bg-tertiary: #000000;
+    --theme-bg-card: rgba(15, 15, 15, 0.98);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: #b0b0b0;
+    --theme-text-muted: #666666;
+    --theme-accent: #ffffff;
+    --theme-accent-dark: #888888;
+    --theme-border: #222222;
+    --theme-choice-bg: transparent;
+    --theme-choice-hover: transparent;
+    --theme-input-bg: transparent;
+    --theme-font-heading: 'IBM Plex Mono', 'Courier New', monospace;
+    --theme-font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+    --theme-border-radius: 0;
+    --theme-choice-radius: 0;
+}
+
+/* Theme 8: iOS Dark */
+[data-theme="ios"] {
+    --theme-bg-primary: #1c1c1e;
+    --theme-bg-secondary: #000000;
+    --theme-bg-tertiary: #000000;
+    --theme-bg-card: rgba(255, 255, 255, 0.06);
+    --theme-text-primary: #ffffff;
+    --theme-text-secondary: rgba(255, 255, 255, 0.8);
+    --theme-text-muted: rgba(255, 255, 255, 0.5);
+    --theme-accent: #ffffff;
+    --theme-accent-dark: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(255, 255, 255, 0.08);
+    --theme-choice-bg: rgba(255, 255, 255, 0.06);
+    --theme-choice-hover: rgba(255, 255, 255, 0.1);
+    --theme-input-bg: rgba(255, 255, 255, 0.03);
+    --theme-font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --theme-font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --theme-border-radius: 16px;
+    --theme-choice-radius: 14px;
+}
+
+/* ===== Theme Application Styles ===== */
+
+/* Background */
+[data-theme] body,
+[data-theme].theme-applied {
+    background: var(--theme-bg-primary);
+    color: var(--theme-text-primary);
+}
+
+[data-theme="ios"] body,
+[data-theme="ios"].theme-applied {
+    background: linear-gradient(180deg, var(--theme-bg-primary) 0%, var(--theme-bg-secondary) 100%);
+}
+
+/* Story Box */
+[data-theme] .story-box {
+    background: var(--theme-bg-card);
+    border-color: var(--theme-border);
+    border-radius: var(--theme-border-radius);
+}
+
+/* Messages */
+[data-theme] .message-text {
+    font-family: var(--theme-font-body);
+    color: var(--theme-text-secondary);
+}
+
+[data-theme] .message-narrator .message-text {
+    font-style: normal;
+}
+
+[data-theme="midnight"] .message-narrator .message-text,
+[data-theme="mono"] .message-narrator .message-text {
+    font-weight: 300;
+}
+
+[data-theme] .message-label {
+    font-family: var(--theme-font-heading);
+    background: var(--theme-accent);
+    color: var(--theme-bg-primary);
+}
+
+/* Remove narrator styling for minimal themes */
+[data-theme="midnight"] .message-narrator,
+[data-theme="mono"] .message-narrator,
+[data-theme="ios"] .message-narrator {
+    background: transparent;
+    border-left: none;
+    padding-left: 16px;
+}
+
+[data-theme="midnight"] .message-narrator .message-text p:first-of-type::first-letter,
+[data-theme="mono"] .message-narrator .message-text p:first-of-type::first-letter,
+[data-theme="ios"] .message-narrator .message-text p:first-of-type::first-letter {
+    float: none;
+    font-size: inherit;
+    margin-right: 0;
+    color: inherit;
+    text-shadow: none;
+}
+
+/* Headers */
+[data-theme] .game-header {
+    background: var(--theme-bg-secondary);
+    border-bottom-color: var(--theme-border);
+}
+
+[data-theme] .quest-title {
+    font-family: var(--theme-font-heading);
+    color: var(--theme-text-primary);
+}
+
+[data-theme] .quest-subtitle {
+    color: var(--theme-text-muted);
+}
+
+/* Choices - Desktop */
+[data-theme] .choice-btn {
+    background: var(--theme-choice-bg);
+    border-color: var(--theme-border);
+    border-radius: var(--theme-choice-radius);
+    font-family: var(--theme-font-body);
+    color: var(--theme-text-primary);
+}
+
+[data-theme] .choice-btn:hover {
+    background: var(--theme-choice-hover);
+    border-color: var(--theme-accent);
+}
+
+/* Choices - Mobile Bottom Sheet */
+[data-theme] .sheet-choice-btn {
+    background: var(--theme-choice-bg);
+    border-color: var(--theme-border);
+    border-radius: var(--theme-choice-radius);
+    font-family: var(--theme-font-body);
+    color: var(--theme-text-primary);
+}
+
+[data-theme] .sheet-choice-btn:hover {
+    background: var(--theme-choice-hover);
+    border-color: var(--theme-accent);
+}
+
+/* Minimal themes: border-based choices */
+[data-theme="midnight"] .choice-btn,
+[data-theme="midnight"] .sheet-choice-btn {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-weight: 300;
+}
+
+[data-theme="mono"] .choice-btn,
+[data-theme="mono"] .sheet-choice-btn {
+    border: none;
+    border-bottom: 1px solid var(--theme-border);
+    border-radius: 0;
+    padding: 14px 0;
+    font-weight: 300;
+}
+
+[data-theme="mono"] .choice-btn:last-child,
+[data-theme="mono"] .sheet-choice-btn:last-child {
+    border-bottom: none;
+}
+
+/* iOS theme: pill buttons */
+[data-theme="ios"] .choice-btn,
+[data-theme="ios"] .sheet-choice-btn {
+    border: none;
+    font-weight: 400;
+}
+
+/* Choice numbers for mono theme */
+[data-theme="mono"] .choice-number {
+    font-family: var(--theme-font-heading);
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    background: transparent;
+    width: auto;
+    height: auto;
+}
+
+/* Input */
+[data-theme] .nes-input,
+[data-theme] .sheet-input,
+[data-theme] #action-input,
+[data-theme] #sheet-action-input {
+    background: var(--theme-input-bg);
+    border-color: var(--theme-border);
+    border-radius: var(--theme-border-radius);
+    font-family: var(--theme-font-body);
+    color: var(--theme-text-primary);
+}
+
+[data-theme] .nes-input::placeholder,
+[data-theme] .sheet-input::placeholder {
+    color: var(--theme-text-muted);
+}
+
+/* Bottom Sheet */
+[data-theme] .bottom-sheet {
+    background: linear-gradient(180deg, var(--theme-bg-secondary) 0%, var(--theme-bg-tertiary) 100%);
+    border-top-color: var(--theme-border);
+    border-radius: var(--theme-border-radius) var(--theme-border-radius) 0 0;
+}
+
+[data-theme] .bottom-sheet-title,
+[data-theme] .sheet-title {
+    color: var(--theme-accent);
+    font-family: var(--theme-font-heading);
+}
+
+/* Welcome screen */
+[data-theme] .welcome h2 {
+    font-family: var(--theme-font-heading);
+    color: var(--theme-accent);
+}
+
+[data-theme] .welcome p {
+    font-family: var(--theme-font-body);
+    color: var(--theme-text-secondary);
+}
+
+/* Turn counter */
+[data-theme] .turn-counter {
+    background: var(--theme-accent);
+    color: var(--theme-bg-primary);
+    font-family: var(--theme-font-heading);
+}
+
+[data-theme="midnight"] .turn-counter,
+[data-theme="mono"] .turn-counter {
+    background: transparent;
+    border: 1px solid var(--theme-border);
+    color: var(--theme-text-muted);
+}
+
+/* Progress bar */
+[data-theme] .progress-bar-fill {
+    background: var(--theme-accent);
+}
+
+/* Buttons */
+[data-theme] .nes-btn.is-primary,
+[data-theme] .begin-btn {
+    background: var(--theme-accent);
+    color: var(--theme-bg-primary);
+    font-family: var(--theme-font-body);
+}
+
+[data-theme] .sheet-submit-btn {
+    background: var(--theme-accent);
+    color: var(--theme-bg-primary);
+}
+
+/* Session bar */
+[data-theme] .session-bar {
+    background: var(--theme-bg-card);
+    border-color: var(--theme-border);
+}
+
+[data-theme] .session-info {
+    color: var(--theme-text-secondary);
+}
+
+/* Response indicator */
+[data-theme] .response-indicator {
+    background: var(--theme-bg-card);
+    border-color: var(--theme-border);
+}
+
+[data-theme] .agent-name {
+    color: var(--theme-accent);
+    font-family: var(--theme-font-heading);
+}
+
+/* ===== Theme Selector Modal ===== */
+.theme-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.theme-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.theme-modal {
+    background: var(--theme-bg-secondary, #1a1a2e);
+    border: 1px solid var(--theme-border, #444);
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 340px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.theme-modal-title {
+    font-family: var(--font-pixel);
+    font-size: 0.7rem;
+    color: var(--color-gold);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.theme-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-option.active {
+    border-color: var(--color-gold);
+    background: rgba(247, 211, 84, 0.1);
+}
+
+.theme-preview {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.theme-preview-rpg {
+    background: linear-gradient(135deg, #212529 0%, #1a1a2e 100%);
+    border: 2px solid #f7d354;
+}
+
+.theme-preview-midnight {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.theme-preview-mono {
+    background: #0f0f0f;
+    border: 1px solid #222;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #666;
+}
+
+.theme-preview-ios {
+    background: linear-gradient(180deg, #1c1c1e 0%, #000 100%);
+    border: none;
+    border-radius: 12px;
+}
+
+.theme-info {
+    flex: 1;
+}
+
+.theme-name {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+
+.theme-desc {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.theme-modal-close {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 10px;
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.theme-modal-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}

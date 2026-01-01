@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="rpg">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,8 +7,8 @@
 
     <!-- NES.css for retro RPG styling -->
     <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
-    <!-- Press Start 2P for headers, Inter for body text -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Press Start 2P for headers, Inter for body text, plus theme fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;600&family=Source+Sans+Pro:wght@300;400&family=IBM+Plex+Mono:wght@300;400&family=IBM+Plex+Sans:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <!-- RPG Awesome icons -->
     <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
 
@@ -22,10 +22,11 @@
     <link rel="stylesheet" href="/static/css/controls.css">
     <link rel="stylesheet" href="/static/css/combat.css">
     <link rel="stylesheet" href="/static/css/responsive.css">
+    <link rel="stylesheet" href="/static/css/themes.css">
 </head>
 <body>
-    <!-- Compact Header with Progress Bar (Mobile) -->
-    <div class="game-header" id="game-header">
+    <!-- Unified Responsive Header -->
+    <header class="game-header" id="game-header">
         <div class="header-content">
             <div class="header-left">
                 <div class="turn-counter" id="turn-counter">1</div>
@@ -35,47 +36,15 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="header-btn" id="menu-btn" title="Menu">
+                <button class="header-btn" id="settings-btn" title="Settings">
                     <i class="ra ra-cog"></i>
                 </button>
-                <button class="header-btn" id="new-game-header-btn" title="New Game">
+                <button class="header-btn" id="new-game-btn" title="New Game">
                     <i class="ra ra-cycle"></i>
                 </button>
             </div>
         </div>
-        <div class="progress-container">
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar-fill" id="progress-fill" style="width: 10%;"></div>
-            </div>
-            <div class="progress-milestones" id="progress-milestones">
-                <div class="milestone reached" data-milestone="start">
-                    <div class="milestone-dot"></div>
-                    <div class="milestone-label">Start</div>
-                </div>
-                <div class="milestone" data-milestone="explore">
-                    <div class="milestone-dot"></div>
-                    <div class="milestone-label">Explore</div>
-                </div>
-                <div class="milestone" data-milestone="challenge">
-                    <div class="milestone-dot"></div>
-                    <div class="milestone-label">Challenge</div>
-                </div>
-                <div class="milestone" data-milestone="climax">
-                    <div class="milestone-dot"></div>
-                    <div class="milestone-label">Climax</div>
-                </div>
-                <div class="milestone" data-milestone="resolution">
-                    <div class="milestone-dot"></div>
-                    <div class="milestone-label">End</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reading Mode Toggle -->
-    <button class="reading-mode-toggle" id="reading-toggle" title="Toggle Reading Mode">
-        <i class="ra ra-book"></i>
-    </button>
+    </header>
 
     <!-- Combat HUD -->
     <div id="combat-hud" class="nes-container is-dark combat-hud">
@@ -113,12 +82,6 @@
     </div>
 
     <div class="container">
-        <!-- Legacy Header (Desktop) -->
-        <header>
-            <h1 class="title"><i class="ra ra-door-open"></i> Pocket Portals</h1>
-            <p class="subtitle"><i class="ra ra-crossed-swords"></i> Solo D&D Adventure <i class="ra ra-crossed-swords"></i></p>
-        </header>
-
         <section class="nes-container is-dark game-container">
             <!-- Story Display -->
             <div class="story-box" id="story">
@@ -246,12 +209,51 @@
         </div>
     </div>
 
+    <!-- Theme Selector Modal -->
+    <div class="theme-modal-overlay" id="theme-modal">
+        <div class="theme-modal">
+            <div class="theme-modal-title">Choose Theme</div>
+            <div class="theme-options">
+                <div class="theme-option active" data-theme-select="rpg">
+                    <div class="theme-preview theme-preview-rpg">⚔️</div>
+                    <div class="theme-info">
+                        <div class="theme-name">RPG Classic</div>
+                        <div class="theme-desc">Gold accents, pixel headers</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme-select="midnight">
+                    <div class="theme-preview theme-preview-midnight">🌙</div>
+                    <div class="theme-info">
+                        <div class="theme-name">Midnight Minimal</div>
+                        <div class="theme-desc">Elegant dark, serif headers</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme-select="mono">
+                    <div class="theme-preview theme-preview-mono">&gt;_</div>
+                    <div class="theme-info">
+                        <div class="theme-name">Monospace</div>
+                        <div class="theme-desc">Developer aesthetic</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme-select="ios">
+                    <div class="theme-preview theme-preview-ios">📱</div>
+                    <div class="theme-info">
+                        <div class="theme-name">iOS Dark</div>
+                        <div class="theme-desc">Apple-style, pill buttons</div>
+                    </div>
+                </div>
+            </div>
+            <button class="theme-modal-close" id="theme-modal-close">Done</button>
+        </div>
+    </div>
+
     <!-- Application JavaScript -->
     <script src="/static/js/game-state.js"></script>
     <script src="/static/js/controllers.js"></script>
     <script src="/static/js/messages.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/combat.js"></script>
+    <script src="/static/js/themes.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

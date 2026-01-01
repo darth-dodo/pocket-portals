@@ -13,15 +13,9 @@ html, body {
 }
 
 body {
-    background-image:
-        radial-gradient(ellipse at top, var(--color-bg-darker) 0%, transparent 50%),
-        radial-gradient(ellipse at bottom, var(--color-bg-accent) 0%, transparent 50%),
-        linear-gradient(180deg, var(--color-bg-darkest) 0%, var(--color-bg-darker) 50%, var(--color-bg-blue) 100%);
+    background: #0a0a0f;
     background-attachment: fixed;
-    padding: 20px;
-    padding-left: max(20px, var(--safe-area-left));
-    padding-right: max(20px, var(--safe-area-right));
-    padding-bottom: max(20px, var(--safe-area-bottom));
+    padding: 0;
 }
 
 .container {

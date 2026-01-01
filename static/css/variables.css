@@ -43,6 +43,6 @@
     --transition-slow: 300ms ease;
 
     /* Bottom sheet */
-    --bottom-sheet-peek: 180px;
+    --bottom-sheet-peek: 70px;
     --bottom-sheet-max: 70vh;
 }

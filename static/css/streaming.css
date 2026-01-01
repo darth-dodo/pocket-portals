@@ -156,8 +156,9 @@
 
 /* Streaming Text */
 .streaming-text {
-    font-size: 0.7rem;
-    line-height: 1.8;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    line-height: 1.65;
     color: var(--color-text);
     position: relative;
 }
@@ -355,7 +356,8 @@
     }
 
     .streaming-text {
-        font-size: 0.65rem;
+        font-size: 1rem;
+        line-height: 1.65;
     }
 
     .typing-dot {

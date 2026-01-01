@@ -58,7 +58,6 @@
         questTitle: null,
         questSubtitle: null,
         progressFill: null,
-        newGameHeaderBtn: null,
 
         // Combat elements
         combatHud: null,
@@ -104,7 +103,6 @@
         DOMElements.questTitle = document.getElementById('quest-title');
         DOMElements.questSubtitle = document.getElementById('quest-subtitle');
         DOMElements.progressFill = document.getElementById('progress-fill');
-        DOMElements.newGameHeaderBtn = document.getElementById('new-game-header-btn');
 
         // Combat elements
         DOMElements.combatHud = document.getElementById('combat-hud');

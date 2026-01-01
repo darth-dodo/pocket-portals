@@ -19,7 +19,6 @@
             submitBtn,
             actionInput,
             newGameBtn,
-            newGameHeaderBtn,
             sheetSubmitBtn,
             sheetActionInput,
             storyBox
@@ -45,18 +44,9 @@
             });
         }
 
-        // New game button (desktop)
+        // New game button (unified for mobile and desktop header)
         if (newGameBtn) {
             newGameBtn.addEventListener('click', function() {
-                if (typeof window.newGame === 'function') {
-                    window.newGame();
-                }
-            });
-        }
-
-        // New game button (mobile header)
-        if (newGameHeaderBtn) {
-            newGameHeaderBtn.addEventListener('click', function() {
                 if (typeof window.newGame === 'function') {
                     window.newGame();
                 }

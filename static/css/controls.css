@@ -125,50 +125,6 @@
     outline-offset: 2px;
 }
 
-/* ===== READING MODE TOGGLE ===== */
-.reading-mode-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    background: rgba(26, 26, 46, 0.95);
-    border: 3px solid var(--color-border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    -webkit-tap-highlight-color: transparent;
-}
-
-.reading-mode-toggle:hover {
-    border-color: var(--color-gold);
-    transform: scale(1.05);
-}
-
-.reading-mode-toggle:active {
-    transform: scale(0.95);
-}
-
-.reading-mode-toggle:focus {
-    outline: 2px solid var(--color-gold);
-    outline-offset: 2px;
-}
-
-.reading-mode-toggle i {
-    color: var(--color-gold);
-    font-size: 1.2rem;
-}
-
-/* Reading mode active state indicator */
-body.reading-mode .reading-mode-toggle {
-    background: rgba(247, 211, 84, 0.2);
-    border-color: var(--color-gold);
-}
-
-body.reading-mode .reading-mode-toggle i {
-    color: var(--color-text);
-}
-
 /* ===== LOADING INDICATOR ===== */
 .loading {
     display: none;
