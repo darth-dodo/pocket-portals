@@ -306,3 +306,74 @@ mock_task.return_value = mock_instance
 | Tests Real API | ✅ | ❌ |
 
 **Rule of thumb**: Mock external services in unit tests, use real services in integration tests (run locally with real keys).
+
+## Global Mock Fixture (Recommended)
+
+As of 2026-01-01, we use a global autouse fixture that mocks all LLM calls at the CrewAI `Task.execute_sync` level. This is simpler and more maintainable than per-test mocks.
+
+### How It Works
+
+```python
+# tests/conftest.py
+
+class MockTaskResult:
+    """Mock CrewAI TaskOutput that mimics real LLM responses."""
+    def __init__(self, raw: str, pydantic: Any = None):
+        self.raw = raw
+        self.pydantic = pydantic
+
+    def __str__(self) -> str:
+        return self.raw
+
+
+def mock_task_execute_sync(self: Any) -> MockTaskResult:
+    """Mock Task.execute_sync() to return deterministic responses."""
+    # Check if task expects Pydantic output (e.g., NarratorResponse)
+    if hasattr(self, "output_pydantic") and self.output_pydantic == NarratorResponse:
+        return MockTaskResult(
+            raw="The ancient door creaks open...",
+            pydantic=NarratorResponse(
+                narrative="The ancient door creaks open...",
+                choices=["Examine the tomes", "Light a torch", "Listen carefully"],
+            ),
+        )
+    # Default narrative response
+    return MockTaskResult(raw="The ancient door creaks open...")
+
+
+@pytest.fixture(autouse=True)
+def mock_crewai_tasks():
+    """Mock all CrewAI Task executions."""
+    with patch("crewai.Task.execute_sync", mock_task_execute_sync):
+        yield
+```
+
+### Benefits
+
+| Aspect | Per-Test Mocks | Global Fixture |
+|--------|----------------|----------------|
+| Boilerplate | High (repeat in each test) | None (automatic) |
+| Maintenance | Update each test | Update one place |
+| Test speed | ~30s | ~30s |
+| Consistency | Varies by test | Uniform responses |
+| Forgot to mock? | Test fails/hangs | Always mocked |
+
+### When to Override
+
+If a specific test needs different mock behavior, you can override within that test:
+
+```python
+def test_special_case(mock_crewai_tasks):
+    # Override the global mock for this test
+    with patch("crewai.Task.execute_sync") as custom_mock:
+        custom_mock.return_value = MockTaskResult(raw="Custom response")
+        # ... test code
+```
+
+### Key Insight
+
+We mock at `crewai.Task.execute_sync` because:
+1. It's the single point where ALL LLM calls happen
+2. Works for all agents (Narrator, Keeper, Jester, etc.)
+3. Handles both simple and Pydantic-structured responses
+4. No need to update when adding new agent methods

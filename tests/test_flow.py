@@ -10,10 +10,17 @@ from src.engine.flow_state import ConversationFlowState
 
 @pytest.fixture
 def mock_agents() -> tuple[MagicMock, MagicMock, MagicMock]:
-    """Create mock agent instances."""
+    """Create mock agent instances.
+
+    Note: We explicitly delete respond_with_choices from the narrator mock
+    so the flow falls back to using respond() instead. This keeps tests
+    simpler and focused on flow orchestration rather than structured output.
+    """
     narrator = MagicMock()
     keeper = MagicMock()
     jester = MagicMock()
+    # Delete respond_with_choices so hasattr returns False and flow uses respond()
+    del narrator.respond_with_choices
     return narrator, keeper, jester
 
 
@@ -83,11 +90,11 @@ def test_flow_executes_specified_agents(
 
     final_state = flow.kickoff(inputs=initial_state.model_dump())
 
-    # Narrator is called twice: once for narration, once for choice generation
-    assert narrator.respond.call_count == 2
+    # Narrator is called once for narration (without respond_with_choices, uses respond)
+    narrator.respond.assert_called_once()
 
     # First call is for narration with original context
-    first_call = narrator.respond.call_args_list[0]
+    first_call = narrator.respond.call_args
     assert first_call.kwargs["action"] == "I examine the artifact"
     assert first_call.kwargs["context"] == "You are in a temple."
 

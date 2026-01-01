@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import random
 from collections.abc import AsyncGenerator
@@ -43,6 +44,12 @@ from src.state.backends import create_backend
 from src.state.models import CombatPhaseEnum, CombatState
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+)
 
 # Content safety filter - redirects inappropriate input
 BLOCKED_PATTERNS = [
@@ -1655,6 +1662,7 @@ async def process_action_stream(
             }
 
             narrative_parts = []
+            choices = ["Look around", "Wait", "Leave"]  # Default fallback
 
             # Execute each agent and stream responses
             for agent_name in routing.agents:
@@ -1671,12 +1679,26 @@ async def process_action_stream(
 
                     # Execute synchronously but in a thread pool
                     loop = asyncio.get_event_loop()
-                    response = await loop.run_in_executor(
-                        None,
-                        lambda ctx=current_context, a=agent: a.respond(
-                            action=action, context=ctx
-                        ),
-                    )
+
+                    # Narrator uses structured response with choices
+                    if agent_name == "narrator" and hasattr(
+                        agent, "respond_with_choices"
+                    ):
+                        structured_response = await loop.run_in_executor(
+                            None,
+                            lambda ctx=current_context, a=agent: a.respond_with_choices(
+                                action=action, context=ctx
+                            ),
+                        )
+                        response = structured_response.narrative
+                        choices = structured_response.choices
+                    else:
+                        response = await loop.run_in_executor(
+                            None,
+                            lambda ctx=current_context, a=agent: a.respond(
+                                action=action, context=ctx
+                            ),
+                        )
 
                     narrative_parts.append(response)
 
@@ -1738,39 +1760,8 @@ async def process_action_stream(
             # Combine narrative
             full_narrative = "\n\n".join(narrative_parts)
 
-            # Generate choices (ask narrator for contextual choices)
-            choices = ["Look around", "Wait", "Leave"]  # Default
-            if narrator and full_narrative:
-                try:
-                    choice_prompt = (
-                        f"Based on this scene:\n\n{full_narrative}\n\n"
-                        "Suggest exactly 3 short action choices (max 6 words each) "
-                        "the player could take next. Format as a simple numbered list:\n"
-                        "1. [action]\n2. [action]\n3. [action]"
-                    )
-                    loop = asyncio.get_event_loop()
-                    choice_response = await loop.run_in_executor(
-                        None, lambda: narrator.respond(action=choice_prompt, context="")
-                    )
-
-                    # Parse choices
-                    parsed = []
-                    for line in choice_response.strip().split("\n"):
-                        line = line.strip()
-                        if (
-                            line
-                            and len(line) > 2
-                            and line[0].isdigit()
-                            and line[1] in ".):"
-                        ):
-                            choice = line[2:].strip().lstrip(".): ")
-                            if choice:
-                                parsed.append(choice)
-
-                    if len(parsed) >= 3:
-                        choices = parsed[:3]
-                except Exception:
-                    pass
+            # Choices were already extracted from narrator's structured response
+            # No need for a second LLM call
 
             yield {
                 "event": "choices",
