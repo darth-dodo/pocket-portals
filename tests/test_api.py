@@ -184,9 +184,9 @@ def test_choices_are_contextual_not_defaults(client: TestClient) -> None:
     # At least 2 of the 3 choices should NOT be in the defaults list
     # (allowing for some coincidental overlap)
     non_default_count = sum(1 for c in choices if c not in default_fallbacks)
-    assert (
-        non_default_count >= 2
-    ), f"Expected contextual choices but got mostly defaults. Choices: {choices}"
+    assert non_default_count >= 2, (
+        f"Expected contextual choices but got mostly defaults. Choices: {choices}"
+    )
 
 
 def test_action_accepts_choice_index(client: TestClient) -> None:
@@ -586,9 +586,9 @@ def test_stream_ends_with_complete_event(client: TestClient) -> None:
                 last_data = line[5:].strip()
                 current_event = ""
 
-    assert (
-        last_event == "complete"
-    ), f"Last event should be 'complete', got '{last_event}'"
+    assert last_event == "complete", (
+        f"Last event should be 'complete', got '{last_event}'"
+    )
     complete_data = json.loads(last_data)
     assert "session_id" in complete_data
     assert complete_data["session_id"] == session_id
@@ -693,6 +693,6 @@ def test_stream_returns_contextual_choices(client: TestClient) -> None:
 
     # At least 2 of the 3 choices should NOT be in the defaults list
     non_default_count = sum(1 for c in choices if c not in default_fallbacks)
-    assert (
-        non_default_count >= 2
-    ), f"Expected contextual choices but got mostly defaults. Choices: {choices}"
+    assert non_default_count >= 2, (
+        f"Expected contextual choices but got mostly defaults. Choices: {choices}"
+    )
