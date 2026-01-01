@@ -120,63 +120,61 @@
         padding-bottom: calc(var(--bottom-sheet-peek) + 20px);
     }
 
-    /* Messages */
+    /* Messages - Inter is clean and readable */
     .message {
-        padding: 18px 16px;
-        margin-bottom: 24px;
+        padding: 14px 12px;
+        margin-bottom: 16px;
         border-radius: 6px;
     }
 
     .message-text {
-        font-size: 1.125rem;
-        line-height: 1.9;
-        letter-spacing: 0.02em;
+        font-size: 0.95rem;
+        line-height: 1.6;
     }
 
     .message-label {
-        font-size: 0.65rem;
-        margin-bottom: 10px;
+        font-size: 0.55rem;
+        margin-bottom: 8px;
     }
 
     .message-narrator .message-text p:first-child::first-letter {
-        font-size: 1.6em;
-        margin-right: 6px;
+        font-size: 1.8em;
+        margin-right: 4px;
     }
 
     .message-keeper .message-text {
-        font-size: 1rem;
-        line-height: 1.7;
+        font-size: 0.9rem;
+        line-height: 1.6;
     }
 
     .message-player .message-text {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     /* Welcome screen */
     .welcome {
-        padding: 28px 20px;
+        padding: 20px 16px;
     }
 
     .welcome p {
-        font-size: 1rem;
-        font-family: 'Crimson Pro', Georgia, serif;
-        line-height: 1.8;
+        font-size: 0.95rem;
+        line-height: 1.6;
         color: #d8d8d8;
     }
 
     .welcome i {
-        font-size: 2.5rem;
+        font-size: 2rem;
     }
 
     .welcome h2 {
-        font-size: 0.85rem;
-        margin-bottom: 16px;
+        font-size: 0.7rem;
+        margin-bottom: 12px;
     }
 
     .welcome .begin-btn {
-        font-size: 0.75rem !important;
-        padding: 18px 36px !important;
-        min-height: 56px;
+        font-size: 0.6rem !important;
+        padding: 14px 28px !important;
+        min-height: 48px;
     }
 
     /* Hide legacy choices on mobile - use bottom sheet */
@@ -306,26 +304,26 @@
     }
 
     .message-text {
-        font-size: 1.0625rem;
+        font-size: 0.9rem;
     }
 
     .welcome h2 {
-        font-size: 0.75rem;
+        font-size: 0.6rem;
     }
 
     .welcome p {
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
     }
 
     .welcome .begin-btn {
-        font-size: 0.65rem !important;
-        padding: 16px 28px !important;
+        font-size: 0.55rem !important;
+        padding: 12px 24px !important;
     }
 
     /* Bottom sheet adjustments */
     .sheet-choice-btn {
-        padding: 14px 16px;
-        font-size: 0.9375rem;
+        padding: 12px 14px;
+        font-size: 0.875rem;
     }
 
     .sheet-choice-btn i {

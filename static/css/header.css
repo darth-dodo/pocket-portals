@@ -59,6 +59,7 @@
 }
 
 .quest-title {
+    font-family: var(--font-pixel);
     font-size: 0.65rem;
     color: var(--color-gold);
     white-space: nowrap;
@@ -196,6 +197,7 @@ header {
 }
 
 .title {
+    font-family: var(--font-pixel);
     color: var(--color-gold);
     font-size: 1.8rem;
     text-shadow:
@@ -209,6 +211,7 @@ header {
 }
 
 .subtitle {
+    font-family: var(--font-pixel);
     color: var(--color-green);
     font-size: 0.65rem;
     letter-spacing: 1px;

@@ -17,6 +17,10 @@
     --color-text-dim: #8a8a9a;
     --color-border: #444;
 
+    /* Fonts */
+    --font-pixel: 'Press Start 2P', cursive;
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
     /* Spacing */
     --safe-area-top: env(safe-area-inset-top);
     --safe-area-bottom: env(safe-area-inset-bottom);

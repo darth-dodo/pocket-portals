@@ -157,9 +157,9 @@
     border: 2px solid var(--color-border);
     border-radius: 10px;
     color: var(--color-text);
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.6rem;
-    line-height: 1.6;
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    line-height: 1.5;
     text-align: left;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -266,8 +266,8 @@
     border: 2px solid var(--color-border);
     border-radius: 8px;
     color: var(--color-text);
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.55rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
     resize: none;
     transition: border-color var(--transition-fast);
 }

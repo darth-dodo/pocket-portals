@@ -40,6 +40,7 @@
 }
 
 .welcome-section h2 {
+    font-family: var(--font-pixel);
     color: var(--color-gold);
     font-size: 1.2rem;
     margin-bottom: 16px;
@@ -47,9 +48,10 @@
 }
 
 .welcome-section p {
+    font-family: var(--font-ui);
     color: var(--color-text-muted);
-    font-size: 0.7rem;
-    line-height: 1.8;
+    font-size: 1rem;
+    line-height: 1.6;
     max-width: 600px;
     margin: 0 auto 12px;
 }
@@ -86,8 +88,9 @@
 }
 
 .message-text {
-    font-size: 0.7rem;
-    line-height: 1.8;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    line-height: 1.7;
     color: var(--color-text);
 }
 
