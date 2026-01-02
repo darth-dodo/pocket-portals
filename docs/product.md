@@ -1,7 +1,7 @@
 # Pocket Portals
 ## Product Requirements Document
 
-**Version 1.0 | December 2025**
+**Version 1.1 | January 2026**
 
 ---
 
@@ -36,10 +36,11 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 | **Backend** | FastAPI REST API | `/health`, `/start`, `/action`, `/action/stream` endpoints |
 | **Backend** | SSE Streaming | Real-time agent responses via Server-Sent Events |
 | **Backend** | Session Management | UUID-based multi-user support with in-memory state |
-| **Agents** | Multi-Agent System | Narrator, Keeper, Jester, Innkeeper, CharacterInterviewer, Epilogue |
+| **Agents** | Multi-Agent System | Narrator, Keeper, Jester, Innkeeper, CharacterInterviewer, QuestDesigner, Epilogue |
 | **Agents** | Agent Router | Phase-based routing with mechanical keyword detection |
 | **Agents** | Turn Executor | Context accumulation across sequential agent calls |
 | **Agents** | Character Creation | Dynamic 5-turn LLM-powered interview with CharacterInterviewerAgent |
+| **Agents** | Quest Selection | 3 personalized quest options with QuestDesignerAgent |
 | **Agents** | Adventure Pacing | 50-turn narrative arc with 5 phases, EpilogueAgent for conclusions |
 | **Orchestration** | CrewAI Flows | `@start`, `@listen`, `@router` decorator-based orchestration |
 | **Config** | YAML-based Config | `agents.yaml`, `tasks.yaml` for agent personalities |
@@ -51,17 +52,25 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 | **Combat** | D&D 5e Mechanics | Initiative, attack/defend/flee, HP tracking, dice rolling |
 | **DevOps** | Docker | Multi-stage build with docker-compose |
 | **DevOps** | CI/CD | GitHub Actions with lint, test, coverage gates |
-| **Quality** | Python Tests | 368 tests passing, 75% coverage |
+| **Quality** | Python Tests | 408 tests passing, 77% coverage |
 | **Quality** | JavaScript Tests | 415 tests passing, 96.49% coverage |
 | **Quality** | XP Practices | TDD, pre-commit hooks (ruff, mypy), continuous integration |
-| **Docs** | E2E Test Suite | Playwright-based testing with 8 documented scenarios |
+| **Docs** | E2E Test Suite | Playwright-based testing with 10 documented scenarios |
+
+#### ✅ Recently Completed (January 2026)
+
+| Feature | Details |
+|---------|---------|
+| Quest Selection Flow | QUEST_SELECTION phase with 3 personalized quest options |
+| Quest Progress Tracking | `check_quest_progress()` integrated in action loop |
+| Quest Personalization | Class-specific quest generation using CHARACTER_STRENGTHS |
+| Quest Variety | Shuffled quest pool ensures diverse options |
 
 #### 🚧 In Progress
 
 | Feature | Requirements | Status |
 |---------|--------------|--------|
 | Character Sheet Display | FR-03 | Show character info in frontend UI |
-| Enhanced Quest Personalization | FR-05 | Use character context in quest generation |
 
 #### 📋 Planned
 
@@ -70,6 +79,7 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 | Character Stat Influence | P1 | Keeper uses stats for mechanical resolution |
 | Export Features | P1 | Adventure log download |
 | Shareable Story Links | P2 | Adventure sharing |
+| Quest Completion Loop | P1 | New quests after completing current quest |
 
 ---
 

@@ -163,7 +163,6 @@ gantt
 | Task | Status | Notes |
 |------|--------|-------|
 | Add character sheet display to UI | ⏳ | Show character info in frontend |
-| Enhanced quest personalization | ⏳ | Use character context in quest generation |
 
 ### Up Next
 
@@ -171,11 +170,17 @@ gantt
 |------|--------|----------|
 | Character stat influence on outcomes | ⏳ | Keeper uses stats for mechanical resolution |
 | Export adventure log | ⏳ | Downloadable adventure summary |
+| Quest completion → new quest loop | ⏳ | After completing quest, return to QUEST_SELECTION |
 
-### Recently Completed
+### Recently Completed (January 2026)
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Quest selection flow | ✅ | QUEST_SELECTION phase with 3 personalized options |
+| Quest progress tracking | ✅ | `check_quest_progress()` integrated in action loop |
+| Quest personalization | ✅ | Class-specific quests using CLASS_STRENGTHS mapping |
+| Quest variety generation | ✅ | Shuffled pool ensures diverse options each game |
+| E2E test validation | ✅ | Playwright tests for quest selection flow |
 | Dynamic character starter generation | ✅ | Agent generates 9 diverse choices across genres (fantasy/sci-fi/modern), shuffles and returns 3 random ones per game |
 | Fix ES6 module loading | ✅ | Added `type="module"` to all script tags in index.html |
 | Playwright E2E Test Suite | ✅ | 8 test scenarios documented in `docs/playwright-e2e-suite.md` |
