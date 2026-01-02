@@ -162,69 +162,34 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Adventure Pacing System - 50 Turn Structure | ✅ | All phases complete, 356 tests passing |
-| UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, haptic feedback, touch targets, safe areas, JS tests |
 | Add character sheet display to UI | ⏳ | Show character info in frontend |
-
-### Adventure Pacing Implementation Progress
-
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 1: Core turn tracking | ✅ | AdventurePhase enum, turn fields in GameState, SessionManager methods |
-| Phase 2: Pacing context | ✅ | PacingContext model, agent integration, narrator pacing guidelines |
-| Phase 3: Closure triggers | ✅ | check_closure_triggers(), ClosureStatus model, hard cap at turn 50 |
-| Phase 4: EpilogueAgent | ✅ | EpilogueAgent class, YAML config, fallback epilogues, 17 new tests |
-| Phase 5: Tests & validation | ✅ | 356 tests passing, 72% coverage |
 
 ### Up Next
 
 | Task | Status | Priority |
 |------|--------|----------|
-| Enhanced quest personalization | ⏳ | Use character context in quest generation |
 | Character stat influence on outcomes | ⏳ | Keeper uses stats for mechanical resolution |
+| Export adventure log | ⏳ | Downloadable adventure summary |
+| Quest completion → new quest loop | ⏳ | After completing quest, return to QUEST_SELECTION |
 
-### Recently Completed
+### Recently Completed (January 2026)
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Quest selection flow | ✅ | QUEST_SELECTION phase with 3 personalized options |
+| Quest progress tracking | ✅ | `check_quest_progress()` integrated in action loop |
+| Quest personalization | ✅ | Class-specific quests using CLASS_STRENGTHS mapping |
+| Quest variety generation | ✅ | Shuffled pool ensures diverse options each game |
+| E2E test validation | ✅ | Playwright tests for quest selection flow |
+| Dynamic character starter generation | ✅ | Agent generates 9 diverse choices across genres (fantasy/sci-fi/modern), shuffles and returns 3 random ones per game |
+| Fix ES6 module loading | ✅ | Added `type="module"` to all script tags in index.html |
+| Playwright E2E Test Suite | ✅ | 8 test scenarios documented in `docs/playwright-e2e-suite.md` |
 | UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, modern button system, haptic feedback, touch targets (48px min), iOS safe areas, 415 JS tests (96.49% coverage) |
 | Structured Narrator Choices | ✅ | Single LLM call for narrative+choices, quality observability, CrewAI tracing, UI fix for hiding choices during loading |
-| Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 356 tests |
-| Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary, 275 tests passing |
-| Dynamic character creation with CharacterInterviewerAgent | ✅ | 148 tests, LLM-powered interview with 5-turn flow |
+| Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 368 tests passing, 75% coverage |
+| Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary |
+| Dynamic character creation with CharacterInterviewerAgent | ✅ | LLM-powered interview with 5-turn flow |
 | Content safety filtering system | ✅ | Pattern-based filter with safe redirects, blocks inappropriate content |
-| Integrate character creation into /start and /action | ✅ | 136 tests, 74% coverage, `/start` begins CHARACTER_CREATION phase |
-| Add CharacterSheet model with TDD | ✅ | 36 tests, CharacterStats, CharacterClass, CharacterRace, full validation |
-| Integrate CharacterSheet with GameState | ✅ | CHARACTER_CREATION phase, has_character property, SessionManager methods |
-| Create character creation design doc | ✅ | `docs/design/2025-12-24-character-creation.md` - comprehensive design |
-| Update frontend for SSE streaming | ✅ | Real-time agent indicators, per-agent message styling (Narrator/Keeper/Jester) |
-| Add SSE streaming endpoint | ✅ | `/action/stream` with real-time agent responses, context accumulation |
-| Add CrewAI Flows integration | ✅ | ConversationFlow with @start/@listen/@router decorators |
-| Create Crews and Flows documentation | ✅ | `docs/guides/CREWS-AND-FLOWS.md` comprehensive guide |
-| Add conversation engine | ✅ | AgentRouter, TurnExecutor, API integration, 71 tests, 83% coverage |
-| Implement world state management | ✅ | GameState Pydantic model, SessionManager CRUD, API integration, 17 tests, 82% coverage |
-| Add API endpoints for all agents | ✅ | `/innkeeper/quest`, `/keeper/resolve`, `/jester/complicate` |
-| Refactor to Pydantic config loader | ✅ | `src/config/loader.py` with typed models |
-| Add testing mocks reference guide | ✅ | `docs/reference/testing-mocks.md` |
-| Fix CI/CD workflow | ✅ | Mocked LLM calls, proper env vars |
-| Set up pre-commit hooks | ✅ | ruff, mypy, trailing whitespace, etc. |
-| Add GitHub Actions CI/CD | ✅ | Lint + test jobs with 70% coverage gate |
-| Add multi-agent crew (Innkeeper, Keeper, Jester) | ✅ | TDD implementation, 79% coverage, 36 tests |
-| Create multi-agent design document | ✅ | `docs/design/2025-12-22-multi-agent-crew.md` |
-| Update YAML configs for all agents | ✅ | Enhanced personalities per creative-writing.md |
-| Create comprehensive spike crash course | ✅ | `docs/CRASH-COURSE.md` - 1091 lines covering architecture, patterns, lessons learned |
-| Create design system documentation | ✅ | `docs/design/design.md` - colors, typography, spacing, components |
-| Fix Render deployment issues | ✅ | Standard pip install, Python 3.12, README.md for hatchling |
-| Add CHANGELOG.md | ✅ | Keep a Changelog format with all features |
-| Improve UI readability and visual design | ✅ | Larger text, message cards, newline rendering, better spacing |
-| Add Docker containerization | ✅ | Dockerfile, docker-compose.yml, Makefile targets |
-| Add starter choices with shuffle | ✅ | `/start` endpoint with pool of 9 adventure hooks |
-| Add retro RPG web UI | ✅ | NES.css styling, Begin Quest button, increased canvas |
-| Update ONBOARDING.md for agent success | ✅ | Added Quick Start, Decision Trees, Pitfalls, Recovery, Metrics |
-| Create Insomnia collection | ✅ | docs/insomnia-collection.json for API testing |
-| Add choice system (3 options + free text) | ✅ | FR-07 & FR-08 from product.md |
-| Document XP programming flow | ✅ | Added to tasks.md |
-| Add conversation context passing | ✅ | LLM now receives history for continuity |
 
 ---
 
@@ -431,7 +396,51 @@ gantt
 
 ## Task History Archive
 
-### Session Log: 2026-01-02
+### Session Log: 2026-01-02 (Afternoon)
+
+**Session Focus**: ES6 Module Fix and Playwright E2E Documentation
+
+**Key Decisions**:
+1. Fixed ES6 module loading error by adding `type="module"` to all script tags
+2. Created comprehensive Playwright E2E test suite documentation
+3. Verified XP practices are actively being used in the project
+
+**Artifacts Created/Modified**:
+- `static/index.html` - Added `type="module"` attribute to all JS script tags
+- `docs/playwright-e2e-suite.md` - New comprehensive E2E test documentation
+- `docs/e2e-screenshots/` - 8 screenshots documenting test scenarios:
+  - `01-homepage.png` - Initial page load
+  - `02-quest-started.png` - After clicking Begin Quest
+  - `03-turn-2-choices.png` - Second turn with new choices
+  - `04-theme-modal.png` - Theme selector opened
+  - `05-midnight-theme.png` - Midnight theme applied
+  - `06-mobile-view.png` - Mobile viewport (390x844)
+  - `07-mobile-bottom-sheet-expanded.png` - Bottom sheet expanded
+  - `08-custom-input.png` - Custom action input
+
+**E2E Test Scenarios**:
+| Test | Status | Notes |
+|------|--------|-------|
+| Homepage Load | ✅ | All elements render, JS initializes |
+| Quest Start | ✅ | Narrative streams, choices appear |
+| Choice Selection | ✅ | Game progresses, turn counter updates |
+| Theme Modal | ✅ | Opens correctly, all themes listed |
+| Theme Switching | ✅ | Midnight theme applies immediately |
+| Mobile Responsive | ✅ | Bottom sheet pattern works |
+| Bottom Sheet Expansion | ✅ | Expands to show choices |
+| Custom Action Input | ✅ | Text input functional |
+
+**XP Practices Verification**:
+- Pre-commit hooks configured (ruff, mypy, formatting)
+- 368 Python tests, 75% coverage
+- 415 JavaScript tests, 96.49% coverage
+- Conventional commit messages (feat, fix, test, refactor, docs, chore)
+- Small, incremental commits
+- CI/CD pipeline enforces quality gates
+
+---
+
+### Session Log: 2026-01-02 (Morning)
 
 **Session Focus**: UX Improvements - Mobile-First Enhancements and Comprehensive JavaScript Testing
 
@@ -603,15 +612,17 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: UX improvements complete - mobile-first enhancements and comprehensive JS testing
-- **Python Test Coverage**: 74% (Python tests)
+- **Current Phase**: Phase 9 Polish - character sheet UI and export features
+- **Python Test Coverage**: 75% (368 tests)
 - **JavaScript Test Coverage**: 96.49% (415 tests across 8 test files)
+- **E2E Testing**: Playwright MCP with 8 documented scenarios
 - **CI/CD**: GitHub Actions with lint + test jobs (Python and JavaScript)
 - **Pre-commit**: ruff, mypy, formatting hooks installed
+- **XP Practices**: TDD, small commits, CI, quality gates enforced
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
 - **Content Safety**: Pattern-based filtering with safe redirects
-- **Frontend**: Modern CSS button system (NES.css removed), haptic feedback, iOS safe areas
+- **Frontend**: Modern CSS (ES6 modules), haptic feedback, iOS safe areas, bottom sheet
 
 ### Agent Integration Status
 | Agent | In Conversation Flow | Standalone Endpoint | Notes |
@@ -642,6 +653,8 @@ gantt
 
 ### Key Files to Review
 - `docs/product.md` - Product vision and requirements
+- `docs/xp.md` - Extreme Programming practices guide
+- `docs/playwright-e2e-suite.md` - E2E test scenarios and documentation
 - `docs/reference/crewai.md` - CrewAI architecture and agent design
 - `docs/reference/testing-mocks.md` - How to mock LLM calls in tests
 - `docs/adr/` - Architecture decision records
@@ -651,16 +664,19 @@ gantt
 - `docs/design/2025-12-22-world-state-management.md` - World state design document
 - `docs/design/2025-12-23-conversation-engine.md` - Conversation engine design document
 - `docs/design/2025-12-24-character-creation.md` - Character creation design document
-- `src/config/agents.yaml` - Agent configurations (includes character_interviewer)
-- `src/config/tasks.yaml` - Task configurations (includes interview_character, generate_starter_choices)
+- `src/config/agents.yaml` - Agent configurations (includes character_interviewer, epilogue)
+- `src/config/tasks.yaml` - Task configurations
 - `src/config/loader.py` - Pydantic config models
 - `src/state/character.py` - CharacterSheet, CharacterStats, enums
-- `src/state/models.py` - GameState Pydantic model with GamePhase enum
+- `src/state/models.py` - GameState Pydantic model with GamePhase, AdventurePhase enums
 - `src/state/session_manager.py` - Session CRUD operations + character methods
 - `src/agents/character_interviewer.py` - CharacterInterviewerAgent with dynamic LLM interviews
+- `src/agents/epilogue.py` - EpilogueAgent for personalized conclusions
 - `src/engine/router.py` - AgentRouter for multi-agent routing
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
+- `src/engine/pacing.py` - PacingContext, ClosureStatus, 50-turn arc management
 - `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
 - `src/api/main.py` - API endpoints with content safety filtering and character creation
-- `static/index.html` - Frontend with SSE streaming support
-- `.github/workflows/ci.yml` - CI/CD workflow
+- `static/index.html` - Frontend with ES6 modules and SSE streaming
+- `static/js/*.js` - JavaScript modules (api, combat, controllers, game-state, haptics, messages, themes, main)
+- `.github/workflows/ci.yml` - CI/CD workflow (Python + JavaScript tests)

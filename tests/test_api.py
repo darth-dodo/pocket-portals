@@ -436,7 +436,11 @@ def test_character_creation_completes_after_5_turns(
 def test_skip_character_creation_with_query_param(
     client: TestClient, session_state: "SessionStateHelper"
 ) -> None:
-    """Test that skip_creation=true skips character creation."""
+    """Test that skip_creation=true skips character creation.
+
+    After skipping character creation, the game should transition to
+    QUEST_SELECTION phase where the player chooses their first quest.
+    """
     from src.state import GamePhase
 
     response = client.get("/start?skip_creation=true")
@@ -444,12 +448,17 @@ def test_skip_character_creation_with_query_param(
 
     session_id = response.json()["session_id"]
 
-    # Should be in EXPLORATION phase with default character
+    # Should be in QUEST_SELECTION phase with default character and quest options
     phase = session_state.get_phase(session_id)
-    assert phase == GamePhase.EXPLORATION
+    assert phase == GamePhase.QUEST_SELECTION
     sheet = session_state.get_character_sheet(session_id)
     assert sheet is not None
     assert sheet.name == "Adventurer"
+
+    # Should have pending quest options to choose from
+    session = session_state.get_session(session_id)
+    assert session is not None
+    assert len(session.pending_quest_options) == 3
 
 
 # Combat Action API Tests

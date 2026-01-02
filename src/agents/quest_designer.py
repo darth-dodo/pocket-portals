@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import uuid
 from typing import Any
 
 from crewai import LLM, Agent, Task
+from pydantic import BaseModel, Field
 
 from src.config.loader import load_agent_config, load_task_config
 from src.settings import settings
@@ -15,6 +17,30 @@ from src.state.character import CharacterSheet
 from src.state.models import Quest, QuestObjective, QuestStatus
 
 logger = logging.getLogger(__name__)
+
+
+class QuestObjectiveOutput(BaseModel):
+    """Structured output for quest objective."""
+
+    id: str
+    description: str
+
+
+class QuestOutput(BaseModel):
+    """Structured output for a single quest."""
+
+    title: str
+    description: str
+    objectives: list[QuestObjectiveOutput]
+    rewards: str
+    given_by: str
+    location_hint: str
+
+
+class QuestOptionsOutput(BaseModel):
+    """Structured output for multiple quest options."""
+
+    quests: list[QuestOutput] = Field(min_length=3)
 
 
 class QuestDesignerAgent:
@@ -94,6 +120,96 @@ class QuestDesignerAgent:
             # Return fallback quest
             return self._create_fallback_quest(character_sheet)
 
+    def generate_quest_options(
+        self,
+        character_sheet: CharacterSheet,
+        game_context: str = "",
+    ) -> list[Quest]:
+        """Generate 6 quest options, shuffle, return 3.
+
+        Args:
+            character_sheet: Character information for context
+            game_context: Current game state description
+
+        Returns:
+            List of 3 Quest objects shuffled from a pool of 6
+        """
+        # Build character context
+        character_info = self._build_character_context(character_sheet)
+
+        # Create task with formatted inputs
+        task_config = load_task_config("generate_quest_options")
+        task_description = task_config.description.format(
+            character_info=character_info,
+            game_context=game_context
+            or "Character has just finished creation and is at the Rusty Tankard tavern.",
+        )
+
+        task = Task(
+            description=task_description,
+            expected_output=task_config.expected_output,
+            agent=self.agent,
+            output_pydantic=QuestOptionsOutput,
+        )
+
+        try:
+            # Execute task synchronously
+            result = task.execute_sync()
+
+            # Access the pydantic result
+            if result.pydantic is None:
+                logger.warning("Quest options generation returned None, using fallback")
+                return [self._create_fallback_quest(character_sheet)]
+
+            # Convert pydantic output to dict and extract quests
+            quest_data = result.pydantic.model_dump()
+            quests = [
+                self._create_quest_from_output(quest_output)
+                for quest_output in quest_data["quests"]
+            ]
+
+            # Shuffle and return 3 quests
+            random.shuffle(quests)
+            return quests[:3]
+
+        except Exception as e:
+            logger.error(f"Failed to generate quest options: {e}", exc_info=True)
+            # Return fallback quest
+            return [self._create_fallback_quest(character_sheet)]
+
+    def _create_quest_from_output(self, quest_output: dict[str, Any]) -> Quest:
+        """Create Quest model from QuestOutput dict.
+
+        Args:
+            quest_output: Dictionary from QuestOutput.model_dump()
+
+        Returns:
+            Quest model instance
+        """
+        # Create quest ID
+        quest_id = str(uuid.uuid4())
+
+        # Parse objectives
+        objectives = [
+            QuestObjective(
+                id=obj["id"],
+                description=obj["description"],
+                is_completed=False,
+            )
+            for obj in quest_output["objectives"]
+        ]
+
+        return Quest(
+            id=quest_id,
+            title=quest_output["title"],
+            description=quest_output["description"],
+            objectives=objectives,
+            rewards=quest_output["rewards"],
+            status=QuestStatus.ACTIVE,
+            given_by=quest_output["given_by"],
+            location_hint=quest_output["location_hint"],
+        )
+
     def check_quest_progress(
         self, active_quest: Quest, action: str, narrative: str
     ) -> dict[str, Any]:
@@ -148,22 +264,72 @@ class QuestDesignerAgent:
             "completion_narrative": completion_narrative,
         }
 
-    def _build_character_context(self, character_sheet: CharacterSheet) -> str:
+    # Class-specific strengths mapping for quest personalization
+    CLASS_STRENGTHS: dict[str, str] = {
+        "fighter": "Martial combat expertise, weapon mastery, physical prowess, protection and defense",
+        "wizard": "Arcane magic, spell research, magical artifacts, supernatural threats",
+        "rogue": "Stealth and infiltration, cunning tactics, theft recovery, trap detection",
+        "cleric": "Divine magic, healing abilities, undead threats, holy site protection",
+        "ranger": "Wilderness tracking, animal handling, nature magic, exploration",
+        "bard": "Social manipulation, performance, information gathering, diplomacy",
+    }
+
+    def _build_character_context(
+        self,
+        character_sheet: CharacterSheet,
+        completed_quests: list[dict[str, str]] | None = None,
+        turn_count: int | None = None,
+        game_phase: str | None = None,
+    ) -> str:
         """Build character context string for quest generation.
 
         Args:
             character_sheet: Character information
+            completed_quests: Optional list of completed quest summaries with
+                title, theme, and outcome fields
+            turn_count: Optional current turn count in the game
+            game_phase: Optional game phase identifier (e.g., "early_game", "mid_game")
 
         Returns:
-            Formatted character context string
+            Formatted character context string with class strengths and history
         """
+        # Basic character info
         context = f"""Character: {character_sheet.name}
 Race: {character_sheet.race.value}
 Class: {character_sheet.character_class.value}
 Level: {character_sheet.level}
 """
+        # Add backstory if present
         if character_sheet.backstory:
             context += f"Backstory: {character_sheet.backstory}\n"
+
+        # Add class-specific strengths
+        class_key = character_sheet.character_class.value.lower()
+        if class_key in self.CLASS_STRENGTHS:
+            context += f"Class Strengths: {self.CLASS_STRENGTHS[class_key]}\n"
+
+        # Add quest history if provided
+        if completed_quests:
+            context += "Quest History:\n"
+            for quest in completed_quests:
+                title = quest.get("title", "Unknown Quest")
+                theme = quest.get("theme", "")
+                outcome = quest.get("outcome", "")
+                quest_line = f"  - {title}"
+                if theme:
+                    quest_line += f" ({theme})"
+                if outcome:
+                    quest_line += f" - {outcome}"
+                context += quest_line + "\n"
+
+        # Add game progress if provided
+        if turn_count is not None or game_phase:
+            context += "Game Progress:"
+            if turn_count is not None:
+                context += f" Turn {turn_count}"
+            if game_phase:
+                context += f" ({game_phase})"
+            context += "\n"
 
         return context
 

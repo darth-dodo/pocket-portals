@@ -16,12 +16,14 @@ class GamePhase(str, Enum):
 
     Attributes:
         CHARACTER_CREATION: Initial character creation/interview phase
+        QUEST_SELECTION: Player selecting from available quest options
         EXPLORATION: General exploration and navigation phase
         COMBAT: Active combat encounters requiring mechanical resolution
         DIALOGUE: Conversation and social interaction phase
     """
 
     CHARACTER_CREATION = "character_creation"
+    QUEST_SELECTION = "quest_selection"
     EXPLORATION = "exploration"
     COMBAT = "combat"
     DIALOGUE = "dialogue"
@@ -251,6 +253,7 @@ class GameState(BaseModel):
     combat_state: CombatState | None = None
     active_quest: Quest | None = None
     completed_quests: list[Quest] = Field(default_factory=list)
+    pending_quest_options: list[Quest] = Field(default_factory=list)
 
     # Adventure pacing fields
     adventure_turn: int = Field(default=0, ge=0, le=50)

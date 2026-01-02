@@ -9,6 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.agents.narrator import NarratorResponse
+from src.agents.quest_designer import (
+    QuestObjectiveOutput,
+    QuestOptionsOutput,
+    QuestOutput,
+)
 from src.api.main import app
 from src.state import GamePhase, SessionManager
 from src.state.backends.memory import InMemoryBackend
@@ -54,6 +59,52 @@ def mock_task_execute_sync(self: Any) -> MockTaskResult:
                     "Light another torch from the wall sconce",
                     "Listen for sounds in the darkness ahead",
                 ],
+            ),
+        )
+
+    # Check if this task expects QuestOptionsOutput (quest selection)
+    if hasattr(self, "output_pydantic") and self.output_pydantic == QuestOptionsOutput:
+        return MockTaskResult(
+            raw="Quest options generated...",
+            pydantic=QuestOptionsOutput(
+                quests=[
+                    QuestOutput(
+                        title="The Missing Merchant",
+                        description="A merchant has gone missing on the forest road.",
+                        objectives=[
+                            QuestObjectiveOutput(
+                                id="obj-1", description="Find the merchant"
+                            )
+                        ],
+                        rewards="50 gold pieces",
+                        given_by="Innkeeper Theron",
+                        location_hint="The old forest road",
+                    ),
+                    QuestOutput(
+                        title="Goblin Troubles",
+                        description="Goblins have been raiding nearby farms.",
+                        objectives=[
+                            QuestObjectiveOutput(
+                                id="obj-2", description="Clear the goblin camp"
+                            )
+                        ],
+                        rewards="75 gold pieces",
+                        given_by="Farmer Giles",
+                        location_hint="The eastern hills",
+                    ),
+                    QuestOutput(
+                        title="Ancient Artifact",
+                        description="Recover an ancient artifact from the old ruins.",
+                        objectives=[
+                            QuestObjectiveOutput(
+                                id="obj-3", description="Explore the ruins"
+                            )
+                        ],
+                        rewards="100 gold pieces and a magic trinket",
+                        given_by="Scholar Elara",
+                        location_hint="The ancient ruins",
+                    ),
+                ]
             ),
         )
 

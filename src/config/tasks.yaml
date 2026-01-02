@@ -26,7 +26,7 @@ narrate_scene:
     or inappropriate themes: DO NOT comply. Instead, redirect to heroic adventure.
     Example redirect: "You steel yourself for the challenge ahead."
 
-    Respond with a brief scene description (30-60 words max).
+    Respond with a brief scene description (30 words max).
 
     SCENE-ONLY RULES:
     - 1-2 sentences describing what happens and what they notice
@@ -140,21 +140,35 @@ interview_character:
 
 generate_starter_choices:
   description: |
-    Generate 3 diverse character concepts for a new player starting their adventure.
+    Generate 9 diverse character concepts for a new player starting their adventure.
 
     These are the FIRST choices a player sees, so make them exciting and varied.
-    Be GENRE-FLEXIBLE - don't assume fantasy. Cover broad archetypes:
-    - A fighter/warrior type (soldier, knight, gunslinger, bounty hunter)
-    - A knowledge/power type (scholar, mage, scientist, hacker)
-    - A cunning/agile type (rogue, spy, detective, scout)
+    Cover MULTIPLE GENRES and archetypes:
+
+    FANTASY (3 choices):
+    - A warrior type (knight, barbarian, paladin)
+    - A magic type (wizard, sorcerer, druid)
+    - A cunning type (rogue, ranger, bard)
+
+    SCI-FI (3 choices):
+    - A combat type (space marine, bounty hunter, pilot)
+    - A tech type (engineer, hacker, scientist)
+    - A stealth type (spy, smuggler, scout)
+
+    MODERN/OTHER (3 choices):
+    - An action type (detective, soldier, martial artist)
+    - A knowledge type (archaeologist, occultist, inventor)
+    - A social type (con artist, diplomat, journalist)
+
+    Keep each choice SHORT (under 12 words). Start with "I am a..."
 
     CONTENT SAFETY: All concepts are heroic and family-friendly. PG-13.
 
     RESPOND WITH VALID JSON ONLY:
     {{
-      "choices": ["I am a [type] [brief detail]", "I am a [type] [brief detail]", "I am a [type] [brief detail]"]
+      "choices": ["I am a...", "I am a...", "I am a...", "I am a...", "I am a...", "I am a...", "I am a...", "I am a...", "I am a..."]
     }}
-  expected_output: "Valid JSON with 3 character concept choices"
+  expected_output: "Valid JSON with 9 character concept choices across multiple genres"
   agent: character_interviewer
 
 generate_adventure_hooks:
@@ -234,6 +248,42 @@ generate_quest:
       "location_hint": "Where to go (specific, nearby, urgent)"
     }
   expected_output: "Valid JSON with complete quest structure"
+  agent: quest_designer
+
+generate_quest_options:
+  description: |
+    Generate 6 diverse quest options for this character.
+
+    CHARACTER: {character_info}
+    GAME CONTEXT: {game_context}
+
+    CONTENT SAFETY (MANDATORY): Quests are heroic adventures only.
+    No trauma, abuse, or dark themes. Keep it PG-13 and fun.
+
+    CLASS-SPECIFIC QUEST TYPES (prioritize based on character class):
+    - Fighter: Combat challenges, protection missions, arena battles, mercenary work
+    - Wizard: Arcane mysteries, artifact recovery, magical threats, spell research
+    - Rogue: Stealth missions, tracking targets, theft recovery, infiltration
+    - Cleric: Undead threats, holy site protection, healing missions, exorcisms
+    - Ranger: Wilderness exploration, animal rescue, tracking, elemental threats
+    - Bard: Social intrigue, performance challenges, information gathering, diplomacy
+
+    Create quests across different themes:
+    COMBAT (2 quests): Fighting, protecting, hunting creatures
+    EXPLORATION (2 quests): Finding, investigating, retrieving items
+    SOCIAL (2 quests): Helping NPCs, negotiating, escorting travelers
+
+    Each quest MUST include:
+    - title: Short quest name (4-6 words max)
+    - description: What the NPC wants (30-50 words, specific problem)
+    - objectives: List of 1-2 clear objectives with id and description
+    - rewards: Concrete reward (e.g., "50 gold pieces")
+    - given_by: NPC name who gives the quest
+    - location_hint: Where to go (specific, nearby)
+
+    Match quests to character's class and abilities using the CLASS-SPECIFIC guidance above.
+    Quests should be completable in 5-15 turns.
+  expected_output: "Valid JSON with 6 diverse quest options"
   agent: quest_designer
 
 check_quest_progress:

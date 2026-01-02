@@ -1,6 +1,8 @@
 """Character Interviewer agent - conducts dynamic character creation interviews."""
 
 import json
+import logging
+import random
 import re
 from typing import Any
 
@@ -8,6 +10,8 @@ from crewai import LLM, Agent, Task
 
 from src.config.loader import load_agent_config, load_task_config
 from src.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class CharacterInterviewerAgent:
@@ -47,8 +51,13 @@ class CharacterInterviewerAgent:
         Returns:
             List of 3 character concept strings
         """
+        logger.info("generate_starter_choices: Starting dynamic generation")
         try:
             task_config = load_task_config("generate_starter_choices")
+            logger.debug(
+                "generate_starter_choices: Loaded task config: %s",
+                task_config.description[:100],
+            )
 
             task = Task(
                 description=task_config.description,
@@ -56,15 +65,32 @@ class CharacterInterviewerAgent:
                 agent=self.agent,
             )
 
+            logger.info("generate_starter_choices: Executing LLM task...")
             result = task.execute_sync()
+            logger.info("generate_starter_choices: Raw LLM result: %s", result)
+
             parsed = self._parse_json_response(str(result))
+            logger.info("generate_starter_choices: Parsed result: %s", parsed)
 
             if parsed and "choices" in parsed and len(parsed["choices"]) >= 3:
-                return parsed["choices"][:3]
+                all_choices = parsed["choices"]
+                random.shuffle(all_choices)
+                selected = all_choices[:3]
+                logger.info(
+                    "generate_starter_choices: SUCCESS - shuffled %d, returning: %s",
+                    len(all_choices),
+                    selected,
+                )
+                return selected
+            else:
+                logger.warning(
+                    "generate_starter_choices: Invalid parsed result, using fallback"
+                )
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception("generate_starter_choices: Exception occurred: %s", str(e))
 
+        logger.info("generate_starter_choices: Using DEFAULT_STARTER_CHOICES fallback")
         return self.DEFAULT_STARTER_CHOICES
 
     def generate_adventure_hooks(self, character_info: str) -> list[str]:

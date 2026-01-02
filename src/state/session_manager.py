@@ -437,3 +437,39 @@ class SessionManager:
             await self._backend.update(session_id, state)
             return state
         return None
+
+    async def set_pending_quest_options(
+        self, session_id: str, quests: list[Quest]
+    ) -> None:
+        """Set the pending quest options for quest selection phase.
+
+        Args:
+            session_id: Session identifier
+            quests: List of Quest objects to present as options
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.pending_quest_options = quests
+            await self._backend.update(session_id, state)
+
+    async def clear_pending_quest_options(self, session_id: str) -> None:
+        """Clear the pending quest options after selection.
+
+        Args:
+            session_id: Session identifier
+        """
+        state = await self._backend.get(session_id)
+        if state:
+            state.pending_quest_options = []
+            await self._backend.update(session_id, state)
+
+    async def update_game_phase(self, session_id: str, phase: GamePhase) -> None:
+        """Update the game phase for a session.
+
+        Alias for set_phase for API consistency.
+
+        Args:
+            session_id: Session identifier
+            phase: GamePhase value to set
+        """
+        await self.set_phase(session_id, phase)

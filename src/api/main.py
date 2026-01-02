@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import random
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -50,6 +49,7 @@ logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 # Content safety filter - redirects inappropriate input
 BLOCKED_PATTERNS = [
@@ -509,27 +509,84 @@ async def start_adventure(
     state = await get_session(request, None)
 
     if skip_creation:
-        # Create default character and skip to exploration
+        # Create default character and transition to quest selection
         default_character = CharacterSheet(
             name="Adventurer",
             race=CharacterRace.HUMAN,
             character_class=CharacterClass.FIGHTER,
         )
         await sm.set_character_sheet(state.session_id, default_character)
-        await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+        await sm.set_phase(state.session_id, GamePhase.QUEST_SELECTION)
 
-        # Select 3 choices from the adventure pool
-        if shuffle:
-            choices = random.sample(STARTER_CHOICES_POOL, 3)
+        # Generate quest options for the player to choose from
+        if quest_designer:
+            try:
+                quest_options = quest_designer.generate_quest_options(
+                    character_sheet=default_character,
+                    game_context="Character just arrived at the Rusty Tankard tavern.",
+                )
+            except Exception:
+                # Fallback to a single quest if generation fails
+                quest_options = [
+                    quest_designer._create_fallback_quest(default_character)
+                ]
         else:
-            choices = STARTER_CHOICES_POOL[:3]
+            # No quest designer - create minimal fallback
+            import uuid
 
+            from src.state.models import Quest, QuestObjective
+
+            quest_options = [
+                Quest(
+                    id=str(uuid.uuid4()),
+                    title="The Missing Merchant",
+                    description="Find the missing merchant who disappeared on the forest road.",
+                    objectives=[
+                        QuestObjective(
+                            id=str(uuid.uuid4()), description="Search the forest road"
+                        )
+                    ],
+                ),
+                Quest(
+                    id=str(uuid.uuid4()),
+                    title="Goblin Troubles",
+                    description="Goblins have been raiding nearby farms.",
+                    objectives=[
+                        QuestObjective(
+                            id=str(uuid.uuid4()), description="Find the goblin camp"
+                        )
+                    ],
+                ),
+                Quest(
+                    id=str(uuid.uuid4()),
+                    title="Ancient Artifact",
+                    description="Recover an ancient artifact from the old ruins.",
+                    objectives=[
+                        QuestObjective(
+                            id=str(uuid.uuid4()), description="Explore the ruins"
+                        )
+                    ],
+                ),
+            ]
+
+        # Store pending quest options
+        await sm.set_pending_quest_options(state.session_id, quest_options)
+
+        # Present quest titles as choices
+        choices = [f"Accept: {quest.title}" for quest in quest_options]
         await sm.set_choices(state.session_id, choices)
+
         if character:
             await sm.set_character_description(state.session_id, character)
 
+        narrative = (
+            "The innkeeper leans forward, his weathered hands resting on the bar. "
+            "'I've heard of several opportunities for someone with your skills. "
+            "Choose your path wisely, adventurer...'"
+        )
+
         return NarrativeResponse(
-            narrative=WELCOME_NARRATIVE,
+            narrative=narrative,
             session_id=state.session_id,
             choices=choices,
         )
@@ -539,8 +596,15 @@ async def start_adventure(
 
     # Generate dynamic starter choices using the agent
     if character_interviewer:
+        logger.info(
+            "start_adventure: Using CharacterInterviewerAgent for starter choices"
+        )
         starter_choices = character_interviewer.generate_starter_choices()
+        logger.info("start_adventure: Got starter choices: %s", starter_choices)
     else:
+        logger.warning(
+            "start_adventure: No character_interviewer, using static fallback"
+        )
         starter_choices = CHARACTER_CREATION_CHOICES
 
     await sm.set_choices(state.session_id, starter_choices)
@@ -581,6 +645,10 @@ async def process_action(
     # Handle CHARACTER_CREATION phase specially
     if state.phase == GamePhase.CHARACTER_CREATION:
         return await _handle_character_creation(request, state, action)
+
+    # Handle QUEST_SELECTION phase
+    if state.phase == GamePhase.QUEST_SELECTION:
+        return await _handle_quest_selection(request, state, action)
 
     # Handle COMBAT phase or combat triggers
     if state.phase == GamePhase.COMBAT or (
@@ -683,6 +751,63 @@ async def process_action(
     # Store exchange in session (auto-limits to 20)
     await sm.add_exchange(state.session_id, action, result.narrative)
 
+    # Get the narrative from turn executor result
+    narrative = result.narrative
+
+    # Check quest progress if conditions are met
+    if state.active_quest and state.phase == GamePhase.EXPLORATION and quest_designer:
+        try:
+            progress = quest_designer.check_quest_progress(
+                active_quest=state.active_quest,
+                action=action,
+                narrative=narrative,
+            )
+
+            if progress["objectives_completed"]:
+                for obj_id in progress["objectives_completed"]:
+                    await sm.update_quest_objective(state.session_id, obj_id, True)
+                logger.info(
+                    "Quest objectives completed: %s", progress["objectives_completed"]
+                )
+
+            if progress["quest_completed"]:
+                await sm.complete_quest(state.session_id)
+                narrative += f"\n\n{progress['completion_narrative']}"
+                logger.info("Quest completed: %s", state.active_quest.title)
+
+                # Generate new quest options and transition to QUEST_SELECTION
+                if state.character_sheet:
+                    try:
+                        new_quest_options = quest_designer.generate_quest_options(
+                            character_sheet=state.character_sheet,
+                            game_context="Character has just completed a quest.",
+                        )
+                        await sm.set_pending_quest_options(
+                            state.session_id, new_quest_options
+                        )
+                        await sm.set_phase(state.session_id, GamePhase.QUEST_SELECTION)
+
+                        # Present new quest choices
+                        quest_choices = [
+                            f"Accept: {q.title}" for q in new_quest_options
+                        ]
+                        await sm.set_choices(state.session_id, quest_choices)
+
+                        narrative += (
+                            "\n\nThe innkeeper has heard of new opportunities. "
+                            "Which path will you take next?"
+                        )
+
+                        return NarrativeResponse(
+                            narrative=narrative,
+                            session_id=state.session_id,
+                            choices=quest_choices,
+                        )
+                    except Exception as e:
+                        logger.warning("Failed to generate new quest options: %s", e)
+        except Exception as e:
+            logger.warning("Quest progress check failed: %s", e)
+
     # Update recent agents for Jester cooldown tracking
     await sm.update_recent_agents(state.session_id, routing.agents)
 
@@ -690,7 +815,7 @@ async def process_action(
     await sm.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
-        narrative=result.narrative, session_id=state.session_id, choices=result.choices
+        narrative=narrative, session_id=state.session_id, choices=result.choices
     )
 
 
@@ -855,6 +980,89 @@ async def _handle_character_creation(
     # Store the exchange with the actual narrative response
     await sm.add_exchange(state.session_id, action, narrative)
     await sm.set_choices(state.session_id, choices)
+
+    return NarrativeResponse(
+        narrative=narrative,
+        session_id=state.session_id,
+        choices=choices,
+    )
+
+
+async def _handle_quest_selection(
+    request: Request, state: GameState, action: str
+) -> NarrativeResponse:
+    """Handle actions during quest selection phase.
+
+    Args:
+        request: FastAPI Request object (to access app.state)
+        state: Current game state
+        action: Player's action (quest selection)
+
+    Returns:
+        NarrativeResponse with quest acceptance narrative or reprompt
+    """
+    sm = get_session_manager(request)
+
+    # Parse the action to find which quest was selected
+    selected_quest = None
+
+    # Check if action starts with "Accept: " (from clicking a choice)
+    if action.startswith("Accept: "):
+        quest_title = action[8:]  # Remove "Accept: " prefix
+        for quest in state.pending_quest_options:
+            if quest.title == quest_title:
+                selected_quest = quest
+                break
+
+    # Check if action is a number (1, 2, or 3)
+    elif action.strip() in ("1", "2", "3"):
+        index = int(action.strip()) - 1
+        if 0 <= index < len(state.pending_quest_options):
+            selected_quest = state.pending_quest_options[index]
+
+    # If no valid selection, stay in QUEST_SELECTION and reprompt
+    if selected_quest is None:
+        choices = [f"Accept: {quest.title}" for quest in state.pending_quest_options]
+        narrative = (
+            "The innkeeper raises an eyebrow. 'Those are the opportunities I know of. "
+            "Which one interests you?'"
+        )
+        await sm.set_choices(state.session_id, choices)
+        return NarrativeResponse(
+            narrative=narrative,
+            session_id=state.session_id,
+            choices=choices,
+        )
+
+    # Valid selection - activate the quest
+    await sm.set_active_quest(state.session_id, selected_quest)
+    await sm.clear_pending_quest_options(state.session_id)
+    await sm.set_phase(state.session_id, GamePhase.EXPLORATION)
+
+    # Build narrative about accepting the quest
+    narrative = (
+        f"You've accepted the quest: **{selected_quest.title}**\n\n"
+        f"{selected_quest.description}\n\n"
+        f"**Objective:** {selected_quest.objectives[0].description if selected_quest.objectives else 'Complete the quest'}\n\n"
+        f"The innkeeper nods approvingly. 'Good choice. May fortune favor your journey.'"
+    )
+
+    # Generate exploration choices based on the quest
+    if selected_quest.location_hint:
+        choices = [
+            f"Head toward {selected_quest.location_hint}",
+            "Ask the innkeeper for more details",
+            "Prepare supplies before leaving",
+        ]
+    else:
+        choices = [
+            "Begin the quest immediately",
+            "Ask where to start",
+            "Gather information first",
+        ]
+
+    await sm.set_choices(state.session_id, choices)
+    await sm.add_exchange(state.session_id, action, narrative)
 
     return NarrativeResponse(
         narrative=narrative,
