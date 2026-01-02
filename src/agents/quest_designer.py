@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import uuid
 from typing import Any
 
 from crewai import LLM, Agent, Task
+from pydantic import BaseModel, Field
 
 from src.config.loader import load_agent_config, load_task_config
 from src.settings import settings
@@ -15,6 +17,30 @@ from src.state.character import CharacterSheet
 from src.state.models import Quest, QuestObjective, QuestStatus
 
 logger = logging.getLogger(__name__)
+
+
+class QuestObjectiveOutput(BaseModel):
+    """Structured output for quest objective."""
+
+    id: str
+    description: str
+
+
+class QuestOutput(BaseModel):
+    """Structured output for a single quest."""
+
+    title: str
+    description: str
+    objectives: list[QuestObjectiveOutput]
+    rewards: str
+    given_by: str
+    location_hint: str
+
+
+class QuestOptionsOutput(BaseModel):
+    """Structured output for multiple quest options."""
+
+    quests: list[QuestOutput] = Field(min_length=3)
 
 
 class QuestDesignerAgent:
@@ -93,6 +119,96 @@ class QuestDesignerAgent:
             logger.error(f"Failed to generate quest: {e}", exc_info=True)
             # Return fallback quest
             return self._create_fallback_quest(character_sheet)
+
+    def generate_quest_options(
+        self,
+        character_sheet: CharacterSheet,
+        game_context: str = "",
+    ) -> list[Quest]:
+        """Generate 6 quest options, shuffle, return 3.
+
+        Args:
+            character_sheet: Character information for context
+            game_context: Current game state description
+
+        Returns:
+            List of 3 Quest objects shuffled from a pool of 6
+        """
+        # Build character context
+        character_info = self._build_character_context(character_sheet)
+
+        # Create task with formatted inputs
+        task_config = load_task_config("generate_quest_options")
+        task_description = task_config.description.format(
+            character_info=character_info,
+            game_context=game_context
+            or "Character has just finished creation and is at the Rusty Tankard tavern.",
+        )
+
+        task = Task(
+            description=task_description,
+            expected_output=task_config.expected_output,
+            agent=self.agent,
+            output_pydantic=QuestOptionsOutput,
+        )
+
+        try:
+            # Execute task synchronously
+            result = task.execute_sync()
+
+            # Access the pydantic result
+            if result.pydantic is None:
+                logger.warning("Quest options generation returned None, using fallback")
+                return [self._create_fallback_quest(character_sheet)]
+
+            # Convert pydantic output to dict and extract quests
+            quest_data = result.pydantic.model_dump()
+            quests = [
+                self._create_quest_from_output(quest_output)
+                for quest_output in quest_data["quests"]
+            ]
+
+            # Shuffle and return 3 quests
+            random.shuffle(quests)
+            return quests[:3]
+
+        except Exception as e:
+            logger.error(f"Failed to generate quest options: {e}", exc_info=True)
+            # Return fallback quest
+            return [self._create_fallback_quest(character_sheet)]
+
+    def _create_quest_from_output(self, quest_output: dict[str, Any]) -> Quest:
+        """Create Quest model from QuestOutput dict.
+
+        Args:
+            quest_output: Dictionary from QuestOutput.model_dump()
+
+        Returns:
+            Quest model instance
+        """
+        # Create quest ID
+        quest_id = str(uuid.uuid4())
+
+        # Parse objectives
+        objectives = [
+            QuestObjective(
+                id=obj["id"],
+                description=obj["description"],
+                is_completed=False,
+            )
+            for obj in quest_output["objectives"]
+        ]
+
+        return Quest(
+            id=quest_id,
+            title=quest_output["title"],
+            description=quest_output["description"],
+            objectives=objectives,
+            rewards=quest_output["rewards"],
+            status=QuestStatus.ACTIVE,
+            given_by=quest_output["given_by"],
+            location_hint=quest_output["location_hint"],
+        )
 
     def check_quest_progress(
         self, active_quest: Quest, action: str, narrative: str

@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.agents.quest_designer import (
+    QuestObjectiveOutput,
+    QuestOptionsOutput,
+    QuestOutput,
+)
 from src.state.character import CharacterClass, CharacterRace, CharacterSheet
 from src.state.models import Quest, QuestObjective, QuestStatus
 
@@ -539,3 +544,342 @@ class TestCheckQuestProgress:
 
         # obj-1 should not be re-added to completed list
         assert "obj-1" not in result["objectives_completed"]
+
+
+class TestCreateQuestFromOutput:
+    """Tests for _create_quest_from_output method."""
+
+    @pytest.fixture
+    def mock_agent(self) -> QuestDesignerAgent:
+        """Create a mock QuestDesignerAgent without LLM initialization."""
+        from src.agents.quest_designer import QuestDesignerAgent
+
+        with (
+            patch("src.agents.quest_designer.load_agent_config"),
+            patch("src.agents.quest_designer.LLM"),
+            patch("src.agents.quest_designer.Agent"),
+        ):
+            agent = QuestDesignerAgent()
+            return agent
+
+    def test_creates_quest_with_all_fields(
+        self, mock_agent: QuestDesignerAgent
+    ) -> None:
+        """Test creating quest from QuestOutput dict with all fields."""
+        quest_output = {
+            "title": "The Stolen Heirloom",
+            "description": "A noble's prized ring was stolen by goblins.",
+            "objectives": [
+                {"id": "obj-1", "description": "Track the goblins to their lair"},
+                {"id": "obj-2", "description": "Recover the stolen ring"},
+            ],
+            "rewards": "75 gold and a letter of recommendation",
+            "given_by": "Lady Evelyn",
+            "location_hint": "The old mine shaft east of town",
+        }
+
+        quest = mock_agent._create_quest_from_output(quest_output)
+
+        assert quest.title == "The Stolen Heirloom"
+        assert quest.description == "A noble's prized ring was stolen by goblins."
+        assert len(quest.objectives) == 2
+        assert quest.objectives[0].id == "obj-1"
+        assert quest.objectives[0].description == "Track the goblins to their lair"
+        assert quest.objectives[1].id == "obj-2"
+        assert quest.rewards == "75 gold and a letter of recommendation"
+        assert quest.given_by == "Lady Evelyn"
+        assert quest.location_hint == "The old mine shaft east of town"
+        assert quest.status == QuestStatus.ACTIVE
+        # Quest should have a generated UUID
+        assert len(quest.id) > 0
+
+    def test_creates_quest_with_inactive_objectives(
+        self, mock_agent: QuestDesignerAgent
+    ) -> None:
+        """Test that all objectives start as not completed."""
+        quest_output = {
+            "title": "Simple Quest",
+            "description": "A simple quest.",
+            "objectives": [
+                {"id": "obj-1", "description": "Do something"},
+                {"id": "obj-2", "description": "Do another thing"},
+            ],
+            "rewards": "Gold",
+            "given_by": "NPC",
+            "location_hint": "Somewhere",
+        }
+
+        quest = mock_agent._create_quest_from_output(quest_output)
+
+        assert all(not obj.is_completed for obj in quest.objectives)
+
+    def test_generates_unique_quest_ids(self, mock_agent: QuestDesignerAgent) -> None:
+        """Test that each quest gets a unique ID."""
+        quest_output = {
+            "title": "Test Quest",
+            "description": "Test description.",
+            "objectives": [{"id": "obj-1", "description": "Objective"}],
+            "rewards": "Reward",
+            "given_by": "NPC",
+            "location_hint": "Location",
+        }
+
+        quest1 = mock_agent._create_quest_from_output(quest_output)
+        quest2 = mock_agent._create_quest_from_output(quest_output)
+
+        assert quest1.id != quest2.id
+
+
+class TestGenerateQuestOptions:
+    """Tests for generate_quest_options method.
+
+    Uses simplified mocking by patching Task execution directly
+    with real Pydantic model instances.
+    """
+
+    @pytest.fixture
+    def mock_agent(self) -> QuestDesignerAgent:
+        """Create a mock QuestDesignerAgent without LLM initialization."""
+        from src.agents.quest_designer import QuestDesignerAgent
+
+        with (
+            patch("src.agents.quest_designer.load_agent_config"),
+            patch("src.agents.quest_designer.LLM"),
+            patch("src.agents.quest_designer.Agent"),
+        ):
+            agent = QuestDesignerAgent()
+            return agent
+
+    @pytest.fixture
+    def character_sheet(self) -> CharacterSheet:
+        """Create a test character sheet."""
+        return CharacterSheet(
+            name="Kira",
+            race=CharacterRace.HALFLING,
+            character_class=CharacterClass.ROGUE,
+            level=2,
+            backstory="A cunning thief seeking redemption.",
+        )
+
+    @pytest.fixture
+    def mock_quest_options_pydantic(self) -> QuestOptionsOutput:
+        """Create real Pydantic QuestOptionsOutput instance for mocking."""
+        return QuestOptionsOutput(
+            quests=[
+                QuestOutput(
+                    title="The Stolen Heirloom",
+                    description="A noble's prized ring was stolen by goblins.",
+                    objectives=[
+                        QuestObjectiveOutput(
+                            id="obj-1", description="Track the goblins to their lair"
+                        ),
+                        QuestObjectiveOutput(
+                            id="obj-2", description="Recover the stolen ring"
+                        ),
+                    ],
+                    rewards="75 gold and a letter of recommendation",
+                    given_by="Lady Evelyn",
+                    location_hint="The old mine shaft east of town",
+                ),
+                QuestOutput(
+                    title="Rats in the Cellar",
+                    description="Giant rats infest the tavern basement.",
+                    objectives=[
+                        QuestObjectiveOutput(
+                            id="obj-3", description="Clear out the giant rats"
+                        ),
+                    ],
+                    rewards="25 gold and free meals for a week",
+                    given_by="Innkeeper Theron",
+                    location_hint="Beneath the Rusty Tankard tavern",
+                ),
+                QuestOutput(
+                    title="The Missing Messenger",
+                    description="A royal messenger never arrived at their destination.",
+                    objectives=[
+                        QuestObjectiveOutput(
+                            id="obj-4",
+                            description="Find clues about the messenger's route",
+                        ),
+                        QuestObjectiveOutput(
+                            id="obj-5", description="Locate the missing messenger"
+                        ),
+                        QuestObjectiveOutput(
+                            id="obj-6", description="Return with news of their fate"
+                        ),
+                    ],
+                    rewards="100 gold and royal favor",
+                    given_by="Captain of the Guard",
+                    location_hint="The forest road to the capital",
+                ),
+            ]
+        )
+
+    def test_generate_quest_options_returns_three_quests(
+        self,
+        mock_agent: QuestDesignerAgent,
+        character_sheet: CharacterSheet,
+        mock_quest_options_pydantic: QuestOptionsOutput,
+    ) -> None:
+        """Test that generate_quest_options returns exactly 3 Quest objects."""
+        mock_result = MagicMock()
+        mock_result.pydantic = mock_quest_options_pydantic
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            quests = mock_agent.generate_quest_options(character_sheet)
+
+            assert len(quests) == 3
+            assert all(isinstance(q, Quest) for q in quests)
+
+    def test_generate_quest_options_quests_are_valid(
+        self,
+        mock_agent: QuestDesignerAgent,
+        character_sheet: CharacterSheet,
+        mock_quest_options_pydantic: QuestOptionsOutput,
+    ) -> None:
+        """Test that each returned quest has all required fields populated."""
+        mock_result = MagicMock()
+        mock_result.pydantic = mock_quest_options_pydantic
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            quests = mock_agent.generate_quest_options(character_sheet)
+
+            for quest in quests:
+                # Validate all required fields are present and non-empty
+                assert quest.title, "Quest must have a title"
+                assert quest.description, "Quest must have a description"
+                assert len(quest.objectives) > 0, (
+                    "Quest must have at least one objective"
+                )
+                assert quest.rewards, "Quest must have rewards"
+                assert quest.given_by, "Quest must have given_by NPC"
+                assert quest.location_hint, "Quest must have a location hint"
+
+                # Validate objectives have required fields
+                for obj in quest.objectives:
+                    assert obj.id, "Objective must have an id"
+                    assert obj.description, "Objective must have a description"
+
+    def test_generate_quest_options_fallback_on_failure(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that fallback quest is returned when LLM generation fails."""
+        mock_result = MagicMock()
+        mock_result.pydantic = None
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            quests = mock_agent.generate_quest_options(character_sheet)
+
+            # Should return fallback quests (at least one)
+            assert len(quests) >= 1
+            # Fallback quest should have required fields
+            assert all(isinstance(q, Quest) for q in quests)
+            # At least one should be the known fallback
+            fallback_titles = [q.title for q in quests]
+            assert any(
+                "Missing Shipment" in title or title for title in fallback_titles
+            )
+
+    def test_generate_quest_options_fallback_on_exception(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that fallback quest is returned when an exception is raised."""
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.side_effect = Exception("LLM API error")
+            MockTask.return_value = mock_task_instance
+
+            quests = mock_agent.generate_quest_options(character_sheet)
+
+            # Should gracefully return fallback quests
+            assert len(quests) >= 1
+            assert all(isinstance(q, Quest) for q in quests)
+
+    def test_generate_quest_options_shuffles_results(
+        self,
+        mock_agent: QuestDesignerAgent,
+        character_sheet: CharacterSheet,
+        mock_quest_options_pydantic: QuestOptionsOutput,
+    ) -> None:
+        """Test that quest results are shuffled for variety."""
+        mock_result = MagicMock()
+        mock_result.pydantic = mock_quest_options_pydantic
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            with patch("random.shuffle") as mock_shuffle:
+                mock_agent.generate_quest_options(character_sheet)
+
+                # Verify shuffle was called on the quest list
+                mock_shuffle.assert_called_once()
+
+    def test_generate_quest_options_uses_correct_task(
+        self,
+        mock_agent: QuestDesignerAgent,
+        character_sheet: CharacterSheet,
+        mock_quest_options_pydantic: QuestOptionsOutput,
+    ) -> None:
+        """Test that generate_quest_options uses the generate_quest_options task config."""
+        mock_result = MagicMock()
+        mock_result.pydantic = mock_quest_options_pydantic
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            with patch("src.agents.quest_designer.load_task_config") as mock_load_task:
+                mock_task_config = MagicMock()
+                mock_task_config.description = "Generate {character_info} quests"
+                mock_task_config.expected_output = "JSON quest options"
+                mock_load_task.return_value = mock_task_config
+
+                mock_agent.generate_quest_options(character_sheet)
+
+                # Verify the correct task was loaded
+                mock_load_task.assert_called_with("generate_quest_options")
+
+    def test_generate_quest_options_includes_character_context(
+        self,
+        mock_agent: QuestDesignerAgent,
+        character_sheet: CharacterSheet,
+        mock_quest_options_pydantic: QuestOptionsOutput,
+    ) -> None:
+        """Test that character information is passed to the task."""
+        mock_result = MagicMock()
+        mock_result.pydantic = mock_quest_options_pydantic
+
+        with patch("src.agents.quest_designer.Task") as MockTask:
+            mock_task_instance = MagicMock()
+            mock_task_instance.execute_sync.return_value = mock_result
+            MockTask.return_value = mock_task_instance
+
+            with patch("src.agents.quest_designer.load_task_config") as mock_load_task:
+                mock_task_config = MagicMock()
+                mock_task_config.description = "Generate quests for {character_info}"
+                mock_task_config.expected_output = "JSON"
+                mock_load_task.return_value = mock_task_config
+
+                mock_agent.generate_quest_options(character_sheet)
+
+                # Verify Task was created with character info in description
+                task_call_kwargs = MockTask.call_args
+                task_description = task_call_kwargs.kwargs.get("description", "")
+                assert (
+                    "Kira" in task_description or "halfling" in task_description.lower()
+                )

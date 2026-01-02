@@ -250,6 +250,34 @@ generate_quest:
   expected_output: "Valid JSON with complete quest structure"
   agent: quest_designer
 
+generate_quest_options:
+  description: |
+    Generate 6 diverse quest options for this character.
+
+    CHARACTER: {character_info}
+    GAME CONTEXT: {game_context}
+
+    CONTENT SAFETY (MANDATORY): Quests are heroic adventures only.
+    No trauma, abuse, or dark themes. Keep it PG-13 and fun.
+
+    Create quests across different themes:
+    COMBAT (2 quests): Fighting, protecting, hunting creatures
+    EXPLORATION (2 quests): Finding, investigating, retrieving items
+    SOCIAL (2 quests): Helping NPCs, negotiating, escorting travelers
+
+    Each quest MUST include:
+    - title: Short quest name (4-6 words max)
+    - description: What the NPC wants (30-50 words, specific problem)
+    - objectives: List of 1-2 clear objectives with id and description
+    - rewards: Concrete reward (e.g., "50 gold pieces")
+    - given_by: NPC name who gives the quest
+    - location_hint: Where to go (specific, nearby)
+
+    Match quests to character's class and abilities.
+    Quests should be completable in 5-15 turns.
+  expected_output: "Valid JSON with 6 diverse quest options"
+  agent: quest_designer
+
 check_quest_progress:
   description: |
     Check if the player's action completed any quest objectives.
