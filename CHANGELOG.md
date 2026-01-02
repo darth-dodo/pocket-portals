@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Comprehensive JavaScript Test Suite**: 415 tests with 96.49% statement coverage
+  - Vitest with jsdom environment for DOM testing
+  - Test files for: api, combat, controllers, game-state, haptics, main, messages, themes
+  - CI/CD integration with coverage reporting
+- **Haptic Feedback System**: Mobile vibration for enhanced interaction (`static/js/haptics.js`)
+  - Vibration API integration with graceful fallback
+  - Tactile feedback patterns: light, medium, success, error, combat
+  - Feature detection for unsupported browsers
+- **Theme System**: 5 visual themes with localStorage persistence (`static/js/themes.js`)
+  - Themes: Dark (default), Light, Dungeon, Forest, Celestial
+  - CSS custom properties for dynamic theming
+  - Theme selector in settings modal
+- **iOS Safe Area Support**: Proper handling of iPhone notch and home indicator
+  - CSS env() functions for safe-area-inset values
+  - Consistent padding across all iOS devices
 - **Adventure Pacing System**: 50-turn adventure structure with 5-phase narrative arc
   - AdventurePhase enum: SETUP, RISING_ACTION, MID_POINT, CLIMAX, DENOUEMENT
   - Turn tracking with automatic phase progression
@@ -22,10 +37,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - New design doc: `docs/design/2025-12-29-adventure-pacing-system.md`
 
 ### Changed
+- **Modern Button System**: Replaced NES.css with custom CSS button styling
+  - Custom CSS variables for consistent theming
+  - Flexbox-based layout for responsive design
+- **Improved Touch Targets**: Minimum 48px touch targets for WCAG 2.1 AAA compliance
+- **Theme Modal Scrollability**: Fixed modal cut-off on mobile with max-height and overflow
 - GameState model extended with adventure_turn, adventure_phase, max_turns fields
 - SessionManager with turn increment and epilogue trigger methods
 - API process_action() integrates pacing context and closure detection
 - Agent configuration updated with pacing guidelines
+
+### Removed
+- **NES.css Dependency**: Replaced with modern, custom CSS button system
+- **Keyboard Shortcuts**: Simplified interaction model for mobile-first approach
 
 ## [0.1.0] - 2025-12-21
 

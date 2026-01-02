@@ -377,3 +377,118 @@ We mock at `crewai.Task.execute_sync` because:
 2. Works for all agents (Narrator, Keeper, Jester, etc.)
 3. Handles both simple and Pydantic-structured responses
 4. No need to update when adding new agent methods
+
+---
+
+## Frontend Testing (JavaScript)
+
+The frontend uses **Vitest + jsdom** for testing JavaScript modules.
+
+### Test Stack
+
+| Tool | Purpose |
+|------|---------|
+| Vitest | Test runner (fast, ESM-native) |
+| jsdom | DOM simulation for browser APIs |
+| @vitest/coverage-v8 | Coverage reporting |
+
+### Running Tests
+
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # With coverage report
+npm run test:ui       # Interactive UI
+```
+
+### Test Structure
+
+```
+static/js/
+├── __tests__/
+│   ├── haptics.test.js     # Haptic feedback tests
+│   ├── themes.test.js      # Theme system tests
+│   ├── game-state.test.js  # Game state management
+│   └── ...
+├── haptics.js
+├── themes.js
+└── ...
+```
+
+### Example: Testing Haptic Feedback
+
+```javascript
+// static/js/__tests__/haptics.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { haptics, isHapticsSupported } from '../haptics.js';
+
+describe('haptics', () => {
+  beforeEach(() => {
+    // Mock navigator.vibrate
+    navigator.vibrate = vi.fn();
+  });
+
+  it('should trigger light haptic feedback', () => {
+    haptics.light();
+    expect(navigator.vibrate).toHaveBeenCalledWith(10);
+  });
+
+  it('should trigger combat pattern', () => {
+    haptics.combat();
+    expect(navigator.vibrate).toHaveBeenCalledWith([15, 30, 15, 30, 50]);
+  });
+});
+```
+
+### Example: Testing Theme System
+
+```javascript
+// static/js/__tests__/themes.test.js
+import { describe, it, expect, beforeEach } from 'vitest';
+import { setTheme, getCurrentTheme, THEMES } from '../themes.js';
+
+describe('themes', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('should apply theme to document', () => {
+    setTheme('forest');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('forest');
+  });
+
+  it('should persist theme to localStorage', () => {
+    setTheme('celestial');
+    expect(localStorage.getItem('pocket-portals-theme')).toBe('celestial');
+  });
+});
+```
+
+### CI Integration
+
+Frontend tests run in the CI pipeline on every push/PR to main:
+
+```yaml
+test-frontend:
+  name: Frontend Tests
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run test:coverage
+```
+
+### What to Test
+
+| Module | Test Focus |
+|--------|------------|
+| `haptics.js` | Vibration patterns, API availability detection |
+| `themes.js` | Theme application, localStorage persistence |
+| `game-state.js` | State transitions, serialization |
+| `combat.js` | Combat UI updates, action handling |
+| `api.js` | SSE event parsing, error handling |

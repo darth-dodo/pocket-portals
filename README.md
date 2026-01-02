@@ -3,7 +3,8 @@
 **Solo D&D adventures powered by AI.** Step through the portal and begin your quest.
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-356%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-415%20passing-brightgreen.svg)]()
+[![Coverage](https://img.shields.io/badge/coverage-96.49%25-brightgreen.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What It Does
@@ -51,6 +52,23 @@ Watch your story unfold character by character:
 - Blinking cursor during generation
 - No waiting for full responses
 
+### Mobile-First Experience
+Optimized for touch devices with native-feeling interactions:
+- **Haptic Feedback** — Tactile vibration on button presses (light, medium, snap presets)
+- **Touch Targets** — 48px minimum touch areas for comfortable tapping
+- **iOS Safe Areas** — Proper spacing for notch and home indicator
+- **Responsive Layout** — Seamless experience from mobile to desktop
+
+### Theme System
+Five visual themes to match your mood:
+- **RPG** — Classic fantasy aesthetic (default)
+- **Modern** — Clean contemporary design
+- **Midnight** — Dark mode for night sessions
+- **Mono** — Minimalist black and white
+- **iOS** — Native Apple-inspired look
+
+Themes persist across sessions via localStorage.
+
 ## Quick Start
 
 ```bash
@@ -90,6 +108,7 @@ The system routes each player action to the appropriate agents based on context.
 | AI | CrewAI + Claude 3.5 Haiku |
 | State | Redis (production) / Memory (dev) |
 | Frontend | NES.css retro aesthetic |
+| Testing | Vitest (96.49% coverage) |
 
 ## Documentation
 
@@ -103,10 +122,33 @@ The system routes each player action to the appropriate agents based on context.
 
 ```bash
 make dev          # Start server
-make test         # Run 296 tests
+make test         # Run Python tests
 make lint         # Code quality
 make docker-dev   # Start with Redis
 ```
+
+### JavaScript Test Suite
+
+The frontend includes a comprehensive Vitest test suite with 415 tests and 96.49% code coverage:
+
+```bash
+npm test              # Run all 415 tests
+npm run test:watch    # Watch mode for development
+npm run test:coverage # Generate coverage report
+npm run test:ui       # Interactive test UI
+```
+
+**Coverage by module:**
+| Module | Coverage |
+|--------|----------|
+| api.js | 99.24% |
+| combat.js | 99.38% |
+| game-state.js | 100% |
+| haptics.js | 100% |
+| messages.js | 100% |
+| main.js | 98.24% |
+| controllers.js | 93.61% |
+| themes.js | 80% |
 
 ## License
 

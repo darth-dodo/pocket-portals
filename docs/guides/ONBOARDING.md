@@ -34,10 +34,15 @@ curl http://localhost:8000/health
 ### Development Commands
 
 ```bash
-# Testing
-uv run pytest              # Full suite (356 tests)
+# Backend Testing (Python)
+uv run pytest              # Full suite (296+ tests)
 uv run pytest -x           # Stop on first failure
 uv run pytest -v           # Verbose
+
+# Frontend Testing (JavaScript)
+npm test                   # Run Vitest tests
+npm run test:watch         # Watch mode
+npm run test:coverage      # With coverage report
 
 # Quality
 uv run ruff check src/     # Lint
@@ -94,8 +99,20 @@ src/
 ├── state/           # Session & state management
 └── utils/           # Dice rolling, helpers
 
-static/              # Web UI (index.html)
-tests/               # Test suite (356 tests, 72% coverage)
+static/
+├── index.html       # Main web UI
+├── css/             # Modular CSS (themes, responsive, combat)
+│   ├── themes.css   # 5 themes with CSS custom properties
+│   ├── responsive.css  # Mobile-first breakpoints, iOS safe areas
+│   └── ...          # Component-specific styles
+└── js/
+    ├── haptics.js   # Mobile haptic feedback module
+    ├── themes.js    # Theme system with localStorage
+    ├── combat.js    # Combat UI logic
+    ├── __tests__/   # Vitest frontend tests
+    └── ...          # Game state, API, controllers
+
+tests/               # Python test suite (296+ tests, 70%+ coverage)
 ```
 
 ### Key Agents
@@ -153,12 +170,18 @@ git commit -m "test: add Z tests"
 ### Quality Gates (Before Every Commit)
 
 ```bash
-uv run pytest              # All tests pass
+# Backend
+uv run pytest              # All Python tests pass
 uv run ruff check src/     # No lint errors
 uv run mypy src/           # No type errors
+
+# Frontend
+npm test                   # All JavaScript tests pass
 ```
 
 Pre-commit hooks run automatically on `git commit`.
+
+**CI/CD**: Both frontend and backend tests run on push/PR to main branch.
 
 ### Code Standards & Conventions
 
@@ -188,10 +211,14 @@ Pre-commit hooks run automatically on `git commit`.
 
 **Before Pushing**:
 ```bash
-uv run pytest                    # All 356+ tests pass
+# Backend
+uv run pytest                    # All 296+ Python tests pass
 uv run ruff check src/ tests/    # Zero lint errors
 uv run ruff format src/ tests/   # Consistent formatting
 uv run mypy src/                 # No type errors
+
+# Frontend
+npm test                         # All JavaScript tests pass
 ```
 
 **PR Requirements**:

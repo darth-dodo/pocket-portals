@@ -163,6 +163,7 @@ gantt
 | Task | Status | Notes |
 |------|--------|-------|
 | Adventure Pacing System - 50 Turn Structure | ✅ | All phases complete, 356 tests passing |
+| UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, haptic feedback, touch targets, safe areas, JS tests |
 | Add character sheet display to UI | ⏳ | Show character info in frontend |
 
 ### Adventure Pacing Implementation Progress
@@ -186,6 +187,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, modern button system, haptic feedback, touch targets (48px min), iOS safe areas, 415 JS tests (96.49% coverage) |
 | Structured Narrator Choices | ✅ | Single LLM call for narrative+choices, quality observability, CrewAI tracing, UI fix for hiding choices during loading |
 | Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 356 tests |
 | Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary, 275 tests passing |
@@ -429,6 +431,55 @@ gantt
 
 ## Task History Archive
 
+### Session Log: 2026-01-02
+
+**Session Focus**: UX Improvements - Mobile-First Enhancements and Comprehensive JavaScript Testing
+
+**Key Decisions**:
+1. Removed NES.css dependency entirely - replaced with modern, custom button system
+2. Implemented flexbox layout for theme modal to fix scrollability on mobile devices
+3. Added haptic feedback using Vibration API for enhanced mobile interaction
+4. Improved touch targets to 48px minimum per WCAG 2.1 AAA guidelines
+5. Added iOS safe area support using CSS env() functions for proper notch handling
+6. Removed keyboard shortcuts feature (simplified interaction model)
+7. Created comprehensive JavaScript test suite with Vitest and jsdom
+
+**Artifacts Created/Modified**:
+- `static/styles.css` - Removed NES.css, added modern button system, safe area support
+- `static/index.html` - Updated button markup, removed NES.css CDN reference
+- `static/js/haptics.js` - New file for Vibration API wrapper with fallback support
+- `static/js/themes.js` - Updated for modal scrollability fix
+- `tests/js/` - New directory with 8 test files:
+  - `api.test.js` - API module tests
+  - `combat.test.js` - Combat system tests
+  - `controllers.test.js` - Controller logic tests
+  - `game-state.test.js` - Game state management tests
+  - `haptics.test.js` - Haptic feedback tests
+  - `main.test.js` - Main module tests
+  - `messages.test.js` - Message display tests
+  - `themes.test.js` - Theme system tests
+- `vitest.config.js` - Vitest configuration with jsdom environment
+- `package.json` - Added Vitest, jsdom, and test script
+- `.github/workflows/ci.yml` - Updated to run frontend tests with coverage
+
+**Quality Gates Passed**:
+- 415 frontend JavaScript tests passing
+- 96.49% statement coverage for frontend code
+- All Python tests continue to pass
+- CI/CD pipeline updated and passing
+- All linting checks passing
+
+**Technical Implementation Details**:
+| Feature | Implementation | Notes |
+|---------|---------------|-------|
+| Button System | Custom CSS variables + flexbox | Replaces NES.css .nes-btn classes |
+| Haptic Feedback | navigator.vibrate() with fallback | Silent no-op on unsupported devices |
+| Touch Targets | min-height: 48px, min-width: 48px | WCAG 2.1 AAA compliance |
+| Safe Areas | padding: env(safe-area-inset-*) | iPhone X+ notch support |
+| Modal Scroll | max-height: 80vh + overflow-y: auto | Fixes cut-off theme list on mobile |
+
+---
+
 ### Session Log: 2026-01-01
 
 **Session Focus**: Structured Narrator Choices - Single LLM call for narrative and choices with observability
@@ -552,13 +603,15 @@ gantt
 ## Notes for Future Agents
 
 ### Project State
-- **Current Phase**: Character creation complete with dynamic agent - MVP flow working
-- **Test Coverage**: 74% (148 tests passing)
-- **CI/CD**: GitHub Actions with lint + test jobs
+- **Current Phase**: UX improvements complete - mobile-first enhancements and comprehensive JS testing
+- **Python Test Coverage**: 74% (Python tests)
+- **JavaScript Test Coverage**: 96.49% (415 tests across 8 test files)
+- **CI/CD**: GitHub Actions with lint + test jobs (Python and JavaScript)
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
 - **Content Safety**: Pattern-based filtering with safe redirects
+- **Frontend**: Modern CSS button system (NES.css removed), haptic feedback, iOS safe areas
 
 ### Agent Integration Status
 | Agent | In Conversation Flow | Standalone Endpoint | Notes |
