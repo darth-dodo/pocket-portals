@@ -34,7 +34,8 @@
     .combat-actions button {
         font-size: 0.6rem !important;
         padding: 12px 10px !important;
-        min-height: var(--touch-target-min);
+        /* Touch target: 48px minimum for accessibility */
+        min-height: var(--touch-target-comfortable);
     }
 
 }
@@ -61,7 +62,8 @@
         min-height: 100vh;
         min-height: 100dvh;
         max-height: none;
-        padding: 56px 16px calc(var(--bottom-sheet-peek) + 12px) 16px;
+        /* Account for header (with safe area) at top, bottom sheet + safe area at bottom */
+        padding: calc(56px + env(safe-area-inset-top, 0px)) 16px calc(var(--bottom-sheet-peek) + 12px + env(safe-area-inset-bottom, 0px)) 16px;
         margin: 0;
         border: none;
         border-radius: 0;
@@ -218,8 +220,8 @@
         text-align: center;
         padding: 14px 16px;
         margin-top: 16px;
-        /* Account for bottom sheet */
-        margin-bottom: calc(var(--bottom-sheet-peek) + 20px);
+        /* Account for bottom sheet and home indicator safe area */
+        margin-bottom: calc(var(--bottom-sheet-peek) + 20px + env(safe-area-inset-bottom, 0px));
     }
 
     .session-info {
@@ -228,7 +230,8 @@
 
     .new-game-btn {
         font-size: 0.5rem !important;
-        min-height: var(--touch-target-min);
+        /* Touch target: 48px minimum for accessibility */
+        min-height: var(--touch-target-comfortable);
         padding: 12px 20px !important;
     }
 
@@ -237,7 +240,8 @@
         margin-top: 20px;
         padding: 14px;
         font-size: 0.5rem;
-        margin-bottom: calc(var(--bottom-sheet-peek) + 40px);
+        /* Account for bottom sheet and home indicator safe area */
+        margin-bottom: calc(var(--bottom-sheet-peek) + 40px + env(safe-area-inset-bottom, 0px));
     }
 
     /* Error box */
@@ -285,6 +289,8 @@
         min-width: auto;
         font-size: 0.45rem !important;
         padding: 10px 4px !important;
+        /* Touch target: 48px minimum for accessibility */
+        min-height: var(--touch-target-comfortable);
     }
 }
 
@@ -317,12 +323,16 @@
     .welcome .begin-btn {
         font-size: 0.55rem !important;
         padding: 12px 24px !important;
+        /* Touch target: 48px minimum even on extra small screens */
+        min-height: var(--touch-target-comfortable);
     }
 
     /* Bottom sheet adjustments */
     .sheet-choice-btn {
         padding: 12px 14px;
         font-size: 0.875rem;
+        /* Touch target: 48px minimum even on extra small screens */
+        min-height: var(--touch-target-comfortable);
     }
 
     .sheet-choice-btn i {
@@ -356,6 +366,8 @@
     .combat-actions button {
         font-size: 0.4rem !important;
         padding: 8px 2px !important;
+        /* Touch target: 48px minimum even on extra small screens */
+        min-height: var(--touch-target-comfortable);
     }
 
     .dice-display .dice-icon {
@@ -688,20 +700,46 @@ body.reading-mode .message {
     }
 }
 
-/* ===== SAFE AREA INSETS (Notched devices) ===== */
+/* ===== SAFE AREA INSETS (Notched devices - iPhone X+) ===== */
+/* Ensures content doesn't overlap with notch, Dynamic Island, or home indicator */
 @supports (padding: max(0px)) {
+    /* Header: Respect top safe area for notch/Dynamic Island */
     .game-header {
-        padding-left: max(16px, var(--safe-area-left));
-        padding-right: max(16px, var(--safe-area-right));
+        padding-top: max(10px, env(safe-area-inset-top, 0px));
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
     }
 
+    /* Bottom sheet: Respect bottom safe area for home indicator */
     .bottom-sheet {
-        padding-left: max(20px, var(--safe-area-left));
-        padding-right: max(20px, var(--safe-area-right));
+        padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+        padding-left: max(20px, env(safe-area-inset-left, 0px));
+        padding-right: max(20px, env(safe-area-inset-right, 0px));
     }
 
-    .bottom-sheet-content {
-        padding-left: max(20px, var(--safe-area-left));
-        padding-right: max(20px, var(--safe-area-right));
+    .sheet-content {
+        /* Additional bottom padding to ensure last choice button clears home indicator */
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Story content: Ensure bottom padding accounts for bottom sheet + safe area */
+    .story-box {
+        padding-bottom: calc(var(--bottom-sheet-peek) + 12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Footer and session bar: Account for safe area when visible */
+    .session-bar {
+        margin-bottom: calc(var(--bottom-sheet-peek) + 20px + env(safe-area-inset-bottom, 0px));
+    }
+
+    footer {
+        margin-bottom: calc(var(--bottom-sheet-peek) + 40px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Combat HUD when bottom-positioned on mobile */
+    @media (max-width: 768px) {
+        .combat-hud {
+            padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+        }
     }
 }

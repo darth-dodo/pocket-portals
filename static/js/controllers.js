@@ -86,6 +86,11 @@
             const diff = this.startY - this.currentY;
             const threshold = 50;
 
+            // Trigger haptic feedback when snapping
+            if (typeof window.hapticFeedback === 'function') {
+                window.hapticFeedback('snap');
+            }
+
             if (this.isExpanded && diff < -threshold) {
                 this.collapse();
             } else if (!this.isExpanded && diff > threshold) {
@@ -175,6 +180,10 @@
                     <span class="sheet-choice-text">${choice}</span>
                 `;
                 btn.onclick = () => {
+                    // Trigger haptic feedback for choice selection
+                    if (typeof window.hapticFeedback === 'function') {
+                        window.hapticFeedback('light');
+                    }
                     this.collapse();
                     if (typeof window.selectChoice === 'function') {
                         window.selectChoice(i + 1);

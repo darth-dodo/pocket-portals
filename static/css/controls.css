@@ -31,6 +31,8 @@
 .choice-btn {
     display: block;
     width: 100%;
+    /* Touch target: 48px minimum for accessibility */
+    min-height: var(--touch-target-comfortable);
     margin-bottom: 14px;
     text-align: left;
     font-size: 0.75rem !important;
@@ -248,6 +250,8 @@
     font-size: 0.875rem;
     font-family: var(--font-ui), -apple-system, sans-serif;
     font-weight: 600;
+    /* Touch target: 48px minimum for accessibility */
+    min-height: var(--touch-target-comfortable);
     padding: 10px 16px;
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     border: none;

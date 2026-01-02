@@ -149,6 +149,8 @@
 .combat-actions button {
     flex: 1;
     min-width: 70px;
+    /* Touch target: 48px minimum for mobile accessibility */
+    min-height: var(--touch-target-comfortable);
     font-size: 0.5rem !important;
     padding: 10px 6px !important;
     display: flex;
@@ -156,6 +158,7 @@
     justify-content: center;
     gap: 6px;
     transition: all var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .combat-actions button i {

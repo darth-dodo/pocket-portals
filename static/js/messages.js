@@ -153,6 +153,10 @@
                     btn.className = 'nes-btn choice-btn';
                     btn.innerHTML = `<i class="ra ${icons[i] || 'ra-hand'}"></i> ${choice}`;
                     btn.onclick = () => {
+                        // Trigger haptic feedback for choice selection
+                        if (typeof window.hapticFeedback === 'function') {
+                            window.hapticFeedback('light');
+                        }
                         if (typeof window.selectChoice === 'function') {
                             window.selectChoice(i + 1);
                         }

@@ -9,7 +9,9 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: 10px 16px;
-    padding-top: max(10px, var(--safe-area-top));
+    /* Safe area inset for notched devices (iPhone X+) */
+    /* Ensures header content doesn't go under the notch/Dynamic Island */
+    padding-top: max(10px, env(safe-area-inset-top, 0px));
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     transition: transform 0.3s ease, opacity 0.3s ease;
 }
@@ -87,8 +89,11 @@
 }
 
 .header-btn {
-    width: 32px;
-    height: 32px;
+    /* Touch target: 48px minimum for mobile accessibility */
+    width: var(--touch-target-comfortable);
+    height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+    min-height: var(--touch-target-comfortable);
     border: none;
     background: transparent;
     border-radius: 8px;
@@ -98,6 +103,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .header-btn:hover {
@@ -117,6 +123,8 @@
 @media (min-width: 600px) {
     .game-header {
         padding: 12px 24px;
+        /* Safe area still applies on iPad with notch/Dynamic Island */
+        padding-top: max(12px, env(safe-area-inset-top, 0px));
     }
 
     .header-content {
@@ -151,6 +159,8 @@
 @media (min-width: 900px) {
     .game-header {
         padding: 14px 32px;
+        /* Desktop typically has no safe area, but env() gracefully returns 0 */
+        padding-top: max(14px, env(safe-area-inset-top, 0px));
     }
 
     .header-content {

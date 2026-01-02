@@ -25,11 +25,16 @@
     --font-pixel: 'Press Start 2P', cursive;
     --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-    /* Spacing */
-    --safe-area-top: env(safe-area-inset-top);
-    --safe-area-bottom: env(safe-area-inset-bottom);
-    --safe-area-left: env(safe-area-inset-left);
-    --safe-area-right: env(safe-area-inset-right);
+    /* Spacing - Safe area insets for notched devices (iPhone X+) */
+    /* Using env() with fallbacks for browsers that don't support safe-area-inset */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+
+    /* Computed safe minimums for consistent spacing */
+    --header-top-padding: max(10px, env(safe-area-inset-top, 0px));
+    --content-bottom-padding: max(16px, env(safe-area-inset-bottom, 0px));
 
     /* Touch targets */
     --touch-target-min: 44px;

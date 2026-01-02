@@ -164,6 +164,11 @@
 
         if (!gameState.isInCombat || !gameState.sessionId) return;
 
+        // Trigger haptic feedback for combat action
+        if (typeof window.hapticFeedback === 'function') {
+            window.hapticFeedback('medium');
+        }
+
         // Disable buttons during action
         const buttons = document.querySelectorAll('.combat-actions button');
         buttons.forEach(btn => btn.disabled = true);
