@@ -182,6 +182,45 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 
 ---
 
+### 9. Quest Selection Flow Test
+
+**Objective**: Verify quest selection appears after character creation and player can choose a quest.
+
+**Steps**:
+1. Complete character creation (5 turns of interview)
+2. Verify transition to quest selection phase
+3. Verify 3 quest options are displayed as choices
+4. Verify quest titles are descriptive and unique
+
+**Expected Result**:
+- After character creation, innkeeper presents 3 quest options
+- Quest options are contextual to character class/abilities
+- Each quest has a clear title describing the objective
+
+**Screenshot**: `e2e-screenshots/09-quest-selection.png`
+
+---
+
+### 10. Quest Activation Test
+
+**Objective**: Verify selecting a quest activates it and starts exploration.
+
+**Steps**:
+1. From quest selection screen, click a quest option
+2. Verify quest is activated (shown in header)
+3. Verify transition to exploration phase
+4. Verify narrative describes quest location/objective
+
+**Expected Result**:
+- Selected quest becomes active
+- Exploration narrative begins
+- New contextual choices appear for exploration
+- Turn counter increments
+
+**Screenshot**: `e2e-screenshots/10-exploration-after-quest-selection.png`
+
+---
+
 ## Test Results Summary
 
 | Test | Status | Notes |
@@ -194,6 +233,8 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 | Mobile Responsive | PASS | Bottom sheet pattern works |
 | Bottom Sheet Expansion | PASS | Expands to show choices |
 | Custom Action Input | PASS | Text input functional |
+| Quest Selection Flow | PASS | 3 quest options after character creation |
+| Quest Activation | PASS | Quest activates, exploration begins |
 
 ## Console Messages Observed
 
@@ -235,7 +276,9 @@ docs/e2e-screenshots/
 ├── 05-midnight-theme.png
 ├── 06-mobile-view.png
 ├── 07-mobile-bottom-sheet-expanded.png
-└── 08-custom-input.png
+├── 08-custom-input.png
+├── 09-quest-selection.png
+└── 10-exploration-after-quest-selection.png
 ```
 
 ## Mobile UX Features Tested

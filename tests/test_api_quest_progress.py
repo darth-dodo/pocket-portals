@@ -525,14 +525,15 @@ class TestProcessActionQuestProgressIntegration:
         This integration test creates a session with an active quest and
         verifies that progress checking is wired up correctly.
         """
+        from src.state.models import GamePhase
         from tests.conftest import run_async
 
-        # Start with character creation skipped to get into exploration
+        # Start with character creation skipped (goes to QUEST_SELECTION)
         start_response = client.get("/start?skip_creation=true")
         assert start_response.status_code == 200
         session_id = start_response.json()["session_id"]
 
-        # Get the session manager and set an active quest
+        # Get the session manager and set up the quest and exploration phase
         sm = client.app.state.session_manager
 
         quest = Quest(
@@ -550,7 +551,10 @@ class TestProcessActionQuestProgressIntegration:
             rewards="Test reward",
         )
 
+        # Set up the active quest and transition to EXPLORATION phase
         run_async(sm.set_active_quest(session_id, quest))
+        run_async(sm.clear_pending_quest_options(session_id))
+        run_async(sm.set_phase(session_id, GamePhase.EXPLORATION))
 
         # Perform an action that should trigger quest progress check
         # Note: This test will FAIL until integration is implemented because
@@ -581,6 +585,7 @@ class TestProcessActionQuestProgressIntegration:
         This test verifies that when an objective is completed, the quest
         state is properly updated in the session.
         """
+        from src.state.models import GamePhase
         from tests.conftest import run_async
 
         # Setup session with quest
@@ -603,7 +608,10 @@ class TestProcessActionQuestProgressIntegration:
             status=QuestStatus.ACTIVE,
         )
 
+        # Set up the active quest and transition to EXPLORATION phase
         run_async(sm.set_active_quest(session_id, quest))
+        run_async(sm.clear_pending_quest_options(session_id))
+        run_async(sm.set_phase(session_id, GamePhase.EXPLORATION))
 
         # Mock quest designer to return completed objective
         with patch("src.api.main.quest_designer") as mock_qd:
@@ -612,6 +620,8 @@ class TestProcessActionQuestProgressIntegration:
                 "quest_completed": True,
                 "completion_narrative": "Quest Complete!",
             }
+            # Also mock generate_quest_options for the post-completion flow
+            mock_qd.generate_quest_options.return_value = []
 
             action_response = client.post(
                 "/action",
