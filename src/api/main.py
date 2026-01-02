@@ -50,6 +50,7 @@ logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 # Content safety filter - redirects inappropriate input
 BLOCKED_PATTERNS = [
@@ -539,8 +540,15 @@ async def start_adventure(
 
     # Generate dynamic starter choices using the agent
     if character_interviewer:
+        logger.info(
+            "start_adventure: Using CharacterInterviewerAgent for starter choices"
+        )
         starter_choices = character_interviewer.generate_starter_choices()
+        logger.info("start_adventure: Got starter choices: %s", starter_choices)
     else:
+        logger.warning(
+            "start_adventure: No character_interviewer, using static fallback"
+        )
         starter_choices = CHARACTER_CREATION_CHOICES
 
     await sm.set_choices(state.session_id, starter_choices)

@@ -176,6 +176,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Dynamic character starter generation | ✅ | Agent generates 9 diverse choices across genres (fantasy/sci-fi/modern), shuffles and returns 3 random ones per game |
 | Fix ES6 module loading | ✅ | Added `type="module"` to all script tags in index.html |
 | Playwright E2E Test Suite | ✅ | 8 test scenarios documented in `docs/playwright-e2e-suite.md` |
 | UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, modern button system, haptic feedback, touch targets (48px min), iOS safe areas, 415 JS tests (96.49% coverage) |
