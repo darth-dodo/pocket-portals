@@ -96,11 +96,17 @@ body {
 }
 
 /* ===== NES.css Overrides ===== */
-.game-container {
+.game-container,
+.nes-container.game-container,
+section.nes-container.is-dark.game-container {
     background: var(--color-bg-dark);
-    border-width: 6px !important;
+    border: none !important;
+    border-image: none !important;
+    box-shadow: none !important;
 }
 
 .nes-container.is-dark {
     background-color: var(--color-bg-dark);
+    border: none !important;
+    border-image: none !important;
 }
