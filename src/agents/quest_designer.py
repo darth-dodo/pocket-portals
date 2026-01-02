@@ -264,22 +264,72 @@ class QuestDesignerAgent:
             "completion_narrative": completion_narrative,
         }
 
-    def _build_character_context(self, character_sheet: CharacterSheet) -> str:
+    # Class-specific strengths mapping for quest personalization
+    CLASS_STRENGTHS: dict[str, str] = {
+        "fighter": "Martial combat expertise, weapon mastery, physical prowess, protection and defense",
+        "wizard": "Arcane magic, spell research, magical artifacts, supernatural threats",
+        "rogue": "Stealth and infiltration, cunning tactics, theft recovery, trap detection",
+        "cleric": "Divine magic, healing abilities, undead threats, holy site protection",
+        "ranger": "Wilderness tracking, animal handling, nature magic, exploration",
+        "bard": "Social manipulation, performance, information gathering, diplomacy",
+    }
+
+    def _build_character_context(
+        self,
+        character_sheet: CharacterSheet,
+        completed_quests: list[dict[str, str]] | None = None,
+        turn_count: int | None = None,
+        game_phase: str | None = None,
+    ) -> str:
         """Build character context string for quest generation.
 
         Args:
             character_sheet: Character information
+            completed_quests: Optional list of completed quest summaries with
+                title, theme, and outcome fields
+            turn_count: Optional current turn count in the game
+            game_phase: Optional game phase identifier (e.g., "early_game", "mid_game")
 
         Returns:
-            Formatted character context string
+            Formatted character context string with class strengths and history
         """
+        # Basic character info
         context = f"""Character: {character_sheet.name}
 Race: {character_sheet.race.value}
 Class: {character_sheet.character_class.value}
 Level: {character_sheet.level}
 """
+        # Add backstory if present
         if character_sheet.backstory:
             context += f"Backstory: {character_sheet.backstory}\n"
+
+        # Add class-specific strengths
+        class_key = character_sheet.character_class.value.lower()
+        if class_key in self.CLASS_STRENGTHS:
+            context += f"Class Strengths: {self.CLASS_STRENGTHS[class_key]}\n"
+
+        # Add quest history if provided
+        if completed_quests:
+            context += "Quest History:\n"
+            for quest in completed_quests:
+                title = quest.get("title", "Unknown Quest")
+                theme = quest.get("theme", "")
+                outcome = quest.get("outcome", "")
+                quest_line = f"  - {title}"
+                if theme:
+                    quest_line += f" ({theme})"
+                if outcome:
+                    quest_line += f" - {outcome}"
+                context += quest_line + "\n"
+
+        # Add game progress if provided
+        if turn_count is not None or game_phase:
+            context += "Game Progress:"
+            if turn_count is not None:
+                context += f" Turn {turn_count}"
+            if game_phase:
+                context += f" ({game_phase})"
+            context += "\n"
 
         return context
 

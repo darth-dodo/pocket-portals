@@ -260,6 +260,14 @@ generate_quest_options:
     CONTENT SAFETY (MANDATORY): Quests are heroic adventures only.
     No trauma, abuse, or dark themes. Keep it PG-13 and fun.
 
+    CLASS-SPECIFIC QUEST TYPES (prioritize based on character class):
+    - Fighter: Combat challenges, protection missions, arena battles, mercenary work
+    - Wizard: Arcane mysteries, artifact recovery, magical threats, spell research
+    - Rogue: Stealth missions, tracking targets, theft recovery, infiltration
+    - Cleric: Undead threats, holy site protection, healing missions, exorcisms
+    - Ranger: Wilderness exploration, animal rescue, tracking, elemental threats
+    - Bard: Social intrigue, performance challenges, information gathering, diplomacy
+
     Create quests across different themes:
     COMBAT (2 quests): Fighting, protecting, hunting creatures
     EXPLORATION (2 quests): Finding, investigating, retrieving items
@@ -273,7 +281,7 @@ generate_quest_options:
     - given_by: NPC name who gives the quest
     - location_hint: Where to go (specific, nearby)
 
-    Match quests to character's class and abilities.
+    Match quests to character's class and abilities using the CLASS-SPECIFIC guidance above.
     Quests should be completable in 5-15 turns.
   expected_output: "Valid JSON with 6 diverse quest options"
   agent: quest_designer

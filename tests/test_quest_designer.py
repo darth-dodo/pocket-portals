@@ -84,6 +84,139 @@ class TestBuildCharacterContext:
         # Empty backstory should not be included
         assert "Backstory:" not in context
 
+    def test_character_context_includes_class_strengths(
+        self, mock_agent: QuestDesignerAgent
+    ) -> None:
+        """Test that character context includes class-specific strengths."""
+        # Test Fighter
+        fighter = CharacterSheet(
+            name="Thorin",
+            race=CharacterRace.DWARF,
+            character_class=CharacterClass.FIGHTER,
+            level=1,
+        )
+        context = mock_agent._build_character_context(fighter)
+        assert "Class Strengths:" in context
+        assert "combat" in context.lower() or "martial" in context.lower()
+
+        # Test Wizard
+        wizard = CharacterSheet(
+            name="Elara",
+            race=CharacterRace.ELF,
+            character_class=CharacterClass.WIZARD,
+            level=1,
+        )
+        context = mock_agent._build_character_context(wizard)
+        assert "Class Strengths:" in context
+        assert "arcane" in context.lower() or "magic" in context.lower()
+
+        # Test Rogue
+        rogue = CharacterSheet(
+            name="Shadow",
+            race=CharacterRace.HALFLING,
+            character_class=CharacterClass.ROGUE,
+            level=1,
+        )
+        context = mock_agent._build_character_context(rogue)
+        assert "Class Strengths:" in context
+        assert "stealth" in context.lower() or "cunning" in context.lower()
+
+        # Test Cleric
+        cleric = CharacterSheet(
+            name="Father Marcus",
+            race=CharacterRace.HUMAN,
+            character_class=CharacterClass.CLERIC,
+            level=1,
+        )
+        context = mock_agent._build_character_context(cleric)
+        assert "Class Strengths:" in context
+        assert "divine" in context.lower() or "healing" in context.lower()
+
+        # Test Ranger
+        ranger = CharacterSheet(
+            name="Sylvan",
+            race=CharacterRace.ELF,
+            character_class=CharacterClass.RANGER,
+            level=1,
+        )
+        context = mock_agent._build_character_context(ranger)
+        assert "Class Strengths:" in context
+        assert "tracking" in context.lower() or "wilderness" in context.lower()
+
+        # Test Bard
+        bard = CharacterSheet(
+            name="Melody",
+            race=CharacterRace.HUMAN,
+            character_class=CharacterClass.BARD,
+            level=1,
+        )
+        context = mock_agent._build_character_context(bard)
+        assert "Class Strengths:" in context
+        assert "social" in context.lower() or "performance" in context.lower()
+
+    def test_character_context_includes_quest_history(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that character context includes quest history when provided."""
+        completed_quests = [
+            {
+                "title": "The Lost Artifact",
+                "theme": "exploration",
+                "outcome": "success",
+            },
+            {
+                "title": "Goblin Raid",
+                "theme": "combat",
+                "outcome": "success",
+            },
+        ]
+
+        context = mock_agent._build_character_context(
+            character_sheet, completed_quests=completed_quests
+        )
+
+        assert "Quest History:" in context
+        assert "The Lost Artifact" in context
+        assert "Goblin Raid" in context
+
+    def test_character_context_without_quest_history(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that quest history section is omitted when not provided."""
+        context = mock_agent._build_character_context(character_sheet)
+
+        assert "Quest History:" not in context
+
+    def test_character_context_empty_quest_history(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that quest history section is omitted when empty list provided."""
+        context = mock_agent._build_character_context(
+            character_sheet, completed_quests=[]
+        )
+
+        assert "Quest History:" not in context
+
+    def test_character_context_includes_game_phase(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that character context includes game phase when provided."""
+        context = mock_agent._build_character_context(
+            character_sheet, turn_count=15, game_phase="mid_game"
+        )
+
+        assert "Game Progress:" in context
+        assert "15" in context
+        assert "mid_game" in context or "mid-game" in context.lower()
+
+    def test_character_context_without_game_phase(
+        self, mock_agent: QuestDesignerAgent, character_sheet: CharacterSheet
+    ) -> None:
+        """Test that game phase section is omitted when not provided."""
+        context = mock_agent._build_character_context(character_sheet)
+
+        assert "Game Progress:" not in context
+
 
 class TestParseQuestResult:
     """Tests for _parse_quest_result method."""
