@@ -36,34 +36,40 @@ Pocket Portals is a web application that generates personalized one-shot D&D adv
 | **Backend** | FastAPI REST API | `/health`, `/start`, `/action`, `/action/stream` endpoints |
 | **Backend** | SSE Streaming | Real-time agent responses via Server-Sent Events |
 | **Backend** | Session Management | UUID-based multi-user support with in-memory state |
-| **Agents** | Multi-Agent System | Narrator, Keeper, Jester integrated in conversation flow |
-| **Agents** | InnkeeperAgent | Standalone `/innkeeper/quest` endpoint |
+| **Agents** | Multi-Agent System | Narrator, Keeper, Jester, Innkeeper, CharacterInterviewer, Epilogue |
 | **Agents** | Agent Router | Phase-based routing with mechanical keyword detection |
 | **Agents** | Turn Executor | Context accumulation across sequential agent calls |
+| **Agents** | Character Creation | Dynamic 5-turn LLM-powered interview with CharacterInterviewerAgent |
+| **Agents** | Adventure Pacing | 50-turn narrative arc with 5 phases, EpilogueAgent for conclusions |
 | **Orchestration** | CrewAI Flows | `@start`, `@listen`, `@router` decorator-based orchestration |
 | **Config** | YAML-based Config | `agents.yaml`, `tasks.yaml` for agent personalities |
-| **Frontend** | Retro RPG UI | NES.css styling with Press Start 2P font |
+| **Frontend** | Modern RPG UI | Custom CSS (NES.css removed), mobile-first design |
+| **Frontend** | Mobile Experience | Haptic feedback, 48px touch targets, iOS safe areas, bottom sheet |
 | **Frontend** | SSE Integration | Real-time agent indicators (Narrator/Keeper/Jester) |
 | **Frontend** | Choice System | 3 predefined options + free text input |
-| **Frontend** | Starter Choices | 9 adventure hooks with shuffle feature |
+| **Frontend** | Theme System | 5 themes (RPG, Modern, Midnight, Mono, iOS) with localStorage persistence |
+| **Combat** | D&D 5e Mechanics | Initiative, attack/defend/flee, HP tracking, dice rolling |
 | **DevOps** | Docker | Multi-stage build with docker-compose |
-| **Quality** | Test Suite | 78 tests passing, 73% coverage |
+| **DevOps** | CI/CD | GitHub Actions with lint, test, coverage gates |
+| **Quality** | Python Tests | 368 tests passing, 75% coverage |
+| **Quality** | JavaScript Tests | 415 tests passing, 96.49% coverage |
+| **Quality** | XP Practices | TDD, pre-commit hooks (ruff, mypy), continuous integration |
+| **Docs** | E2E Test Suite | Playwright-based testing with 8 documented scenarios |
 
 #### 🚧 In Progress
 
 | Feature | Requirements | Status |
 |---------|--------------|--------|
-| Character Creation | FR-01, FR-02, FR-03 | Design complete, implementation starting |
-| Innkeeper Flow Integration | - | Currently standalone, needs `/start` integration |
+| Character Sheet Display | FR-03 | Show character info in frontend UI |
+| Enhanced Quest Personalization | FR-05 | Use character context in quest generation |
 
 #### 📋 Planned
 
 | Feature | Priority | Dependencies |
 |---------|----------|--------------|
-| Combat Mechanics | P0 | Character creation |
-| Dice Rolling System | P0 | Combat mechanics |
-| Adventure Epilogue | P0 | Quest completion tracking |
-| Export Features | P1 | Epilogue system |
+| Character Stat Influence | P1 | Keeper uses stats for mechanical resolution |
+| Export Features | P1 | Adventure log download |
+| Shareable Story Links | P2 | Adventure sharing |
 
 ---
 
@@ -120,11 +126,15 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 |-------|------------|--------|
 | Language | Python 3.12 | ✅ |
 | Agent Framework | CrewAI | ✅ |
-| LLM Provider | Anthropic Claude Sonnet 4 (claude-sonnet-4-20250514) | ✅ |
+| LLM Provider | Anthropic Claude 3.5 Haiku | ✅ |
 | Backend | FastAPI | ✅ |
-| Frontend | Vanilla HTML/CSS/JavaScript with NES.css | ✅ |
-| Styling | NES.css (retro RPG theme) + Press Start 2P font | ✅ |
+| Frontend | Vanilla HTML/CSS/JavaScript (ES6 Modules) | ✅ |
+| Styling | Custom CSS + RPG Awesome icons + Press Start 2P font | ✅ |
+| Testing (Python) | Pytest + pytest-cov (75% coverage) | ✅ |
+| Testing (JS) | Vitest + jsdom (96.49% coverage) | ✅ |
+| E2E Testing | Playwright MCP | ✅ |
 | Containerization | Docker + Docker Compose | ✅ |
+| CI/CD | GitHub Actions | ✅ |
 | Deployment | Render.com | ✅ |
 
 ---
@@ -135,9 +145,9 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| FR-01 | Accept free-form character description (text input) | P0 — Must Have | In Progress |
-| FR-02 | Generate character sheet (stats, equipment, backstory) | P0 — Must Have | Planned |
-| FR-03 | Allow user to accept or modify generated character | P0 — Must Have | Planned |
+| FR-01 | Accept free-form character description (text input) | P0 — Must Have | ✅ |
+| FR-02 | Generate character sheet (stats, equipment, backstory) | P0 — Must Have | ✅ |
+| FR-03 | Allow user to accept or modify generated character | P0 — Must Have | In Progress |
 | FR-04 | Display parallel agent activity during generation | P1 — Should Have | Planned |
 
 ### 6.2 Narrative & Quest System
@@ -163,18 +173,18 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| FR-14 | Initiative system with turn order display | P0 — Must Have | Planned |
-| FR-15 | Dice rolling with animated results | P0 — Must Have | Planned |
-| FR-16 | Keeper validation of dice rolls and game state | P0 — Must Have | Planned |
-| FR-17 | HP tracking and damage/healing calculations | P0 — Must Have | Planned |
+| FR-14 | Initiative system with turn order display | P0 — Must Have | ✅ |
+| FR-15 | Dice rolling with animated results | P0 — Must Have | ✅ |
+| FR-16 | Keeper validation of dice rolls and game state | P0 — Must Have | ✅ |
+| FR-17 | HP tracking and damage/healing calculations | P0 — Must Have | ✅ |
 | FR-18 | ASCII battlefield visualization | P2 — Nice to Have | Planned |
 
 ### 6.5 Epilogue & Output
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| FR-19 | Generate personalized epilogue based on player choices | P0 — Must Have | Planned |
-| FR-20 | Final character sheet with achievements and relationships | P0 — Must Have | Planned |
+| FR-19 | Generate personalized epilogue based on player choices | P0 — Must Have | ✅ |
+| FR-20 | Final character sheet with achievements and relationships | P0 — Must Have | In Progress |
 | FR-21 | Downloadable adventure log | P1 — Should Have | Planned |
 | FR-22 | Shareable story link | P2 — Nice to Have | Planned |
 
@@ -192,7 +202,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 │  🍺 INNKEEPER THERON          📜 NARRATOR                          │
 │  ├─ Quest introductions       ├─ Scene descriptions                │
 │  ├─ NPC broker                ├─ World state narration             │
-│  ├─ Session bookends          ├─ Adapts to player tone             │
+│  ├─ Session bookends          ├─ Phase-aware pacing guidelines     │
 │  └─ Weary, direct voice       └─ Sensory, present-tense            │
 │                                                                     │
 │  🎲 KEEPER                    🎭 JESTER                             │
@@ -201,15 +211,23 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 │  ├─ Game state enforcement    ├─ Fourth-wall awareness             │
 │  └─ Terse, mechanical         └─ Knowing, playful                  │
 │                                                                     │
+│  🎭 CHARACTER INTERVIEWER     📖 EPILOGUE                          │
+│  ├─ Dynamic character creation├─ Personalized conclusions          │
+│  ├─ 5-turn LLM interview      ├─ Adventure summary                 │
+│  ├─ Fallback mechanisms       ├─ Character growth reflection       │
+│  └─ Creative, engaging        └─ Dramatic, rewarding               │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 | Agent | Role | Personality | Integration Status |
 |-------|------|-------------|-------------------|
-| **Innkeeper Theron** | Quest introduction, NPC broker, session bookends | Weary, direct, speaks from experience | ⚠️ Standalone only |
-| **Narrator** | Narrative generation, world state, scene description | Sensory, present-tense, adapts to player tone | ✅ In flow |
+| **Innkeeper Theron** | Quest introduction, NPC broker, session bookends | Weary, direct, speaks from experience | ✅ In flow |
+| **Narrator** | Narrative generation, world state, scene description | Sensory, present-tense, phase-aware pacing | ✅ In flow |
 | **Keeper** | Dice rolls, health tracking, game state | Terse, functional, stays out of the way | ✅ In flow |
 | **Jester** | Complications, observations, meta-commentary | Knowing, casual, fourth-wall aware | ✅ In flow |
+| **CharacterInterviewer** | Dynamic character creation, 5-turn interview | Creative, engaging, context-aware | ✅ In flow |
+| **Epilogue** | Personalized adventure conclusions | Dramatic, rewarding, reflective | ✅ In flow |
 
 ### 7.2 Agent Interaction Model
 
@@ -274,13 +292,29 @@ class AgentName:
 - `src/engine/router.py` — AgentRouter logic
 - `src/engine/executor.py` — TurnExecutor orchestration
 
-### 7.5 Pending Implementation
+### 7.5 Adventure Pacing System
+
+Every adventure follows a 50-turn narrative arc:
+
+| Phase | Turns | Description |
+|-------|-------|-------------|
+| **Setup** | 1-5 | Establish world and hook |
+| **Rising Action** | 6-20 | Develop complications |
+| **Mid Point** | 21-30 | Major revelation or shift |
+| **Climax** | 31-42 | Final confrontation |
+| **Denouement** | 43-50 | Resolution and epilogue |
+
+- Minimum 25 turns before quest can trigger ending
+- Hard cap at 50 turns
+- PacingContext provides urgency and directive hints to agents
+- EpilogueAgent generates personalized conclusions
+
+### 7.6 Pending Implementation
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| Innkeeper Flow Integration | Add to `/start` and dialogue phase | High |
-| Character Creation Tasks | New YAML tasks for sheet generation | High |
-| Combat Tools | Dice rolling, damage calculation | Medium |
+| Character Sheet UI | Display character info in frontend | High |
+| Character Stat Influence | Keeper uses stats for resolution | Medium |
 | Dynamic NPC Spawning | Agent instantiation from templates | Low |
 
 ---
@@ -289,13 +323,15 @@ class AgentName:
 
 | Component | Function | Key Technologies | Status |
 |-----------|----------|------------------|--------|
-| Entry Portal | Adventure start, choice presentation | NES.css, vanilla JavaScript | ✅ |
-| Character Engine | Parallel agent analysis, sheet generation | CrewAI parallel tasks | Planned |
-| Quest Factory | Personalized adventure generation | CrewAI sequential flow, memory | ✅ (Basic) |
+| Entry Portal | Adventure start, choice presentation | Custom CSS, ES6 Modules | ✅ |
+| Character Engine | Dynamic interview, sheet generation | CharacterInterviewerAgent, CrewAI | ✅ |
+| Quest Factory | Personalized adventure generation | CrewAI sequential flow, memory | ✅ |
 | NPC Spawner | Dynamic agent instantiation | CrewAI dynamic agents | Planned |
-| Combat Manager | Turn-based mechanics, dice tools | CrewAI tools, function calling | Planned |
+| Combat Manager | Turn-based mechanics, dice tools | CombatManager, DiceRoller | ✅ |
+| Pacing Engine | 50-turn narrative arc management | PacingContext, AdventurePhase | ✅ |
 | Flow Controller | State machine, branching logic | FastAPI sessions, in-memory state | ✅ |
-| Narrative Handler | Real-time narrative delivery | FastAPI REST endpoints | ✅ |
+| Narrative Handler | Real-time narrative delivery | FastAPI REST + SSE endpoints | ✅ |
+| Epilogue Generator | Personalized adventure conclusions | EpilogueAgent with fallbacks | ✅ |
 | Export Service | Adventure log, character sheet output | PDF/Markdown generation | Planned |
 
 **Current API Endpoints:**
@@ -340,12 +376,12 @@ class AgentName:
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| **ENTER** | ✅ | User lands on retro RPG-styled welcome screen |
-| **START** | ✅ | Click "Begin Adventure" → welcome narrative + 3 starter choices |
-| **DESCRIBE** | 🚧 | Character creation via Innkeeper conversation |
-| **PLAY** | ✅ | Turn-based adventure with multi-agent responses |
+| **ENTER** | ✅ | User lands on modern RPG-styled welcome screen |
+| **START** | ✅ | Click "Begin Quest" → welcome narrative + 3 starter choices |
+| **DESCRIBE** | ✅ | Character creation via CharacterInterviewerAgent (5-turn interview) |
+| **PLAY** | ✅ | Turn-based adventure with multi-agent responses (50-turn arc) |
 | **CONTINUE** | ✅ | Receive new choices, loop back to PLAY |
-| **RESOLVE** | 📋 | Epilogue generation based on choices |
+| **RESOLVE** | ✅ | EpilogueAgent generates personalized conclusion |
 | **EXPORT** | 📋 | Download adventure log |
 
 ### 9.2 Turn Flow (PLAY Phase)
@@ -491,8 +527,26 @@ When using `/action/stream`, the frontend receives real-time events:
 | **Phase 1: Foundation** | FastAPI, Narrator, Sessions, Docker | ✅ Complete |
 | **Phase 2: Multi-Agent** | Keeper, Jester, Router, Executor | ✅ Complete |
 | **Phase 3: Streaming** | SSE endpoint, Frontend integration | ✅ Complete |
-| **Phase 4: Character** | Creation flow, Innkeeper integration | 🚧 In Progress |
-| **Phase 5: Combat** | Dice tools, HP tracking, Initiative | 📋 Planned |
-| **Phase 6: Epilogue** | Quest resolution, Export features | 📋 Planned |
+| **Phase 4: Character** | CharacterInterviewerAgent, 5-turn interview, content safety | ✅ Complete |
+| **Phase 5: Combat** | D&D 5e mechanics, DiceRoller, CombatManager, HP tracking | ✅ Complete |
+| **Phase 6: Pacing** | 50-turn arc, 5 phases, EpilogueAgent | ✅ Complete |
+| **Phase 7: Mobile UX** | Haptic feedback, touch targets, safe areas, bottom sheet | ✅ Complete |
+| **Phase 8: Testing** | 368 Python tests (75%), 415 JS tests (96.49%), E2E suite | ✅ Complete |
+| **Phase 9: Polish** | Character sheet UI, stat influence, export features | 🚧 In Progress |
+
+### 13.6 XP Practices
+
+This project follows **Extreme Programming (XP)** methodology:
+
+| Practice | Implementation |
+|----------|----------------|
+| **TDD** | Red-Green-Refactor cycle for all features |
+| **Simple Design** | Build simplest solution that works |
+| **Small Steps** | Commits every 15-30 min |
+| **YAGNI** | No speculative features |
+| **CI** | GitHub Actions with lint + test gates |
+| **Quality Gates** | Pre-commit hooks (ruff, mypy), 70% coverage minimum |
+
+See `docs/xp.md` for comprehensive XP guide.
 
 ---
