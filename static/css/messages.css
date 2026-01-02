@@ -68,6 +68,19 @@
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* Begin Quest Button - Hero CTA */
+.begin-btn {
+    padding: 16px 32px;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    border-radius: 12px;
+    margin-top: 8px;
+}
+
+.begin-btn i {
+    font-size: 1.2rem;
+}
+
 /* Base Message Styles - Chat Bubble Container */
 .message {
     display: flex;

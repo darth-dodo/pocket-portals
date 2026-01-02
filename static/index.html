@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pocket Portals - Solo D&D Adventure</title>
 
-    <!-- NES.css for retro RPG styling -->
-    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <!-- NES.css removed - using custom modern styles instead -->
     <!-- Press Start 2P for headers, Inter for body text, plus theme fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;600&family=Source+Sans+Pro:wght@300;400&family=IBM+Plex+Mono:wght@300;400&family=IBM+Plex+Sans:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <!-- RPG Awesome icons -->
@@ -89,7 +88,7 @@
                     <i class="ra ra-scroll-unfurled"></i>
                     <h2>Welcome, Adventurer!</h2>
                     <p>Your quest awaits. Choose your starting path or type your own action below.</p>
-                    <button class="nes-btn is-primary begin-btn" id="begin-btn">
+                    <button class="btn btn-gold begin-btn" id="begin-btn">
                         <i class="ra ra-player-lift"></i> Begin Quest
                     </button>
                 </div>
@@ -137,11 +136,11 @@
                     <input
                         type="text"
                         id="action-input"
-                        class="nes-input is-dark"
+                        class="input-dark"
                         placeholder="What do you do?"
                         autocomplete="off"
                     >
-                    <button class="nes-btn is-success" id="submit-btn">
+                    <button class="btn btn-success" id="submit-btn">
                         <i class="ra ra-lightning-bolt"></i> Act
                     </button>
                 </div>
@@ -154,7 +153,7 @@
                 <i class="ra ra-player"></i>
                 <span id="session-display">New Adventure</span>
             </span>
-            <button class="nes-btn is-error new-game-btn" id="new-game-btn">
+            <button class="btn btn-danger new-game-btn" id="new-game-btn">
                 <i class="ra ra-cycle"></i> New Game
             </button>
         </div>

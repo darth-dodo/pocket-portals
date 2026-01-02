@@ -332,9 +332,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 20px;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    overflow-y: auto;
 }
 
 .theme-modal-overlay.visible {
@@ -349,8 +351,11 @@
     padding: 24px;
     width: 90%;
     max-width: 340px;
-    max-height: 80vh;
-    overflow-y: auto;
+    max-height: calc(100vh - 40px);
+    max-height: calc(var(--app-height, 100vh) - 40px); /* Use app height for mobile */
+    display: flex;
+    flex-direction: column;
+    margin: auto;
 }
 
 .theme-modal-title {
@@ -359,12 +364,19 @@
     color: var(--color-gold);
     text-align: center;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .theme-options {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    min-height: 0;
+    padding-right: 4px; /* Space for scrollbar */
 }
 
 .theme-option {
@@ -377,6 +389,7 @@
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .theme-option:hover {
@@ -453,8 +466,68 @@
     font-size: 14px;
     cursor: pointer;
     transition: background 0.2s ease;
+    flex-shrink: 0;
 }
 
 .theme-modal-close:hover {
     background: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== Theme Modal Responsive ===== */
+@media (max-height: 600px) {
+    .theme-modal {
+        max-height: 90vh;
+        max-height: 90dvh;
+        padding: 16px;
+    }
+
+    .theme-modal-title {
+        margin-bottom: 12px;
+    }
+
+    .theme-options {
+        gap: 8px;
+    }
+
+    .theme-option {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .theme-preview {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .theme-name {
+        font-size: 13px;
+    }
+
+    .theme-desc {
+        font-size: 11px;
+    }
+
+    .theme-modal-close {
+        margin-top: 12px;
+        padding: 12px;
+    }
+}
+
+@media (max-height: 500px) {
+    .theme-modal {
+        max-height: 95vh;
+        max-height: 95dvh;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .theme-option {
+        padding: 10px;
+    }
+
+    .theme-preview {
+        width: 36px;
+        height: 36px;
+    }
 }

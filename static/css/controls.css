@@ -98,31 +98,83 @@
     gap: 12px;
 }
 
-.input-row .nes-input {
+/* Modern input styling (replaces NES.css) */
+.input-row input,
+.input-row .nes-input,
+#action-input {
     flex: 1;
-    font-size: 0.75rem !important;
-    padding: 14px !important;
+    font-size: 1rem;
+    font-family: var(--font-ui), -apple-system, sans-serif;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text);
+    transition: border-color 0.2s ease;
 }
 
-.input-row .nes-input:focus {
-    outline: 2px solid var(--color-blue);
-    outline-offset: 2px;
+.input-row input:focus,
+.input-row .nes-input:focus,
+#action-input:focus {
+    outline: none;
+    border-color: var(--color-blue);
 }
 
+.input-row input::placeholder,
+#action-input::placeholder {
+    color: var(--color-text-dim);
+}
+
+.input-row input:disabled,
 .input-row .nes-input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.input-row .nes-btn {
-    font-size: 0.7rem !important;
+/* Modern button styling (replaces NES.css) */
+.input-row button,
+.input-row .nes-btn,
+#submit-btn {
+    font-size: 1rem;
+    font-family: var(--font-ui), -apple-system, sans-serif;
+    font-weight: 600;
     white-space: nowrap;
-    padding: 14px 24px !important;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%);
+    border: none;
+    border-radius: 8px;
+    color: #1a1a2e;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.input-row .nes-btn:focus {
+.input-row button:hover,
+.input-row .nes-btn:hover,
+#submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(146, 204, 65, 0.4);
+}
+
+.input-row button:active,
+#submit-btn:active {
+    transform: translateY(0);
+}
+
+.input-row button:focus,
+.input-row .nes-btn:focus,
+#submit-btn:focus {
     outline: 2px solid var(--color-green);
     outline-offset: 2px;
+}
+
+.input-row button:disabled,
+#submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* ===== LOADING INDICATOR ===== */
@@ -189,11 +241,38 @@
     font-size: 0.8rem;
 }
 
-.new-game-btn {
-    font-size: 0.45rem !important;
+/* New Game button styling */
+.new-game-btn,
+.nes-btn.is-error.new-game-btn,
+#new-game-btn {
+    font-size: 0.875rem;
+    font-family: var(--font-ui), -apple-system, sans-serif;
+    font-weight: 600;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.new-game-btn:focus {
+.new-game-btn:hover,
+#new-game-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.new-game-btn:active,
+#new-game-btn:active {
+    transform: translateY(0);
+}
+
+.new-game-btn:focus,
+#new-game-btn:focus {
     outline: 2px solid var(--color-orange);
     outline-offset: 2px;
 }
