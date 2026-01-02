@@ -1,5 +1,9 @@
 /* ===== CSS Custom Properties ===== */
 :root {
+    /* iOS Viewport Height Fix */
+    --app-height: 100vh;
+    --vh: 1vh;
+
     /* Colors */
     --color-gold: #f7d354;
     --color-gold-dark: #c9a227;

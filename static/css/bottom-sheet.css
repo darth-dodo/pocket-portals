@@ -89,7 +89,7 @@
 }
 
 .sheet-title {
-    font-size: 0.6rem;
+    font-size: 0.875rem;
     color: var(--color-text-muted);
     letter-spacing: 0.5px;
     font-weight: normal;
@@ -151,15 +151,15 @@
 }
 
 .sheet-choice-btn {
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 44px;
+    padding: 10px 14px;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
     color: var(--color-text);
     font-family: var(--font-ui);
-    font-size: 0.85rem;
-    line-height: 1.35;
+    font-size: 1rem;
+    line-height: 1.4;
     text-align: left;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -208,12 +208,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     background: var(--color-gold);
     color: var(--color-bg-darkest);
     border-radius: 50%;
-    font-size: 0.5rem;
+    font-size: 0.75rem;
     font-weight: bold;
     flex-shrink: 0;
 }
@@ -234,7 +234,7 @@
 }
 
 .custom-action-label {
-    font-size: 0.55rem;
+    font-size: 0.875rem;
     color: var(--color-text-muted);
     margin-bottom: 10px;
     letter-spacing: 0.5px;
@@ -254,9 +254,10 @@
     border-radius: 8px;
     color: var(--color-text);
     font-family: var(--font-ui);
-    font-size: 0.9rem;
+    font-size: 16px; /* Prevents iOS zoom on focus */
     resize: none;
     transition: border-color var(--transition-fast);
+    touch-action: manipulation;
 }
 
 .custom-action-input:focus {
@@ -312,7 +313,7 @@
 }
 
 .sheet-choices-loading .loading-text {
-    font-size: 0.6rem;
+    font-size: 0.875rem;
     color: var(--color-text-muted);
 }
 
@@ -329,7 +330,7 @@
 }
 
 .sheet-empty-text {
-    font-size: 0.6rem;
+    font-size: 0.875rem;
     color: var(--color-text-muted);
     line-height: 1.6;
 }
@@ -338,6 +339,7 @@
 @media (max-width: 480px) {
     .bottom-sheet {
         border-radius: 16px 16px 0 0;
+        max-height: calc(var(--app-height, 100vh) * 0.7);
     }
 
     .sheet-header {
@@ -345,7 +347,7 @@
     }
 
     .sheet-title {
-        font-size: 0.6rem;
+        font-size: 0.875rem;
     }
 
     .sheet-content {
@@ -354,20 +356,28 @@
 
     .sheet-choice-btn {
         padding: 12px 14px;
-        font-size: 0.55rem;
+        font-size: 1rem;
         gap: 10px;
     }
 
     .choice-number {
         width: 24px;
         height: 24px;
-        font-size: 0.5rem;
+        font-size: 0.75rem;
     }
 
     .custom-action-input {
-        font-size: 0.5rem;
+        font-size: 16px; /* Prevents iOS zoom */
         padding: 10px 12px;
     }
+}
+
+/* iOS Input Zoom Prevention */
+input,
+textarea,
+select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    touch-action: manipulation;
 }
 
 /* Landscape adjustments */

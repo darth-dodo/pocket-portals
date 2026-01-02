@@ -146,12 +146,18 @@
 
     // ===== Loading Phrases =====
     const LoadingPhrases = [
-        'Adventuring',
-        'Rolling dice',
-        'Consulting the fates',
-        'Weaving the tale',
-        'Charting the path',
-        'Summoning words'
+        'Rolling for initiative...',
+        'Consulting the ancient scrolls...',
+        'The dungeon master ponders...',
+        'Fate weaves your story...',
+        'The dice are tumbling...',
+        'Summoning arcane words...',
+        'Deciphering runes...',
+        'The oracle speaks...',
+        'Gathering mana...',
+        'Venturing forth...',
+        'Traversing the mists...',
+        'The quill scratches...'
     ];
 
     /**
