@@ -691,6 +691,32 @@ async def process_action(
     # Store exchange in session (auto-limits to 20)
     await sm.add_exchange(state.session_id, action, result.narrative)
 
+    # Get the narrative from turn executor result
+    narrative = result.narrative
+
+    # Check quest progress if conditions are met
+    if state.active_quest and state.phase == GamePhase.EXPLORATION and quest_designer:
+        try:
+            progress = quest_designer.check_quest_progress(
+                active_quest=state.active_quest,
+                action=action,
+                narrative=narrative,
+            )
+
+            if progress["objectives_completed"]:
+                for obj_id in progress["objectives_completed"]:
+                    await sm.update_quest_objective(state.session_id, obj_id, True)
+                logger.info(
+                    "Quest objectives completed: %s", progress["objectives_completed"]
+                )
+
+            if progress["quest_completed"]:
+                await sm.complete_quest(state.session_id)
+                narrative += f"\n\n{progress['completion_narrative']}"
+                logger.info("Quest completed: %s", state.active_quest.title)
+        except Exception as e:
+            logger.warning("Quest progress check failed: %s", e)
+
     # Update recent agents for Jester cooldown tracking
     await sm.update_recent_agents(state.session_id, routing.agents)
 
@@ -698,7 +724,7 @@ async def process_action(
     await sm.set_choices(state.session_id, result.choices)
 
     return NarrativeResponse(
-        narrative=result.narrative, session_id=state.session_id, choices=result.choices
+        narrative=narrative, session_id=state.session_id, choices=result.choices
     )
 
 
