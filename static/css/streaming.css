@@ -1,8 +1,8 @@
 /* ===== Streaming Feedback Styles ===== */
 
-/* Response Indicator Container */
+/* Response Indicator Container - Hidden by default, shown with .visible */
 .response-indicator {
-    display: flex;
+    display: none;
     align-items: flex-start;
     gap: 14px;
     padding: 16px;
@@ -13,8 +13,8 @@
     animation: fadeIn 0.3s ease;
 }
 
-.response-indicator.hidden {
-    display: none;
+.response-indicator.visible {
+    display: flex;
 }
 
 /* Agent Avatar */
