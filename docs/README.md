@@ -30,11 +30,13 @@ docs/
 ├── reference/
 │   ├── conversation-engine.md  # Turn mechanics
 │   ├── creative-writing.md     # Narrative guidelines
+│   ├── testing-mocks.md        # LLM mocking strategy
 │   └── xp.md                   # XP methodology
 │
 ├── design/
 │   ├── choice-system.md        # Choice mechanics
 │   ├── conversation-context.md # Context management
+│   ├── mobile-ux-improvement-plan.md  # Mobile UX design
 │   └── 2025-12-*.md            # Design documents
 │
 ├── adr/
@@ -82,10 +84,12 @@ graph TD
 
 ## Project Status
 
-- **296 tests** passing
-- **68% coverage** on critical paths
+- **Backend**: 296+ Python tests passing (pytest)
+- **Frontend**: Vitest + jsdom test suite
+- **Coverage**: 70%+ on critical paths
 - **Pre-commit hooks** enforced (ruff, mypy)
+- **CI/CD**: Frontend and backend tests run on push/PR to main
 
 ---
 
-*Updated December 2024*
+*Updated January 2025*

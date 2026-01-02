@@ -37,7 +37,7 @@ Behavior-Driven Development ensures we build what users actually need:
 ```mermaid
 flowchart TB
     subgraph UI["User Interface"]
-        Browser["Browser<br/>NES.css Frontend"]
+        Browser["Browser<br/>Mobile-First Frontend"]
     end
 
     subgraph API["FastAPI Backend"]
@@ -948,39 +948,51 @@ Each agent's behavior maps to specific Gherkin scenarios:
 # .github/workflows/ci.yml
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  test:
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:coverage
+
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
 
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Lint
-        run: uv run ruff check src/ tests/
-
-      - name: Type check
-        run: uv run mypy src/
-
-      - name: Unit tests
-        run: uv run pytest tests/unit -v
-
-      - name: Integration tests
-        run: uv run pytest tests/integration -v
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=70
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Coverage
-        run: uv run pytest --cov=src --cov-fail-under=80
-
-      - name: BDD Tests (P0 scenarios)
-        run: uv run behave tests/bdd --tags=@P0
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: test-key-for-ci
 ```
 
 ### Ten-Minute Build
@@ -1360,12 +1372,27 @@ pocket-portals/
 │       ├── environment.py
 │       └── behave.ini
 │
+├── static/                    # Frontend (vanilla JS + CSS)
+│   ├── index.html             # Single-page application
+│   ├── css/
+│   │   ├── themes.css         # 5 themes with CSS custom properties
+│   │   ├── responsive.css     # Mobile-first, iOS safe areas
+│   │   ├── combat.css         # Combat HUD styles
+│   │   └── ...                # Component-specific styles
+│   └── js/
+│       ├── api.js             # SSE streaming, API calls
+│       ├── combat.js          # Combat UI logic
+│       ├── themes.js          # Theme system (localStorage)
+│       ├── haptics.js         # Mobile haptic feedback
+│       └── __tests__/         # Vitest frontend tests
+│
 ├── docs/
-│   ├── architecture.md         # This file
-│   └── adr/                    # Architecture Decision Records
-│       └── 001-htmx-over-react.md
+│   ├── architecture.md        # This file
+│   └── adr/                   # Architecture Decision Records
 │
 ├── pyproject.toml
+├── package.json               # Frontend test dependencies (Vitest)
+├── vitest.config.js           # Frontend test configuration
 ├── Makefile
 ├── Dockerfile
 ├── fly.toml
@@ -1376,21 +1403,28 @@ pocket-portals/
 
 ## 13. Architecture Decision Records
 
-### ADR-001: HTMX Over React
+### ADR-001: Vanilla JavaScript Over React
 
-**Status:** Accepted
+**Status:** Accepted (Updated January 2025)
 
 **Context:** Need interactive UI for streaming narrative and choices.
 
-**Decision:** Use HTMX + Jinja2 instead of React/Vue.
+**Decision:** Use vanilla JavaScript with modular CSS instead of React/Vue.
 
 **Consequences:**
-- ✅ Simpler stack (XP: Simplicity)
-- ✅ No build step for frontend
-- ✅ SSE streaming works naturally
-- ✅ Progressive enhancement
-- ⚠️ Less ecosystem for complex UI
-- ⚠️ Team must learn HTMX patterns
+- No build step for frontend (simple static files)
+- SSE streaming works naturally with EventSource API
+- Progressive enhancement with mobile-first design
+- Modular JS files: `api.js`, `combat.js`, `themes.js`, `haptics.js`
+- CSS organized by component: `themes.css`, `responsive.css`, `combat.css`
+- Testable with Vitest + jsdom
+
+**Frontend Stack:**
+- Vanilla JS with ES modules
+- CSS custom properties for theming (5 themes)
+- Mobile-first responsive design with iOS safe areas
+- Haptic feedback via Vibration API
+- No external CSS frameworks (NES.css removed)
 
 ### ADR-002: Swappable Session Backends
 

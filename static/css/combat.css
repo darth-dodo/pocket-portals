@@ -1,0 +1,379 @@
+/* ===== COMBAT.CSS - Combat HUD Styling ===== */
+
+/* ===== COMBAT CONTAINER ===== */
+.combat-hud {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 280px;
+    z-index: 100;
+    padding: 15px;
+    display: none;
+    background: linear-gradient(180deg, var(--color-bg-darker) 0%, var(--color-bg-dark) 100%);
+    border: 4px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.combat-hud.active {
+    display: block;
+    animation: slideIn 0.3s ease-out;
+}
+
+/* ===== INITIATIVE TRACKER ===== */
+.initiative-tracker {
+    margin-bottom: 15px;
+}
+
+.initiative-tracker h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.6rem;
+    color: var(--color-gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.initiative-tracker h4 i {
+    font-size: 0.9rem;
+}
+
+.initiative-tracker ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.initiative-tracker li {
+    padding: 8px 10px;
+    margin: 4px 0;
+    background: rgba(51, 51, 51, 0.8);
+    font-size: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.initiative-tracker li:hover {
+    background: rgba(68, 68, 68, 0.9);
+}
+
+.initiative-tracker li.active-turn {
+    background: linear-gradient(90deg, var(--color-green) 0%, var(--color-green-dark) 100%);
+    color: #000;
+    font-weight: bold;
+    border-left-color: var(--color-gold);
+    box-shadow: 0 2px 8px rgba(146, 204, 65, 0.4);
+}
+
+/* ===== HP DISPLAYS ===== */
+.hp-displays {
+    margin-bottom: 15px;
+}
+
+.hp-bar {
+    margin: 10px 0;
+    position: relative;
+}
+
+.hp-bar label {
+    display: block;
+    font-size: 0.5rem;
+    margin-bottom: 4px;
+    color: var(--color-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hp-bar progress {
+    width: 100%;
+    height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Progress bar styling for WebKit browsers */
+.hp-bar progress::-webkit-progress-bar {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+}
+
+.hp-bar progress.nes-progress.is-success::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--color-green) 0%, var(--color-green-dark) 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.hp-bar progress.nes-progress.is-error::-webkit-progress-value {
+    background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Progress bar styling for Firefox */
+.hp-bar progress::-moz-progress-bar {
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.hp-bar span {
+    font-size: 0.5rem;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(25%);
+    color: #000;
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* HP bar states */
+.hp-bar.critical progress.nes-progress.is-success::-webkit-progress-value {
+    background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.hp-bar.low progress.nes-progress.is-success::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--color-orange) 0%, #d45a0a 100%);
+}
+
+/* ===== COMBAT ACTION BUTTONS ===== */
+.combat-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.combat-actions button {
+    flex: 1;
+    min-width: 70px;
+    /* Touch target: 48px minimum for mobile accessibility */
+    min-height: var(--touch-target-comfortable);
+    font-size: 0.5rem !important;
+    padding: 10px 6px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.combat-actions button i {
+    font-size: 0.9rem;
+}
+
+.combat-actions button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.combat-actions button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.combat-actions button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.combat-actions button:focus {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+}
+
+/* Attack button */
+.combat-actions button.nes-btn.is-error {
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.combat-actions button.nes-btn.is-error:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ff6b5b 0%, #e74c3c 100%);
+}
+
+/* Defend button */
+.combat-actions button.nes-btn.is-primary {
+    background: linear-gradient(180deg, var(--color-blue) 0%, #1a7dc7 100%);
+}
+
+.combat-actions button.nes-btn.is-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4ab0ff 0%, var(--color-blue) 100%);
+}
+
+/* Flee button */
+.combat-actions button.nes-btn.is-warning {
+    background: linear-gradient(180deg, var(--color-orange) 0%, #d45a0a 100%);
+}
+
+.combat-actions button.nes-btn.is-warning:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ff8c42 0%, var(--color-orange) 100%);
+}
+
+/* ===== DICE DISPLAY ===== */
+.dice-display {
+    margin-top: 12px;
+    text-align: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    display: none;
+}
+
+.dice-display.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.dice-display .dice-icon {
+    font-size: 28px;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.dice-display .dice-icon.rolling {
+    animation: dice-spin 0.3s ease-out;
+}
+
+.dice-display span {
+    display: block;
+    font-size: 0.55rem;
+    color: var(--color-gold);
+    font-weight: bold;
+}
+
+/* Dice result states */
+.dice-display.critical-hit {
+    border-color: var(--color-gold);
+    background: rgba(247, 211, 84, 0.1);
+}
+
+.dice-display.critical-hit span {
+    color: var(--color-gold);
+    animation: pulse 0.5s ease-in-out 3;
+}
+
+.dice-display.critical-miss {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.dice-display.critical-miss span {
+    color: #e74c3c;
+}
+
+/* ===== COMBAT STATUS MESSAGES ===== */
+.combat-status {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    font-size: 0.45rem;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.combat-status.player-turn {
+    border-left: 3px solid var(--color-green);
+    color: var(--color-green);
+}
+
+.combat-status.enemy-turn {
+    border-left: 3px solid #e74c3c;
+    color: #e74c3c;
+}
+
+/* ===== COMBAT DAMAGE NUMBERS ===== */
+@keyframes damage-float {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-40px) scale(0.8);
+    }
+}
+
+.damage-number {
+    position: absolute;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #e74c3c;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    animation: damage-float 1s ease-out forwards;
+    pointer-events: none;
+}
+
+.damage-number.healing {
+    color: var(--color-green);
+}
+
+.damage-number.critical {
+    color: var(--color-gold);
+    font-size: 1rem;
+}
+
+/* ===== COMBAT LOG ===== */
+.combat-log {
+    max-height: 100px;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    font-size: 0.4rem;
+}
+
+.combat-log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text-muted);
+}
+
+.combat-log-entry:last-child {
+    border-bottom: none;
+}
+
+.combat-log-entry.player-action {
+    color: var(--color-green);
+}
+
+.combat-log-entry.enemy-action {
+    color: #e74c3c;
+}
+
+.combat-log-entry.system {
+    color: var(--color-gold);
+    font-style: italic;
+}
+
+/* ===== COMBAT TURN INDICATOR ===== */
+.turn-indicator {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-gold);
+    color: var(--color-bg-darkest);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.45rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(247, 211, 84, 0.4);
+}
+
+.turn-indicator.enemy {
+    background: #e74c3c;
+    color: white;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+}
