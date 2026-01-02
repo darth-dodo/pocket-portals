@@ -3,182 +3,238 @@
  * Handles theme switching with localStorage persistence
  */
 
-(function() {
-    'use strict';
+/**
+ * List of valid theme names
+ */
+export const VALID_THEMES = ['rpg', 'modern', 'midnight', 'mono', 'ios'];
 
-    // ===== Theme Controller =====
-    const ThemeController = {
-        currentTheme: 'rpg',
-        validThemes: ['rpg', 'modern', 'midnight', 'mono', 'ios'],
+/**
+ * Default theme to use when no theme is saved
+ */
+export const DEFAULT_THEME = 'rpg';
 
-        /**
-         * Initialize the theme system
-         * Loads saved theme and sets up event listeners
-         */
-        init: function() {
-            // Load saved theme from localStorage
-            const savedTheme = localStorage.getItem('pocket-portals-theme');
-            this.currentTheme = this.isValidTheme(savedTheme) ? savedTheme : 'rpg';
+/**
+ * LocalStorage key for theme persistence
+ */
+export const STORAGE_KEY = 'pocket-portals-theme';
 
-            // Apply theme to document
-            this.applyTheme(this.currentTheme);
+/**
+ * Current active theme (module-level state)
+ */
+let currentTheme = DEFAULT_THEME;
 
-            // Set up event listeners
-            this.setupEventListeners();
-        },
+/**
+ * Check if a theme name is valid
+ * @param {string|null} themeName - Theme name to validate
+ * @returns {boolean} True if theme is valid
+ */
+export function isValidTheme(themeName) {
+    return Boolean(themeName && VALID_THEMES.includes(themeName));
+}
 
-        /**
-         * Check if a theme name is valid
-         * @param {string|null} themeName - Theme name to validate
-         * @returns {boolean} True if theme is valid
-         */
-        isValidTheme: function(themeName) {
-            return themeName && this.validThemes.includes(themeName);
-        },
+/**
+ * Get the current theme name
+ * @returns {string} Current theme name
+ */
+export function getCurrentTheme() {
+    return currentTheme;
+}
 
-        /**
-         * Apply a theme to the document
-         * @param {string} themeName - Theme name to apply
-         */
-        applyTheme: function(themeName) {
-            if (!this.isValidTheme(themeName)) {
-                console.warn('ThemeController: Invalid theme name:', themeName);
-                return;
-            }
+/**
+ * Update the active state on theme options in the DOM
+ */
+export function updateActiveOption() {
+    const themeOptions = document.querySelectorAll('.theme-option');
 
-            document.documentElement.setAttribute('data-theme', themeName);
-            this.currentTheme = themeName;
-            this.updateActiveOption();
-        },
-
-        /**
-         * Set and persist a theme
-         * @param {string} themeName - Theme name to set
-         */
-        setTheme: function(themeName) {
-            if (!this.isValidTheme(themeName)) {
-                console.warn('ThemeController: Invalid theme name:', themeName);
-                return;
-            }
-
-            // Apply theme
-            this.applyTheme(themeName);
-
-            // Save to localStorage
-            localStorage.setItem('pocket-portals-theme', themeName);
-
-            // Close modal after selection
-            this.closeModal();
-        },
-
-        /**
-         * Update the active state on theme options
-         */
-        updateActiveOption: function() {
-            const themeOptions = document.querySelectorAll('.theme-option');
-
-            themeOptions.forEach(function(option) {
-                const optionTheme = option.getAttribute('data-theme-select');
-                if (optionTheme === this.currentTheme) {
-                    option.classList.add('active');
-                } else {
-                    option.classList.remove('active');
-                }
-            }, this);
-        },
-
-        /**
-         * Open the theme selector modal
-         */
-        openModal: function() {
-            const modal = document.getElementById('theme-modal');
-            if (modal) {
-                modal.classList.add('visible');
-            }
-        },
-
-        /**
-         * Close the theme selector modal
-         */
-        closeModal: function() {
-            const modal = document.getElementById('theme-modal');
-            if (modal) {
-                modal.classList.remove('visible');
-            }
-        },
-
-        /**
-         * Get the current theme name
-         * @returns {string} Current theme name
-         */
-        getCurrentTheme: function() {
-            return this.currentTheme;
-        },
-
-        /**
-         * Set up event listeners for theme controls
-         */
-        setupEventListeners: function() {
-            const self = this;
-
-            // Settings button opens modal (unified for mobile and desktop)
-            const settingsBtn = document.getElementById('settings-btn');
-            if (settingsBtn) {
-                settingsBtn.addEventListener('click', function() {
-                    self.openModal();
-                });
-            }
-
-            // Close button closes modal
-            const closeBtn = document.getElementById('theme-modal-close');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', function() {
-                    self.closeModal();
-                });
-            }
-
-            // Theme options select theme
-            const themeOptions = document.querySelectorAll('.theme-option');
-            themeOptions.forEach(function(option) {
-                option.addEventListener('click', function() {
-                    const themeName = this.getAttribute('data-theme-select');
-                    if (themeName) {
-                        self.setTheme(themeName);
-                    }
-                });
-            });
-
-            // Clicking overlay closes modal
-            const modal = document.getElementById('theme-modal');
-            if (modal) {
-                modal.addEventListener('click', function(e) {
-                    // Only close if clicking the overlay, not the modal content
-                    if (e.target === modal) {
-                        self.closeModal();
-                    }
-                });
-            }
-
-            // Escape key closes modal
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    self.closeModal();
-                }
-            });
+    themeOptions.forEach(function(option) {
+        const optionTheme = option.getAttribute('data-theme-select');
+        if (optionTheme === currentTheme) {
+            option.classList.add('active');
+        } else {
+            option.classList.remove('active');
         }
-    };
+    });
+}
 
-    // Expose controller to window
+/**
+ * Apply a theme to the document without persisting
+ * @param {string} themeName - Theme name to apply
+ * @returns {boolean} True if theme was applied successfully
+ */
+export function applyTheme(themeName) {
+    if (!isValidTheme(themeName)) {
+        console.warn('ThemeController: Invalid theme name:', themeName);
+        return false;
+    }
+
+    document.documentElement.setAttribute('data-theme', themeName);
+    currentTheme = themeName;
+    updateActiveOption();
+    return true;
+}
+
+/**
+ * Open the theme selector modal
+ */
+export function openModal() {
+    const modal = document.getElementById('theme-modal');
+    if (modal) {
+        modal.classList.add('visible');
+    }
+}
+
+/**
+ * Close the theme selector modal
+ */
+export function closeModal() {
+    const modal = document.getElementById('theme-modal');
+    if (modal) {
+        modal.classList.remove('visible');
+    }
+}
+
+/**
+ * Set and persist a theme
+ * @param {string} themeName - Theme name to set
+ * @returns {boolean} True if theme was set successfully
+ */
+export function setTheme(themeName) {
+    if (!isValidTheme(themeName)) {
+        console.warn('ThemeController: Invalid theme name:', themeName);
+        return false;
+    }
+
+    // Apply theme
+    applyTheme(themeName);
+
+    // Save to localStorage
+    localStorage.setItem(STORAGE_KEY, themeName);
+
+    // Close modal after selection
+    closeModal();
+
+    return true;
+}
+
+/**
+ * Load saved theme from localStorage
+ * @returns {string} The loaded theme name (or default if none saved)
+ */
+export function loadSavedTheme() {
+    const savedTheme = localStorage.getItem(STORAGE_KEY);
+    return isValidTheme(savedTheme) ? savedTheme : DEFAULT_THEME;
+}
+
+/**
+ * Set up event listeners for theme controls
+ */
+export function setupEventListeners() {
+    // Settings button opens modal (unified for mobile and desktop)
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', function() {
+            openModal();
+        });
+    }
+
+    // Close button closes modal
+    const closeBtn = document.getElementById('theme-modal-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            closeModal();
+        });
+    }
+
+    // Theme options select theme
+    const themeOptions = document.querySelectorAll('.theme-option');
+    themeOptions.forEach(function(option) {
+        option.addEventListener('click', function() {
+            const themeName = this.getAttribute('data-theme-select');
+            if (themeName) {
+                setTheme(themeName);
+            }
+        });
+    });
+
+    // Clicking overlay closes modal
+    const modal = document.getElementById('theme-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            // Only close if clicking the overlay, not the modal content
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+
+    // Escape key closes modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
+}
+
+/**
+ * Initialize the theme system
+ * Loads saved theme and sets up event listeners
+ */
+export function initTheme() {
+    // Load saved theme from localStorage
+    currentTheme = loadSavedTheme();
+
+    // Apply theme to document
+    applyTheme(currentTheme);
+
+    // Set up event listeners
+    setupEventListeners();
+}
+
+/**
+ * Reset theme state to default (useful for testing)
+ */
+export function resetThemeState() {
+    currentTheme = DEFAULT_THEME;
+}
+
+/**
+ * ThemeController object for backward compatibility
+ * Mirrors the original IIFE interface
+ */
+export const ThemeController = {
+    get currentTheme() {
+        return getCurrentTheme();
+    },
+    validThemes: VALID_THEMES,
+    init: initTheme,
+    isValidTheme,
+    applyTheme,
+    setTheme,
+    updateActiveOption,
+    openModal,
+    closeModal,
+    getCurrentTheme,
+    setupEventListeners
+};
+
+// Browser compatibility: expose to window for script tag usage
+if (typeof window !== 'undefined') {
     window.ThemeController = ThemeController;
+    window.initTheme = initTheme;
+    window.setTheme = setTheme;
+    window.applyTheme = applyTheme;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.getCurrentTheme = getCurrentTheme;
+    window.isValidTheme = isValidTheme;
 
-    // Initialize when DOM is ready
+    // Auto-initialize when DOM is ready (maintains original behavior)
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            ThemeController.init();
+            initTheme();
         });
     } else {
         // DOM is already ready
-        ThemeController.init();
+        initTheme();
     }
-
-})();
+}
