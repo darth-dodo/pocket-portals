@@ -4,6 +4,10 @@
 **Status**: Planning
 **Related Doc**: [2025-12-25-crewai-state-management.md](./2025-12-25-crewai-state-management.md)
 
+> **Note**: For API improvements (modular structure, rate limiting, CORS), see:
+> - `tasks.md` - Current status of completed backend improvements
+> - `docs/design/2026-01-03-backend-improvements.md` - Design document
+
 ---
 
 ## Overview
