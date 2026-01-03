@@ -1,6 +1,7 @@
 """Shared pytest fixtures for Pocket Portals tests."""
 
 import asyncio
+import os
 from collections.abc import Generator
 from typing import Any, TypeVar
 from unittest.mock import MagicMock, patch
@@ -8,17 +9,25 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.agents.narrator import NarratorResponse
-from src.agents.quest_designer import (
+# Set test environment before any imports that might cache settings
+os.environ["ENVIRONMENT"] = "test"
+
+# Clear the settings cache to pick up test environment
+from src.config.settings import get_settings
+
+get_settings.cache_clear()
+
+from src.agents.narrator import NarratorResponse  # noqa: E402
+from src.agents.quest_designer import (  # noqa: E402
     QuestObjectiveOutput,
     QuestOptionsOutput,
     QuestOutput,
 )
-from src.api.main import app
-from src.state import GamePhase, SessionManager
-from src.state.backends.memory import InMemoryBackend
-from src.state.character import CharacterSheet
-from src.state.models import CombatState, GameState
+from src.api.main import app  # noqa: E402
+from src.state import GamePhase, SessionManager  # noqa: E402
+from src.state.backends.memory import InMemoryBackend  # noqa: E402
+from src.state.character import CharacterSheet  # noqa: E402
+from src.state.models import CombatState, GameState  # noqa: E402
 
 T = TypeVar("T")
 

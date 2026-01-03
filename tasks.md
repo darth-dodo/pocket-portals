@@ -164,13 +164,46 @@ gantt
 |------|--------|-------|
 | Quest data SSE event for active quest display | ⏳ | Character sheet shows "No active quest" after selection |
 
-### Up Next
+### Up Next - Priority Tasks (from Codebase Analysis 2026-01-03)
 
-| Task | Status | Priority |
-|------|--------|----------|
-| Character stat influence on outcomes | ⏳ | Keeper uses stats for mechanical resolution |
-| Export adventure log | ⏳ | Downloadable adventure summary |
-| Quest completion → new quest loop | ⏳ | After completing quest, return to QUEST_SELECTION |
+#### 🔴 Critical (Immediate)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Split main.py into smaller modules | ✅ | Critical | Done: main.py reduced from 2133 to 5 lines. Created routes/, handlers/, models/, app.py, dependencies.py |
+| Add rate limiting to API | ✅ | Critical | Done: Privacy-first rate limiting using session_id only (no IP tracking). 3 tiers: 20/60/100 per minute |
+| Fix production CORS configuration | ✅ | Critical | Done: CORS now configurable via settings. Permissive in dev, restrictive in prod |
+| Improve content filter (word boundaries) | | Critical |  |
+
+#### 🟠 High Priority (Next Sprint)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Fix Jester duplicate config loaders | | High | Task 1.1 from improvements.md |
+| Centralize LLM config in YAML | | High | Task 1.2 - remove hardcoded model settings |
+| Implement Redis session persistence | | High | Task 2.1 - sessions lost on restart |
+| Add structured output schemas with guardrails | | High | Task 2.3 - ~15% JSON parse failure rate |
+| Refactor SessionManager (28+ methods) | | High | Split into session_crud.py, character_manager.py, quest_manager.py |
+
+#### 🟡 Medium Priority (This Quarter)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Add execution hooks for observability | | Medium | Task 2.2 - no LLM call visibility |
+| Enable agent memory system | | Medium | Task 3.1 - narrator forgets story details |
+| Add D&D knowledge sources | | Medium | Task 3.2 - agents lack rule references |
+| Create custom agent tools | | Medium | Task 3.3 - DiceRoller called directly |
+| Make AgentRouter random seedable | | Medium | Uses `random.random()` directly - not testable |
+| Add Playwright E2E tests for critical flows | | Medium | Extend test coverage beyond unit tests |
+| Add authentication layer | | Medium | Sessions are UUID-based only, no auth |
+
+#### 🟢 Existing Backlog
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Character stat influence on outcomes | ⏳ | Medium | Keeper uses stats for mechanical resolution |
+| Export adventure log | ⏳ | Low | Downloadable adventure summary |
+| Quest completion → new quest loop | ⏳ | Medium | After completing quest, return to QUEST_SELECTION |
 
 ### Recently Completed (January 2026)
 
