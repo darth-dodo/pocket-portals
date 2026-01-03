@@ -11,7 +11,7 @@ Pocket Portals uses Playwright for browser automation and E2E testing. The tests
 - **Server**: FastAPI with uvicorn (`src.api.main:app`)
 - **Default Port**: 8765
 - **Browser**: Chromium (via Playwright MCP)
-- **Test Date**: January 2, 2026
+- **Test Date**: January 3, 2026
 
 ## Starting the Test Server
 
@@ -221,6 +221,97 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 
 ---
 
+### 11. Character Sheet Display Test
+
+**Objective**: Verify character sheet panel appears after character creation and displays stats correctly.
+
+**Steps**:
+1. Complete character creation (5 turns of interview)
+2. Select a quest to enter exploration phase
+3. Verify character sheet panel is visible
+4. Verify character identity (name, race, class, level) is displayed
+5. Verify HP bar shows current/max HP with color coding
+6. Verify all 6 ability scores are displayed with modifiers
+
+**Expected Result**:
+- Character sheet panel appears in sidebar (desktop) or collapsible header (mobile)
+- Name, race, class, level match created character
+- HP bar shows green (>50%), yellow (26-50%), or red (≤25%) based on health
+- Stats show values (3-18) with calculated modifiers (+4 to -4)
+- Quest section shows active quest title and objectives
+
+**Screenshot**: `e2e-screenshots/11-character-sheet.png`
+
+---
+
+### 12. Character Sheet Collapse/Expand Test
+
+**Objective**: Verify character sheet panel can be collapsed and expanded.
+
+**Steps**:
+1. With character sheet visible, click the toggle button
+2. Verify panel collapses with smooth animation
+3. Verify collapsed state shows minimal info (name + HP)
+4. Click toggle again to expand
+5. Verify full character sheet content is visible
+
+**Expected Result**:
+- Toggle button (↑/↓ icons) works correctly
+- Collapse animation is smooth (300ms transition)
+- Collapsed state persists across page interactions
+- Expanded state shows all character information
+
+**Screenshot**: `e2e-screenshots/12-character-sheet-collapsed.png`
+
+---
+
+### 13. Character Sheet Theme Integration Test
+
+**Objective**: Verify character sheet matches each theme's visual style.
+
+**Steps**:
+1. Start game and create character
+2. For each theme (RPG, Midnight, Mono, iOS):
+   - Open theme modal and select theme
+   - Verify character sheet colors match theme
+   - Verify font styles match theme
+   - Verify border radius matches theme
+
+**Expected Result**:
+- **RPG Classic**: Gold accents, Press Start 2P font, 8px radius
+- **Midnight Minimal**: White accents, Playfair Display font, no radius
+- **Monospace**: White accents, IBM Plex Mono font, underlines
+- **iOS Dark**: White accents, DM Sans font, 16px radius
+
+**Screenshots**:
+- `e2e-screenshots/13-charsheet-rpg.png`
+- `e2e-screenshots/13-charsheet-midnight.png`
+- `e2e-screenshots/13-charsheet-mono.png`
+- `e2e-screenshots/13-charsheet-ios.png`
+
+---
+
+### 14. Character Sheet Mobile Test
+
+**Objective**: Verify character sheet works on mobile viewport.
+
+**Steps**:
+1. Set viewport to 390x844 (iPhone 14 Pro)
+2. Start game and create character
+3. Verify character sheet is collapsed by default on mobile
+4. Tap toggle to expand
+5. Verify full content is visible and scrollable if needed
+
+**Expected Result**:
+- Panel is collapsed by default on mobile (<768px)
+- Toggle button has 44px+ touch target
+- Expanded state shows 2-column stats grid
+- Quest objectives are visible and readable
+
+**Screenshot**: `e2e-screenshots/14-charsheet-mobile.png`
+
+---
+
 ## Test Results Summary
 
 | Test | Status | Notes |
@@ -235,6 +326,10 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 | Custom Action Input | PASS | Text input functional |
 | Quest Selection Flow | PASS | 3 quest options after character creation |
 | Quest Activation | PASS | Quest activates, exploration begins |
+| Character Sheet Display | PENDING | Stats, HP bar, quest objectives |
+| Character Sheet Collapse | PENDING | Toggle, animation, persistence |
+| Character Sheet Themes | PENDING | All 4 themes match |
+| Character Sheet Mobile | PENDING | Mobile-first, 44px targets |
 
 ## Console Messages Observed
 
@@ -253,7 +348,7 @@ Received choices: [...]
 
 ### Unit Tests (Vitest)
 ```bash
-npm test                 # Run all 415 tests
+npm test                 # Run all 468 tests
 npm run test:watch       # Watch mode
 npm run test:coverage    # With coverage report
 ```
@@ -298,8 +393,10 @@ Tested on:
 
 ## Future Test Additions
 
-1. Combat system E2E tests
-2. New game reset flow
+1. Combat system E2E tests (HP changes during combat)
+2. New game reset flow (character sheet clears)
 3. Error handling scenarios
 4. Network failure recovery
 5. Accessibility testing (keyboard navigation, screen readers)
+6. Quest completion and new quest selection
+7. Character sheet real-time HP updates during combat
