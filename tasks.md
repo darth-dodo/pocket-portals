@@ -164,18 +164,54 @@ gantt
 |------|--------|-------|
 | Quest data SSE event for active quest display | ⏳ | Character sheet shows "No active quest" after selection |
 
-### Up Next
+### Up Next - Priority Tasks (from Codebase Analysis 2026-01-03)
 
-| Task | Status | Priority |
-|------|--------|----------|
-| Character stat influence on outcomes | ⏳ | Keeper uses stats for mechanical resolution |
-| Export adventure log | ⏳ | Downloadable adventure summary |
-| Quest completion → new quest loop | ⏳ | After completing quest, return to QUEST_SELECTION |
+#### 🔴 Critical (Immediate)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Split main.py into smaller modules | ✅ | Critical | Done 2026-01-03: main.py 2133→5 lines. Created routes/, handlers/, models/, app.py, dependencies.py, constants.py, content_safety.py |
+| Add rate limiting to API | ✅ | Critical | Done 2026-01-03: Privacy-first rate limiting using session_id only (no IP tracking). 3 tiers: 20/60/100 per minute. 35 tests. |
+| Fix production CORS configuration | ✅ | Critical | Done 2026-01-03: CORS now configurable via settings. Permissive in dev, restrictive in prod. |
+| Improve content filter (word boundaries) | | Critical |  |
+
+#### 🟠 High Priority (Next Sprint)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Fix Jester duplicate config loaders | | High | Task 1.1 from improvements.md |
+| Centralize LLM config in YAML | | High | Task 1.2 - remove hardcoded model settings |
+| Implement Redis session persistence | | High | Task 2.1 - sessions lost on restart |
+| Add structured output schemas with guardrails | | High | Task 2.3 - ~15% JSON parse failure rate |
+| Refactor SessionManager (28+ methods) | | High | Split into session_crud.py, character_manager.py, quest_manager.py |
+
+#### 🟡 Medium Priority (This Quarter)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Add execution hooks for observability | | Medium | Task 2.2 - no LLM call visibility |
+| Enable agent memory system | | Medium | Task 3.1 - narrator forgets story details |
+| Add D&D knowledge sources | | Medium | Task 3.2 - agents lack rule references |
+| Create custom agent tools | | Medium | Task 3.3 - DiceRoller called directly |
+| Make AgentRouter random seedable | | Medium | Uses `random.random()` directly - not testable |
+| Add Playwright E2E tests for critical flows | | Medium | Extend test coverage beyond unit tests |
+| Add authentication layer | | Medium | Sessions are UUID-based only, no auth |
+
+#### 🟢 Existing Backlog
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Character stat influence on outcomes | ⏳ | Medium | Keeper uses stats for mechanical resolution |
+| Export adventure log | ⏳ | Low | Downloadable adventure summary |
+| Quest completion → new quest loop | ⏳ | Medium | After completing quest, return to QUEST_SELECTION |
 
 ### Recently Completed (January 2026)
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Backend improvements - modular API | ✅ | main.py 2133→5 lines. Branch: backend-improvements, Commit: 778ebb0 |
+| Backend improvements - rate limiting | ✅ | Privacy-first (session_id only). 3 tiers: LLM 20/min, Combat 60/min, Default 100/min |
+| Backend improvements - CORS config | ✅ | Configurable via settings.py. Permissive in dev, restrictive in prod |
 | CharacterBuilderAgent implementation | ✅ | LLM-powered stat generation from interview using CrewAI Pydantic output |
 | Character sheet API integration | ✅ | `CharacterSheetData` model, SSE `game_state` event after character creation |
 | Skip character creation fixes | ✅ | Both `/start?skip_creation=true` and typing "skip" return character_sheet |
@@ -400,6 +436,67 @@ gantt
 
 ## Task History Archive
 
+### Session Log: 2026-01-03
+
+**Session Focus**: Backend Improvements - Modular API, Rate Limiting, CORS
+
+**Key Decisions**:
+1. Split 2133-line main.py into modular structure using FastAPI app factory pattern
+2. Implemented privacy-first rate limiting using session_id only (NO IP tracking)
+3. Made CORS configurable via settings (permissive dev, restrictive prod)
+4. Used APIRouter for modular route organization
+
+**Branch**: `backend-improvements`
+**Commit**: `778ebb0`
+
+**Artifacts Created**:
+- `src/api/app.py` - App factory with lifespan and middleware (143 lines)
+- `src/api/rate_limiting.py` - Privacy-first rate limiter (153 lines)
+- `src/api/dependencies.py` - Shared dependencies (87 lines)
+- `src/api/constants.py` - Narrative text and choices (38 lines)
+- `src/api/content_safety.py` - Content filtering (142 lines)
+- `src/api/models/` - Request/response models package
+- `src/api/routes/` - Route modules (adventure, combat, agents, health)
+- `src/api/handlers/` - Business logic handlers (character, quest, combat)
+- `tests/test_rate_limiting.py` - 35 rate limiting tests
+- `docs/design/2026-01-03-backend-improvements.md` - Design document
+
+**Files Modified**:
+- `src/api/main.py` - Reduced from 2133 to 5 lines
+- `src/config/settings.py` - Added rate limit and CORS settings
+- `pyproject.toml` - Added ratelimit>=2.2.1 dependency
+- `tests/conftest.py` - Fixed import noqa comments
+- `tests/test_api_quest_progress.py` - Fixed imports for new module structure
+
+**Rate Limiting Implementation**:
+| Tier | Limit | Endpoints |
+|------|-------|-----------|
+| LLM | 20/min | /action, /action/stream, /keeper/resolve, /jester/complicate |
+| Combat | 60/min | /combat/start, /combat/action |
+| Default | 100/min | /start, /health |
+
+**API Module Structure**:
+```
+src/api/
+├── main.py          # 5 lines - entry point
+├── app.py           # App factory, lifespan, CORS
+├── rate_limiting.py # Privacy-first rate limiter
+├── dependencies.py  # get_session_manager, build_context
+├── constants.py     # Narrative text
+├── content_safety.py# BLOCKED_PATTERNS, filter_content
+├── models/          # Pydantic request/response models
+├── routes/          # APIRouter modules
+└── handlers/        # Business logic
+```
+
+**Quality Gates Passed**:
+- 444 Python tests passing (was 409)
+- 35 new rate limiting tests
+- 8 E2E Playwright tests passing
+- All linting/type checks passing
+
+---
+
 ### Session Log: 2026-01-02 (Afternoon)
 
 **Session Focus**: ES6 Module Fix and Playwright E2E Documentation
@@ -617,7 +714,7 @@ gantt
 
 ### Project State
 - **Current Phase**: Phase 9 Polish - character sheet UI and export features
-- **Python Test Coverage**: 75% (368 tests)
+- **Python Test Coverage**: 75% (444 tests)
 - **JavaScript Test Coverage**: 96.49% (415 tests across 8 test files)
 - **E2E Testing**: Playwright MCP with 8 documented scenarios
 - **CI/CD**: GitHub Actions with lint + test jobs (Python and JavaScript)
@@ -627,6 +724,9 @@ gantt
 - **Architecture**: ADR 001 documents agent service pattern
 - **Content Safety**: Pattern-based filtering with safe redirects
 - **Frontend**: Modern CSS (ES6 modules), haptic feedback, iOS safe areas, bottom sheet
+- **API Structure**: Modular (routes/, handlers/, models/), app factory pattern
+- **Rate Limiting**: Privacy-first (session_id only), 3 tiers (20/60/100 per min)
+- **CORS**: Configurable via settings (permissive dev, restrictive prod)
 
 ### Agent Integration Status
 | Agent | In Conversation Flow | Standalone Endpoint | Notes |
@@ -684,7 +784,13 @@ gantt
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
 - `src/engine/pacing.py` - PacingContext, ClosureStatus, 50-turn arc management
 - `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
-- `src/api/main.py` - API endpoints with content safety filtering and character creation
+- `src/api/main.py` - Entry point (5 lines), imports app from app.py
+- `src/api/app.py` - App factory with lifespan, CORS middleware
+- `src/api/rate_limiting.py` - Privacy-first rate limiter (session_id only)
+- `src/api/dependencies.py` - Shared dependencies (get_session_manager, build_context)
+- `src/api/routes/` - Route modules (adventure.py, combat.py, agents.py, health.py)
+- `src/api/handlers/` - Business logic (character.py, quest.py, combat.py)
+- `src/api/models/` - Request/response Pydantic models
 - `static/index.html` - Frontend with ES6 modules and SSE streaming
 - `static/js/*.js` - JavaScript modules (api, combat, controllers, game-state, haptics, messages, themes, main)
 - `.github/workflows/ci.yml` - CI/CD workflow (Python + JavaScript tests)

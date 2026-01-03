@@ -108,7 +108,8 @@ class TestProcessActionQuestProgress:
         - quest_designer.check_quest_progress() is called once per action
         - It receives (active_quest, action, narrative) parameters
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         # Create mock session manager
         mock_sm = AsyncMock()
@@ -126,26 +127,27 @@ class TestProcessActionQuestProgress:
             "completion_narrative": None,
         }
 
-        # Create mock request
+        # Create mock turn executor
+        mock_turn_executor = MagicMock()
+
+        # Create mock request with agents on app.state
         mock_request = MagicMock()
         mock_request.app.state.session_manager = mock_sm
+        mock_request.app.state.quest_designer = mock_quest_designer
+        mock_request.app.state.turn_executor = mock_turn_executor
 
         action_request = ActionRequest(
             action="I search for the artifact in the ruins",
             session_id="session-123",
         )
 
-        # Patch global quest_designer and turn_executor
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Patch check_closure_triggers (imported from src.engine.pacing)
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             # Setup mock turn executor
             mock_result = MagicMock()
             mock_result.narrative = "You search through the ancient ruins..."
             mock_result.choices = ["Look deeper", "Return", "Rest"]
-            mock_executor.execute_async = AsyncMock(return_value=mock_result)
+            mock_turn_executor.execute_async = AsyncMock(return_value=mock_result)
 
             # Setup closure check to not trigger epilogue
             mock_closure_status = MagicMock()
@@ -179,7 +181,8 @@ class TestProcessActionQuestProgress:
         - For each objective_id in objectives_completed, call sm.update_quest_objective()
         - Objectives are marked as completed in the session state
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         # Create mock session manager
         mock_sm = AsyncMock()
@@ -207,11 +210,15 @@ class TestProcessActionQuestProgress:
             session_id="session-123",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state
+
+        mock_request.app.state.quest_designer = mock_quest_designer
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = (
                 "You found the ancient artifact hidden in the ruins!"
@@ -245,7 +252,8 @@ class TestProcessActionQuestProgress:
         - sm.complete_quest() is called to finalize the quest
         - Quest moves to completed_quests list
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         completion_narrative = (
             "Quest Completed: Find the Lost Artifact!\n"
@@ -280,11 +288,15 @@ class TestProcessActionQuestProgress:
             session_id="session-123",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state
+
+        mock_request.app.state.quest_designer = mock_quest_designer
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = "You hand the artifact to the grateful elder."
             mock_result.choices = ["Continue", "Rest", "Explore"]
@@ -318,7 +330,8 @@ class TestProcessActionQuestProgress:
         - quest_designer.check_quest_progress() is NOT called
         - Normal action processing continues without quest logic
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         # Create mock session manager
         mock_sm = AsyncMock()
@@ -340,11 +353,15 @@ class TestProcessActionQuestProgress:
             session_id="session-456",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state
+
+        mock_request.app.state.quest_designer = mock_quest_designer
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = "You survey your surroundings carefully."
             mock_result.choices = ["Continue", "Wait", "Leave"]
@@ -369,7 +386,8 @@ class TestProcessActionQuestProgress:
         creation phase, the progress check is skipped since the player is not
         yet engaged in gameplay actions.
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         # Create state in CHARACTER_CREATION phase with quest (edge case)
         state = GameState(
@@ -397,19 +415,19 @@ class TestProcessActionQuestProgress:
             session_id="session-789",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.character_interviewer") as mock_interviewer,
-        ):
-            mock_interviewer.interview_turn.return_value = {
-                "narrative": "The innkeeper nods...",
-                "choices": ["Continue", "Skip", "Tell more"],
-            }
+        # Set agents on mock_request.app.state
+        mock_request.app.state.quest_designer = mock_quest_designer
+        mock_interviewer = MagicMock()
+        mock_request.app.state.character_interviewer = mock_interviewer
+        mock_interviewer.interview_turn.return_value = {
+            "narrative": "The innkeeper nods...",
+            "choices": ["Continue", "Skip", "Tell more"],
+        }
 
-            await process_action(mock_request, action_request)
+        await process_action(mock_request, action_request)
 
-            # Quest progress should NOT be checked during character creation
-            mock_quest_designer.check_quest_progress.assert_not_called()
+        # Quest progress should NOT be checked during character creation
+        mock_quest_designer.check_quest_progress.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_process_action_skips_check_during_combat(
@@ -420,7 +438,8 @@ class TestProcessActionQuestProgress:
         This test verifies that quest progress checking is skipped when the
         player is in combat, since combat has its own resolution logic.
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
         from src.state.models import (
             Combatant,
             CombatantType,
@@ -492,25 +511,25 @@ class TestProcessActionQuestProgress:
             session_id="session-combat",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.keeper") as mock_keeper,
-            patch("src.api.main.combat_manager") as mock_combat,
-        ):
-            # Setup mock keeper for combat resolution
-            # Player attack defeats enemy to end combat cleanly
-            mock_keeper.resolve_player_attack.return_value = {
-                "success": True,
-                "damage": 10,
-                "enemy_hp": 0,  # Enemy defeated
-                "log_entry": "You hit the goblin for 10 damage!",
-            }
-            mock_combat.format_attack_result.return_value = "Combat result..."
+        # Set agents on mock_request.app.state
+        mock_request.app.state.quest_designer = mock_quest_designer
+        mock_keeper = MagicMock()
+        mock_request.app.state.keeper = mock_keeper
+        # Note: combat_manager is created fresh per request in _get_agents, no need to set
 
-            await process_action(mock_request, action_request)
+        # Setup mock keeper for combat resolution
+        # Player attack defeats enemy to end combat cleanly
+        mock_keeper.resolve_player_attack.return_value = {
+            "success": True,
+            "damage": 10,
+            "enemy_hp": 0,  # Enemy defeated
+            "log_entry": "You hit the goblin for 10 damage!",
+        }
 
-            # Quest progress should NOT be checked during combat
-            mock_quest_designer.check_quest_progress.assert_not_called()
+        await process_action(mock_request, action_request)
+
+        # Quest progress should NOT be checked during combat
+        mock_quest_designer.check_quest_progress.assert_not_called()
 
 
 class TestProcessActionQuestProgressIntegration:
@@ -559,13 +578,17 @@ class TestProcessActionQuestProgressIntegration:
         # Perform an action that should trigger quest progress check
         # Note: This test will FAIL until integration is implemented because
         # check_quest_progress is not called in process_action
-        with patch("src.api.main.quest_designer") as mock_qd:
-            mock_qd.check_quest_progress.return_value = {
-                "objectives_completed": [],
-                "quest_completed": False,
-                "completion_narrative": None,
-            }
+        # Patch the quest_designer on the app state
+        mock_qd = MagicMock()
+        mock_qd.check_quest_progress.return_value = {
+            "objectives_completed": [],
+            "quest_completed": False,
+            "completion_narrative": None,
+        }
+        original_qd = client.app.state.quest_designer
+        client.app.state.quest_designer = mock_qd
 
+        try:
             action_response = client.post(
                 "/action",
                 json={
@@ -578,6 +601,8 @@ class TestProcessActionQuestProgressIntegration:
 
             # This assertion will FAIL until integration is implemented
             mock_qd.check_quest_progress.assert_called_once()
+        finally:
+            client.app.state.quest_designer = original_qd
 
     def test_objective_completion_updates_quest_state(self, client: TestClient) -> None:
         """Test that completed objectives are persisted in quest state.
@@ -614,15 +639,18 @@ class TestProcessActionQuestProgressIntegration:
         run_async(sm.set_phase(session_id, GamePhase.EXPLORATION))
 
         # Mock quest designer to return completed objective
-        with patch("src.api.main.quest_designer") as mock_qd:
-            mock_qd.check_quest_progress.return_value = {
-                "objectives_completed": ["completion-obj-1"],
-                "quest_completed": True,
-                "completion_narrative": "Quest Complete!",
-            }
-            # Also mock generate_quest_options for the post-completion flow
-            mock_qd.generate_quest_options.return_value = []
+        mock_qd = MagicMock()
+        mock_qd.check_quest_progress.return_value = {
+            "objectives_completed": ["completion-obj-1"],
+            "quest_completed": True,
+            "completion_narrative": "Quest Complete!",
+        }
+        # Also mock generate_quest_options for the post-completion flow
+        mock_qd.generate_quest_options.return_value = []
+        original_qd = client.app.state.quest_designer
+        client.app.state.quest_designer = mock_qd
 
+        try:
             action_response = client.post(
                 "/action",
                 json={
@@ -644,6 +672,8 @@ class TestProcessActionQuestProgressIntegration:
                 state.active_quest is None
                 or state.active_quest.status == QuestStatus.COMPLETED
             )
+        finally:
+            client.app.state.quest_designer = original_qd
 
 
 class TestQuestProgressEdgeCases:
@@ -658,7 +688,8 @@ class TestQuestProgressEdgeCases:
         This handles the case where ANTHROPIC_API_KEY is not set and agents
         are not initialized.
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         mock_sm = AsyncMock()
         mock_sm.get_or_create_session.return_value = mock_state_with_quest
@@ -676,11 +707,15 @@ class TestQuestProgressEdgeCases:
         )
 
         # Patch quest_designer to be None (simulating no API key)
-        with (
-            patch("src.api.main.quest_designer", None),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state (quest_designer is None)
+
+        mock_request.app.state.quest_designer = None
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = "You explore carefully."
             mock_result.choices = ["Continue", "Wait", "Leave"]
@@ -704,7 +739,8 @@ class TestQuestProgressEdgeCases:
 
         The action processing should continue even if quest progress check fails.
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         mock_sm = AsyncMock()
         mock_sm.get_or_create_session.return_value = mock_state_with_quest
@@ -724,11 +760,15 @@ class TestQuestProgressEdgeCases:
             session_id="session-123",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state
+
+        mock_request.app.state.quest_designer = mock_quest_designer
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = "The adventure continues..."
             mock_result.choices = ["Go on", "Rest", "Return"]
@@ -752,7 +792,8 @@ class TestQuestProgressEdgeCases:
 
         A single player action might complete multiple quest objectives.
         """
-        from src.api.main import ActionRequest, process_action
+        from src.api.models import ActionRequest
+        from src.api.routes.adventure import process_action
 
         quest = Quest(
             id="multi-obj-quest",
@@ -806,11 +847,15 @@ class TestQuestProgressEdgeCases:
             session_id="multi-obj-session",
         )
 
-        with (
-            patch("src.api.main.quest_designer", mock_quest_designer),
-            patch("src.api.main.turn_executor") as mock_executor,
-            patch("src.api.main.check_closure_triggers") as mock_closure,
-        ):
+        # Set agents on mock_request.app.state
+
+        mock_request.app.state.quest_designer = mock_quest_designer
+
+        mock_executor = MagicMock()
+
+        mock_request.app.state.turn_executor = mock_executor
+
+        with patch("src.api.routes.adventure.check_closure_triggers") as mock_closure:
             mock_result = MagicMock()
             mock_result.narrative = "You found the legendary equipment!"
             mock_result.choices = ["Equip items", "Continue", "Search more"]

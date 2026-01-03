@@ -18,6 +18,8 @@ dependencies = [
     # State management dependencies
     "redis[hiredis]>=5.0.0",
     "pydantic-settings>=2.0.0",
+    # Rate limiting
+    "ratelimit>=2.2.1",
 ]
 
 [project.optional-dependencies]

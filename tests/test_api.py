@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.testclient import TestClient
 
-from src.api.main import build_context
+from src.api.dependencies import build_context
 
 if TYPE_CHECKING:
     from tests.conftest import SessionStateHelper

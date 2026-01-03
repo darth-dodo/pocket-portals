@@ -328,6 +328,49 @@ class Settings(BaseSettings):
 
 FastAPI-based API with SSE streaming support for real-time narrative delivery.
 
+### API Module Structure (Modular Architecture)
+
+```
+src/api/
+├── main.py              # Entry point (5 lines)
+├── app.py               # App factory, lifespan, CORS middleware
+├── rate_limiting.py     # Privacy-first rate limiter (session_id only)
+├── dependencies.py      # Shared dependencies (get_session_manager, build_context)
+├── constants.py         # Narrative text, fallback choices
+├── content_safety.py    # BLOCKED_PATTERNS, filter_content
+├── models/
+│   ├── __init__.py
+│   ├── requests.py      # ActionRequest, ResolveRequest, etc.
+│   └── responses.py     # NarrativeResponse, etc.
+├── routes/
+│   ├── __init__.py
+│   ├── adventure.py     # /start, /action, /action/stream
+│   ├── combat.py        # /combat/start, /combat/action
+│   ├── agents.py        # /innkeeper, /keeper, /jester
+│   └── health.py        # /health
+└── handlers/
+    ├── __init__.py
+    ├── character.py     # Character creation logic
+    ├── quest.py         # Quest selection logic
+    └── combat.py        # Combat action logic
+```
+
+### Rate Limiting
+
+Privacy-first rate limiting using **session_id only** (no IP tracking):
+
+| Tier | Limit | Endpoints |
+|------|-------|-----------|
+| LLM | 20/min | /action, /action/stream, /keeper/resolve, /jester/complicate |
+| Combat | 60/min | /combat/start, /combat/action |
+| Default | 100/min | /start, /health |
+
+### CORS Configuration
+
+Configurable via `src/config/settings.py`:
+- **Development**: Permissive (all origins)
+- **Production**: Restrictive (configured allow-list)
+
 ### Core Endpoints
 
 **Session Management:**
@@ -1297,14 +1340,29 @@ class DungeonMaster:
 
 ```
 pocket-portals/
-├── src/pocket_portals/
+├── src/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPI app entry
 │   │
-│   ├── api/
+│   ├── api/                    # Modular API layer
 │   │   ├── __init__.py
-│   │   ├── routes.py           # HTTP endpoints
-│   │   └── streaming.py        # SSE handlers
+│   │   ├── main.py             # Entry point (5 lines)
+│   │   ├── app.py              # App factory, lifespan, CORS
+│   │   ├── rate_limiting.py    # Privacy-first rate limiter
+│   │   ├── dependencies.py     # Shared dependencies
+│   │   ├── constants.py        # Narrative text
+│   │   ├── content_safety.py   # Content filtering
+│   │   ├── models/             # Request/response models
+│   │   │   ├── requests.py
+│   │   │   └── responses.py
+│   │   ├── routes/             # API endpoints
+│   │   │   ├── adventure.py    # /start, /action, /action/stream
+│   │   │   ├── combat.py       # /combat/*
+│   │   │   ├── agents.py       # /innkeeper, /keeper, /jester
+│   │   │   └── health.py       # /health
+│   │   └── handlers/           # Business logic
+│   │       ├── character.py
+│   │       ├── quest.py
+│   │       └── combat.py
 │   │
 │   ├── agents/
 │   │   ├── __init__.py

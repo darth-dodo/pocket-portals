@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/Tests-823_passing-brightgreen?logo=pytest" alt="Tests: 823 passing">
+  <img src="https://img.shields.io/badge/Tests-859_passing-brightgreen?logo=pytest" alt="Tests: 859 passing">
   <img src="https://img.shields.io/badge/Coverage-77%25-green?logo=codecov" alt="Coverage: 77%">
 </p>
 
@@ -99,20 +99,22 @@ make dev
 | Component | Technology |
 |-----------|------------|
 | **Runtime** | Python 3.12 |
-| **API** | FastAPI with SSE streaming |
+| **API** | FastAPI with SSE streaming (modular architecture) |
 | **AI** | CrewAI + Anthropic Claude |
 | **Frontend** | Vanilla JS + Modern CSS |
 | **State** | Redis (prod) / Memory (dev) |
+| **Security** | Rate limiting + configurable CORS |
 
 ### Codebase Health
 
 | Metric | Value |
 |--------|-------|
-| **Python Tests** | 408 passing |
+| **Python Tests** | 444 passing |
 | **JS Tests** | 415 passing |
 | **Coverage** | 77% |
 | **Type Checking** | Strict mypy |
 | **Linting** | Ruff + pre-commit |
+| **Rate Limiting** | Privacy-first (session_id only) |
 
 ### Architecture
 
