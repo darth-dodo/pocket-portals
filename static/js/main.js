@@ -97,6 +97,10 @@ export function init() {
         window.GameHeader.init();
     }
 
+    if (window.CharacterSheet && typeof window.CharacterSheet.init === 'function') {
+        window.CharacterSheet.init();
+    }
+
     // ===== Reading Mode Toggle =====
     initReadingMode();
 
