@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **CharacterBuilderAgent**: LLM-powered intelligent stat generation from interview conversations
+  - Uses CrewAI's `output_pydantic` pattern for structured JSON output
+  - Analyzes 5-turn interview to determine appropriate race, class, and stats
+  - Stat generation follows D&D rules: total 70-80 points, primary stat 14-16
+  - Fallback mechanism for LLM failures with default human fighter
+- **Character Sheet API Integration**: Frontend receives character data after creation
+  - `CharacterSheetData` Pydantic model for API responses
+  - SSE `game_state` event emits character sheet after turn 5
+  - Both `/start?skip_creation=true` and typing "skip" return character_sheet
+- **Character Sheet E2E Tests**: Playwright tests 11-14 for character sheet UI
+  - Display test: stats, HP bar, quest section
+  - Collapse/expand test: toggle functionality
+  - Theme integration: all 4 themes properly style character sheet
+  - Mobile responsive: 2-column grid, touch-friendly collapse
 - **Comprehensive JavaScript Test Suite**: 415 tests with 96.49% statement coverage
   - Vitest with jsdom environment for DOM testing
   - Test files for: api, combat, controllers, game-state, haptics, main, messages, themes

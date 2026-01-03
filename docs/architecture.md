@@ -53,6 +53,7 @@ flowchart TB
             Keeper["Keeper"]
             Jester["Jester"]
             Interviewer["Character Interviewer"]
+            Builder["Character Builder"]
         end
         subgraph Tools["Shared Tools"]
             Dice["DiceRoller"]
@@ -84,7 +85,8 @@ The Pocket Portals architecture employs a multi-agent system built on CrewAI, wh
 | **Keeper** | D&D 5e rules enforcement, combat mechanics | Minimal | Validates mechanics, orchestrates dice rolls, enforces D&D 5e rules. Uses pure Python for combat. |
 | **Jester** | Comic relief | Yes (15% random) | Injects unexpected complications and humor. Randomly appears in 15% of eligible interactions. |
 | **Innkeeper** | Session management | Yes | Welcomes adventurers, introduces quests, delivers session bookends and epilogue reflections |
-| **Character Interviewer** | Character creation flow | Yes | Guides players through conversational character creation, generates D&D 5e character sheets |
+| **Character Interviewer** | Character creation flow | Yes | Guides players through 5-turn conversational character creation interview |
+| **Character Builder** | Stat generation | Yes (once) | Analyzes interview conversation, generates intelligent D&D stats using CrewAI Pydantic output |
 
 ### Agent Interaction Pattern
 
@@ -97,7 +99,8 @@ User Input
 │  (Determines which agent(s) handle the request based on phase)  │
 └─────────────────────────────────────────────────────────────────┘
     │
-    ├── CHARACTER_CREATION phase ──► Character Interviewer
+    ├── CHARACTER_CREATION phase ──► Character Interviewer (5 turns)
+    │                                    └──► Character Builder (turn 5, generates stats)
     │
     ├── EXPLORATION phase ──► Narrator (primary) + Jester (15% chance)
     │
