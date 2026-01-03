@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="/static/css/combat.css">
     <link rel="stylesheet" href="/static/css/responsive.css">
     <link rel="stylesheet" href="/static/css/themes.css">
+    <link rel="stylesheet" href="/static/css/character-sheet.css">
 </head>
 <body>
     <!-- Unified Responsive Header -->
@@ -81,6 +82,112 @@
     </div>
 
     <div class="container">
+        <!-- Character Sheet Panel (hidden until character creation) -->
+        <div class="character-sheet-panel" id="character-sheet-panel" role="region" aria-label="Character Sheet">
+            <div class="character-sheet-header" id="character-sheet-header" tabindex="0" role="button" aria-expanded="false" aria-controls="character-sheet-content">
+                <div class="character-sheet-title">
+                    <i class="ra ra-player"></i>
+                    <span class="character-sheet-title-text">Character Sheet</span>
+                    <div class="character-sheet-summary" id="character-sheet-summary">
+                        <span class="summary-name" id="char-summary-name">--</span>
+                        <span class="summary-hp">
+                            <i class="ra ra-hearts"></i>
+                            <span id="char-summary-hp">--/--</span>
+                        </span>
+                    </div>
+                </div>
+                <button class="character-sheet-toggle" id="character-sheet-toggle" aria-label="Toggle character sheet" type="button">
+                    <i class="ra ra-arrow-up"></i>
+                </button>
+            </div>
+            <div class="character-sheet-content" id="character-sheet-content">
+                <!-- Character Identity -->
+                <div class="character-identity">
+                    <h3 class="character-name" id="char-name">--</h3>
+                    <p class="character-details" id="char-details">
+                        <span class="race">--</span> <span class="class">--</span> <span class="level">Lv. 1</span>
+                    </p>
+                </div>
+
+                <!-- HP Bar -->
+                <div class="hp-section">
+                    <div class="hp-label">
+                        <span class="hp-title">
+                            <i class="ra ra-hearts"></i>
+                            <span>HP</span>
+                        </span>
+                        <span class="hp-values">
+                            <span id="char-hp-current">--</span>/<span id="char-hp-max">--</span>
+                        </span>
+                    </div>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar-fill hp-high" id="char-hp-bar" style="width: 100%;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Health points"></div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-section">
+                    <div class="stats-title">Ability Scores</div>
+                    <div class="stats-grid">
+                        <div class="stat-item" aria-label="Strength">
+                            <span class="stat-name">STR</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-str">10</span>
+                                <span class="stat-modifier" id="mod-str">(+0)</span>
+                            </span>
+                        </div>
+                        <div class="stat-item" aria-label="Dexterity">
+                            <span class="stat-name">DEX</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-dex">10</span>
+                                <span class="stat-modifier" id="mod-dex">(+0)</span>
+                            </span>
+                        </div>
+                        <div class="stat-item" aria-label="Constitution">
+                            <span class="stat-name">CON</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-con">10</span>
+                                <span class="stat-modifier" id="mod-con">(+0)</span>
+                            </span>
+                        </div>
+                        <div class="stat-item" aria-label="Intelligence">
+                            <span class="stat-name">INT</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-int">10</span>
+                                <span class="stat-modifier" id="mod-int">(+0)</span>
+                            </span>
+                        </div>
+                        <div class="stat-item" aria-label="Wisdom">
+                            <span class="stat-name">WIS</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-wis">10</span>
+                                <span class="stat-modifier" id="mod-wis">(+0)</span>
+                            </span>
+                        </div>
+                        <div class="stat-item" aria-label="Charisma">
+                            <span class="stat-name">CHA</span>
+                            <span class="stat-value">
+                                <span class="stat-score" id="stat-cha">10</span>
+                                <span class="stat-modifier" id="mod-cha">(+0)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quest Section -->
+                <div class="quest-section">
+                    <div class="quest-section-title">
+                        <i class="ra ra-scroll-unfurled"></i>
+                        <span>Active Quest</span>
+                    </div>
+                    <p class="quest-name" id="char-quest-name"></p>
+                    <ul class="quest-objectives" id="char-quest-objectives">
+                        <li class="no-quest">No active quest</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <section class="nes-container is-dark game-container">
             <!-- Story Display -->
             <div class="story-box" id="story">
@@ -267,6 +374,7 @@
     <script type="module" src="/static/js/messages.js"></script>
     <script type="module" src="/static/js/api.js"></script>
     <script type="module" src="/static/js/combat.js"></script>
+    <script type="module" src="/static/js/character-sheet.js"></script>
     <script type="module" src="/static/js/themes.js"></script>
     <script type="module" src="/static/js/main.js"></script>
 </body>

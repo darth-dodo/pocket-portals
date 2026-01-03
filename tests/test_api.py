@@ -460,6 +460,49 @@ def test_skip_character_creation_with_query_param(
     assert session is not None
     assert len(session.pending_quest_options) == 3
 
+    # The response should include character_sheet data for frontend
+    data = response.json()
+    assert "character_sheet" in data
+    assert data["character_sheet"] is not None
+    char_data = data["character_sheet"]
+    assert char_data["name"] == "Adventurer"
+    assert char_data["race"] == "human"
+    assert char_data["character_class"] == "fighter"
+    assert "stats" in char_data
+    assert "strength" in char_data["stats"]
+
+
+def test_skip_action_during_creation_returns_character_sheet(
+    client: TestClient, session_state: "SessionStateHelper"
+) -> None:
+    """Test that typing 'skip' during character creation returns character_sheet."""
+    from src.state import GamePhase
+
+    # Start session in character creation
+    start_response = client.get("/start")
+    session_id = start_response.json()["session_id"]
+
+    # Type "skip" to skip character creation
+    action_response = client.post(
+        "/action",
+        json={"action": "skip", "session_id": session_id},
+    )
+    assert action_response.status_code == 200
+
+    # Should transition to EXPLORATION phase
+    phase = session_state.get_phase(session_id)
+    assert phase == GamePhase.EXPLORATION
+
+    # Response should include character_sheet data for frontend
+    data = action_response.json()
+    assert "character_sheet" in data
+    assert data["character_sheet"] is not None
+    char_data = data["character_sheet"]
+    assert char_data["name"] == "Adventurer"
+    assert char_data["race"] == "human"
+    assert char_data["character_class"] == "fighter"
+    assert "stats" in char_data
+
 
 # Combat Action API Tests
 

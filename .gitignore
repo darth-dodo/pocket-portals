@@ -209,3 +209,5 @@ __marimo__/
 # OS
 .DS_Store
 Thumbs.db
+
+node_modules/

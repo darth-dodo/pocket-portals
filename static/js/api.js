@@ -40,6 +40,11 @@ export function handleStreamEvent(eventType, data) {
             window.updateChoices(data.choices);
             break;
 
+        case 'game_state':
+            // Handle game state updates including character sheet and quest data
+            handleGameStateUpdate(data);
+            break;
+
         case 'complete':
             state.sessionId = data.session_id;
             window.DOMElements.sessionDisplay.textContent = `Quest: ${data.session_id.substring(0, 8)}...`;
@@ -56,6 +61,78 @@ export function handleStreamEvent(eventType, data) {
                 console.log('Unknown event type:', eventType, data);
             }
     }
+}
+
+/**
+ * Handle game state updates from API
+ * Updates character sheet and quest display
+ * @param {Object} data - Game state data
+ */
+export function handleGameStateUpdate(data) {
+    // Update character sheet if data is present
+    if (data.character_sheet && window.CharacterSheet) {
+        const charData = transformCharacterData(data.character_sheet);
+        window.CharacterSheet.update(charData);
+        window.CharacterSheet.show();
+    }
+
+    // Update active quest if data is present
+    if (window.CharacterSheet) {
+        if (data.active_quest) {
+            const questData = transformQuestData(data.active_quest);
+            window.CharacterSheet.updateQuest(questData);
+        } else {
+            window.CharacterSheet.updateQuest(null);
+        }
+    }
+
+    // Update turn count if present
+    if (data.turn_count !== undefined && window.GameHeader) {
+        window.GameHeader.updateTurn(data.turn_count);
+    }
+}
+
+/**
+ * Transform backend character sheet data to frontend format
+ * @param {Object} backendData - Character data from API
+ * @returns {Object} Frontend-formatted character data
+ */
+export function transformCharacterData(backendData) {
+    return {
+        name: backendData.name,
+        race: backendData.race,
+        characterClass: backendData.character_class,
+        level: backendData.level || 1,
+        stats: {
+            strength: backendData.stats?.strength || 10,
+            dexterity: backendData.stats?.dexterity || 10,
+            constitution: backendData.stats?.constitution || 10,
+            intelligence: backendData.stats?.intelligence || 10,
+            wisdom: backendData.stats?.wisdom || 10,
+            charisma: backendData.stats?.charisma || 10
+        },
+        currentHp: backendData.current_hp,
+        maxHp: backendData.max_hp
+    };
+}
+
+/**
+ * Transform backend quest data to frontend format
+ * @param {Object} backendData - Quest data from API
+ * @returns {Object} Frontend-formatted quest data
+ */
+export function transformQuestData(backendData) {
+    return {
+        id: backendData.id,
+        title: backendData.title,
+        description: backendData.description,
+        objectives: (backendData.objectives || []).map(obj => ({
+            id: obj.id,
+            description: obj.description,
+            isCompleted: obj.is_completed || false
+        })),
+        status: backendData.status
+    };
 }
 
 /**
@@ -204,6 +281,19 @@ export async function startNewAdventure(shuffle) {
         window.addMessage(data.narrative, 'narrator');
         window.updateChoices(data.choices);
 
+        // Update character sheet if data is present in response
+        if (data.character_sheet && window.CharacterSheet) {
+            const charData = transformCharacterData(data.character_sheet);
+            window.CharacterSheet.update(charData);
+            window.CharacterSheet.show();
+        }
+
+        // Update active quest if data is present
+        if (data.active_quest && window.CharacterSheet) {
+            const questData = transformQuestData(data.active_quest);
+            window.CharacterSheet.updateQuest(questData);
+        }
+
     } catch (err) {
         console.error('Error:', err);
         window.showError(`Failed to start adventure: ${err.message}`);
@@ -267,6 +357,11 @@ export function newGame() {
     if (actionInput) {
         actionInput.focus();
     }
+
+    // Reset character sheet
+    if (window.CharacterSheet) {
+        window.CharacterSheet.reset();
+    }
 }
 
 // Expose functions to window for backward compatibility
@@ -277,4 +372,7 @@ if (typeof window !== 'undefined') {
     window.startNewAdventure = startNewAdventure;
     window.newGame = newGame;
     window.handleStreamEvent = handleStreamEvent;
+    window.handleGameStateUpdate = handleGameStateUpdate;
+    window.transformCharacterData = transformCharacterData;
+    window.transformQuestData = transformQuestData;
 }

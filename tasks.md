@@ -162,7 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Add character sheet display to UI | ⏳ | Show character info in frontend |
+| Quest data SSE event for active quest display | ⏳ | Character sheet shows "No active quest" after selection |
 
 ### Up Next
 
@@ -176,6 +176,10 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| CharacterBuilderAgent implementation | ✅ | LLM-powered stat generation from interview using CrewAI Pydantic output |
+| Character sheet API integration | ✅ | `CharacterSheetData` model, SSE `game_state` event after character creation |
+| Skip character creation fixes | ✅ | Both `/start?skip_creation=true` and typing "skip" return character_sheet |
+| Character sheet E2E tests | ✅ | Tests 11-14 passing: display, collapse, themes, mobile |
 | Quest selection flow | ✅ | QUEST_SELECTION phase with 3 personalized options |
 | Quest progress tracking | ✅ | `check_quest_progress()` integrated in action loop |
 | Quest personalization | ✅ | Class-specific quests using CLASS_STRENGTHS mapping |
@@ -183,7 +187,7 @@ gantt
 | E2E test validation | ✅ | Playwright tests for quest selection flow |
 | Dynamic character starter generation | ✅ | Agent generates 9 diverse choices across genres (fantasy/sci-fi/modern), shuffles and returns 3 random ones per game |
 | Fix ES6 module loading | ✅ | Added `type="module"` to all script tags in index.html |
-| Playwright E2E Test Suite | ✅ | 8 test scenarios documented in `docs/playwright-e2e-suite.md` |
+| Playwright E2E Test Suite | ✅ | 14 test scenarios documented in `docs/playwright-e2e-suite.md` |
 | UX Improvements - Mobile-First Enhancements | ✅ | NES.css removal, modern button system, haptic feedback, touch targets (48px min), iOS safe areas, 415 JS tests (96.49% coverage) |
 | Structured Narrator Choices | ✅ | Single LLM call for narrative+choices, quality observability, CrewAI tracing, UI fix for hiding choices during loading |
 | Adventure Pacing System | ✅ | 50-turn structure, 5-phase arc, EpilogueAgent, closure triggers, 368 tests passing, 75% coverage |
@@ -632,15 +636,18 @@ gantt
 | Jester | ✅ 15% random | `/jester/complicate` | 3-turn cooldown |
 | Innkeeper | ✅ Quest Introduction | `/innkeeper/quest` | Integrated for quest hooks |
 | CharacterInterviewer | ✅ Character Creation | - | Dynamic 5-turn interview with LLM |
+| CharacterBuilder | ✅ Post-Interview | - | Generates intelligent stats from interview via Pydantic output |
 | Epilogue | ✅ Adventure End | - | Personalized conclusions on closure triggers |
 
 ### Character Creation Flow
 - `/start` begins in CHARACTER_CREATION phase with CharacterInterviewer
 - CharacterInterviewerAgent conducts dynamic 5-turn LLM-powered interview
 - Generates starter choices dynamically or uses fallback options
-- After 5 turns, generates CharacterSheet from conversation analysis
+- After 5 turns, CharacterBuilderAgent generates intelligent stats from conversation
+- CharacterSheetData returned in API response and via SSE `game_state` event
 - Content safety filtering applied to all player inputs
 - `skip_creation=true` query param skips to EXPLORATION with default character
+- Typing "skip" during creation also returns character_sheet data
 
 ### Development Workflow
 1. Check this file for current task status
@@ -671,6 +678,7 @@ gantt
 - `src/state/models.py` - GameState Pydantic model with GamePhase, AdventurePhase enums
 - `src/state/session_manager.py` - Session CRUD operations + character methods
 - `src/agents/character_interviewer.py` - CharacterInterviewerAgent with dynamic LLM interviews
+- `src/agents/character_builder.py` - CharacterBuilderAgent for intelligent stat generation
 - `src/agents/epilogue.py` - EpilogueAgent for personalized conclusions
 - `src/engine/router.py` - AgentRouter for multi-agent routing
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
