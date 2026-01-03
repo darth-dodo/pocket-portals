@@ -284,10 +284,10 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 - **iOS Dark**: White accents, DM Sans font, 16px radius
 
 **Screenshots**:
-- `e2e-screenshots/13-charsheet-rpg.png`
-- `e2e-screenshots/13-charsheet-midnight.png`
-- `e2e-screenshots/13-charsheet-mono.png`
-- `e2e-screenshots/13-charsheet-ios.png`
+- `e2e-screenshots/13a-theme-midnight-minimal.png`
+- `e2e-screenshots/13b-theme-monospace.png`
+- `e2e-screenshots/13c-theme-ios-dark.png`
+- `e2e-screenshots/13d-theme-rpg-classic.png`
 
 ---
 
@@ -308,7 +308,10 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 - Expanded state shows 2-column stats grid
 - Quest objectives are visible and readable
 
-**Screenshot**: `e2e-screenshots/14-charsheet-mobile.png`
+**Screenshots**:
+- `e2e-screenshots/14a-mobile-character-sheet.png`
+- `e2e-screenshots/14b-mobile-top-view.png`
+- `e2e-screenshots/14c-mobile-collapsed.png`
 
 ---
 
@@ -326,10 +329,10 @@ uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 | Custom Action Input | PASS | Text input functional |
 | Quest Selection Flow | PASS | 3 quest options after character creation |
 | Quest Activation | PASS | Quest activates, exploration begins |
-| Character Sheet Display | PENDING | Stats, HP bar, quest objectives |
-| Character Sheet Collapse | PENDING | Toggle, animation, persistence |
-| Character Sheet Themes | PENDING | All 4 themes match |
-| Character Sheet Mobile | PENDING | Mobile-first, 44px targets |
+| Character Sheet Display | PASS | Stats, HP bar, quest section visible |
+| Character Sheet Collapse | PASS | Toggle works, collapsed shows name+HP |
+| Character Sheet Themes | PASS | All 4 themes match styling |
+| Character Sheet Mobile | PASS | 2-column grid, collapse works |
 
 ## Console Messages Observed
 
@@ -373,7 +376,16 @@ docs/e2e-screenshots/
 ├── 07-mobile-bottom-sheet-expanded.png
 ├── 08-custom-input.png
 ├── 09-quest-selection.png
-└── 10-exploration-after-quest-selection.png
+├── 10-exploration-after-quest-selection.png
+├── 11-character-sheet.png
+├── 12-character-sheet-collapsed.png
+├── 13a-theme-midnight-minimal.png
+├── 13b-theme-monospace.png
+├── 13c-theme-ios-dark.png
+├── 13d-theme-rpg-classic.png
+├── 14a-mobile-character-sheet.png
+├── 14b-mobile-top-view.png
+└── 14c-mobile-collapsed.png
 ```
 
 ## Mobile UX Features Tested

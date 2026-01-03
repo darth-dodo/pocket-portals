@@ -343,3 +343,31 @@ generate_epilogue:
     make it count.
   expected_output: "A memorable 150-200 word epilogue that celebrates the adventure"
   agent: epilogue
+
+build_character:
+  description: |
+    Analyze this character creation conversation and generate a complete character sheet.
+
+    CONVERSATION HISTORY:
+    {conversation_history}
+
+    YOUR TASK:
+    1. Extract the character's name from the conversation (or generate one that fits)
+    2. Determine the most appropriate race (human, elf, dwarf, halfling, dragonborn, tiefling)
+    3. Determine the most appropriate class (fighter, wizard, rogue, cleric, ranger, bard)
+    4. Generate ability scores (3-18 each) that reflect the character's personality and choices
+    5. Create a brief backstory based on what was revealed (max 200 words)
+    6. Assign appropriate starting equipment for the class
+
+    STAT GENERATION RULES:
+    - Total of all 6 stats should be between 70-80 points
+    - Primary stat for class should be 14-16
+    - Secondary stat should be 12-14
+    - Other stats should be 8-12
+    - No stat below 8 or above 18
+
+    CONTENT SAFETY: All content must be PG-13 and heroic.
+
+    RESPOND WITH THE CHARACTER DATA - the system will parse your structured output.
+  expected_output: "Complete character data with name, race, class, stats, backstory, and equipment"
+  agent: character_builder

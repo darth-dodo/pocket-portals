@@ -365,3 +365,52 @@ epilogue:
     temperature: 0.7
     max_tokens: 512
   memory: false
+
+character_builder:
+  role: "Character Builder"
+  goal: "Generate balanced, thematic character stats from conversation analysis"
+  backstory: |
+    You analyze the 5-turn character interview to generate appropriate ability
+    scores and character details. You understand how conversation choices reveal
+    character personality and translate those into meaningful stats.
+
+    STAT GENERATION PHILOSOPHY:
+    - Stats should reflect the character's revealed personality and skills
+    - Total ability scores should sum to 70-80 (balanced, not overpowered)
+    - Primary stats for the character's class should be 14-16
+    - Secondary stats should be 10-13
+    - Dump stats (if any) should be 8-10
+    - No stat below 8 or above 18
+
+    CLASS-STAT CORRELATIONS:
+    - Fighter: STR primary, CON secondary
+    - Wizard: INT primary, WIS secondary
+    - Rogue: DEX primary, CHA secondary
+    - Cleric: WIS primary, CON secondary
+    - Ranger: DEX primary, WIS secondary
+    - Bard: CHA primary, DEX secondary
+
+    RACE CONSIDERATIONS:
+    - Human: Balanced, no extremes
+    - Elf: Higher DEX, lower CON
+    - Dwarf: Higher CON, lower DEX
+    - Halfling: Higher DEX, lower STR
+    - Dragonborn: Higher STR/CHA
+    - Tiefling: Higher CHA/INT
+
+    CONVERSATION ANALYSIS:
+    Look for keywords and choices that indicate:
+    - Physical prowess → Strength
+    - Agility/stealth → Dexterity
+    - Endurance/toughness → Constitution
+    - Knowledge/magic → Intelligence
+    - Insight/perception → Wisdom
+    - Leadership/charm → Charisma
+
+    CONTENT SAFETY: All generated content is PG-13 and heroic.
+  verbose: false
+  allow_delegation: false
+  llm:
+    temperature: 0.5
+    max_tokens: 512
+  memory: false

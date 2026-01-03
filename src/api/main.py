@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
+from src.agents.character_builder import CharacterBuilderAgent
 from src.agents.character_interviewer import CharacterInterviewerAgent
 from src.agents.epilogue import EpilogueAgent, generate_fallback_epilogue
 from src.agents.innkeeper import InnkeeperAgent
@@ -194,6 +195,7 @@ innkeeper: InnkeeperAgent | None = None
 keeper: KeeperAgent | None = None
 jester: JesterAgent | None = None
 character_interviewer: CharacterInterviewerAgent | None = None
+character_builder: CharacterBuilderAgent | None = None
 quest_designer: QuestDesignerAgent | None = None
 epilogue_agent: EpilogueAgent | None = None
 agent_router = AgentRouter()
@@ -330,12 +332,27 @@ class ActionRequest(BaseModel):
         return self
 
 
+class CharacterSheetData(BaseModel):
+    """Character sheet data for API responses."""
+
+    name: str
+    race: str
+    character_class: str
+    level: int = 1
+    current_hp: int
+    max_hp: int
+    stats: dict[str, int]
+    equipment: list[str]
+    backstory: str
+
+
 class NarrativeResponse(BaseModel):
     """Response model containing narrative text."""
 
     narrative: str
     session_id: str
     choices: list[str] = Field(default_factory=lambda: ["Look around", "Wait", "Leave"])
+    character_sheet: CharacterSheetData | None = None
 
 
 class HealthResponse(BaseModel):
@@ -422,6 +439,7 @@ async def lifespan(app: FastAPI) -> Any:
         keeper, \
         jester, \
         character_interviewer, \
+        character_builder, \
         quest_designer, \
         epilogue_agent, \
         turn_executor
@@ -438,6 +456,7 @@ async def lifespan(app: FastAPI) -> Any:
         keeper = KeeperAgent()
         jester = JesterAgent()
         character_interviewer = CharacterInterviewerAgent()
+        character_builder = CharacterBuilderAgent()
         quest_designer = QuestDesignerAgent()
         epilogue_agent = EpilogueAgent()
         turn_executor = TurnExecutor(
@@ -456,6 +475,7 @@ async def lifespan(app: FastAPI) -> Any:
     keeper = None
     jester = None
     character_interviewer = None
+    character_builder = None
     epilogue_agent = None
     turn_executor = None
 
@@ -585,10 +605,31 @@ async def start_adventure(
             "Choose your path wisely, adventurer...'"
         )
 
+        # Build character sheet data for frontend
+        character_sheet_data = CharacterSheetData(
+            name=default_character.name,
+            race=default_character.race.value,
+            character_class=default_character.character_class.value,
+            level=default_character.level,
+            current_hp=default_character.current_hp,
+            max_hp=default_character.max_hp,
+            stats={
+                "strength": default_character.stats.strength,
+                "dexterity": default_character.stats.dexterity,
+                "constitution": default_character.stats.constitution,
+                "intelligence": default_character.stats.intelligence,
+                "wisdom": default_character.stats.wisdom,
+                "charisma": default_character.stats.charisma,
+            },
+            equipment=default_character.equipment,
+            backstory=default_character.backstory,
+        )
+
         return NarrativeResponse(
             narrative=narrative,
             session_id=state.session_id,
             choices=choices,
+            character_sheet=character_sheet_data,
         )
 
     # Start character creation flow
@@ -853,10 +894,31 @@ async def _handle_character_creation(
         await sm.add_exchange(state.session_id, action, WELCOME_NARRATIVE)
         await sm.set_choices(state.session_id, choices)
 
+        # Build character sheet data for frontend
+        character_sheet_data = CharacterSheetData(
+            name=default_character.name,
+            race=default_character.race.value,
+            character_class=default_character.character_class.value,
+            level=default_character.level,
+            current_hp=default_character.current_hp,
+            max_hp=default_character.max_hp,
+            stats={
+                "strength": default_character.stats.strength,
+                "dexterity": default_character.stats.dexterity,
+                "constitution": default_character.stats.constitution,
+                "intelligence": default_character.stats.intelligence,
+                "wisdom": default_character.stats.wisdom,
+                "charisma": default_character.stats.charisma,
+            },
+            equipment=default_character.equipment,
+            backstory=default_character.backstory,
+        )
+
         return NarrativeResponse(
             narrative=WELCOME_NARRATIVE,
             session_id=state.session_id,
             choices=choices,
+            character_sheet=character_sheet_data,
         )
 
     # If we've completed 5 turns, generate character sheet and transition
@@ -1074,16 +1136,40 @@ async def _handle_quest_selection(
 def _generate_character_from_history(state: GameState) -> CharacterSheet:
     """Generate a character sheet from conversation history.
 
-    For MVP, this creates a basic character. Future versions will use
-    InnkeeperAgent to parse the conversation and generate appropriate stats.
+    Uses CharacterBuilderAgent for intelligent stat generation based on
+    the 5-turn character interview. Falls back to keyword-based generation
+    if the agent fails or is unavailable.
 
     Args:
         state: Game state with conversation history
 
     Returns:
-        Generated CharacterSheet
+        Generated CharacterSheet with intelligent stats
     """
-    # Extract character info from conversation history
+    # Build conversation history string for the agent
+    history_lines = []
+    for entry in state.conversation_history:
+        if entry.get("action"):
+            history_lines.append(f"Player: {entry['action']}")
+        if entry.get("narrative"):
+            history_lines.append(f"Innkeeper: {entry['narrative']}")
+    conversation_history = "\n".join(history_lines)
+
+    # Try using CharacterBuilderAgent for intelligent stat generation
+    if character_builder and conversation_history:
+        try:
+            logger.info("CharacterBuilder: Generating character from interview")
+            character_sheet = character_builder.build_character(conversation_history)
+            logger.info(
+                f"CharacterBuilder: Created {character_sheet.name} the "
+                f"{character_sheet.race.value} {character_sheet.character_class.value}"
+            )
+            return character_sheet
+        except Exception as e:
+            logger.warning(f"CharacterBuilder failed, using fallback: {e}")
+
+    # Fallback to keyword-based generation
+    logger.info("CharacterBuilder: Using keyword-based fallback")
     history_text = " ".join(
         entry.get("action", "") for entry in state.conversation_history
     ).lower()
@@ -1786,6 +1872,13 @@ async def process_action_stream(
     if state.phase == GamePhase.CHARACTER_CREATION:
         result = await _handle_character_creation(request, state, action)
 
+        # Check if character was just created (phase transitioned to EXPLORATION)
+        updated_state = await sm.get_or_create_session(state.session_id)
+        character_just_created = (
+            updated_state.phase == GamePhase.EXPLORATION
+            and updated_state.character_sheet is not None
+        )
+
         async def creation_generator() -> AsyncGenerator[dict[str, Any], None]:
             # Signal agent starting
             yield {
@@ -1806,6 +1899,32 @@ async def process_action_stream(
                 "event": "agent_response",
                 "data": json.dumps({"agent": "narrator", "content": result.narrative}),
             }
+
+            # If character was just created, emit game_state with character_sheet
+            if character_just_created and updated_state.character_sheet:
+                cs = updated_state.character_sheet
+                character_data = {
+                    "name": cs.name,
+                    "race": cs.race.value,
+                    "character_class": cs.character_class.value,
+                    "level": cs.level,
+                    "current_hp": cs.current_hp,
+                    "max_hp": cs.max_hp,
+                    "stats": {
+                        "strength": cs.stats.strength,
+                        "dexterity": cs.stats.dexterity,
+                        "constitution": cs.stats.constitution,
+                        "intelligence": cs.stats.intelligence,
+                        "wisdom": cs.stats.wisdom,
+                        "charisma": cs.stats.charisma,
+                    },
+                    "equipment": cs.equipment,
+                    "backstory": cs.backstory,
+                }
+                yield {
+                    "event": "game_state",
+                    "data": json.dumps({"character_sheet": character_data}),
+                }
 
             # Send choices
             yield {
