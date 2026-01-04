@@ -96,7 +96,9 @@ cp .agentic/templates/session-template.md docs/session-log.md
 │   ├── feature-development.md    # Generic feature workflow
 │   ├── content-creation.md       # Documentation/content workflow
 │   ├── bug-fix.md                # Bug investigation & fix workflow
-│   └── multi-agent-coordination.md  # Parallel agent patterns
+│   ├── multi-agent-coordination.md  # Parallel agent patterns
+│   ├── task-management.md        # Task tracking & session lifecycle
+│   └── playwright-e2e.md         # E2E browser testing workflow
 │
 ├── quality-gates/                # Validation framework
 │   ├── generic-gates.md          # Language-agnostic gates
@@ -139,6 +141,8 @@ Structured patterns for common development tasks:
 | Content Creation    | 1-2 hours | Outline → Write → Review           |
 | Bug Fix             | 30-90 min | Investigate → Fix → Verify         |
 | Multi-Agent         | Variable  | Coordinate → Parallel Work → Merge |
+| Task Management     | Ongoing   | Track → Update → Handoff           |
+| Playwright E2E      | 15-60 min | Setup → Test → Document            |
 
 ### 3. Quality Gates
 
@@ -201,7 +205,9 @@ Parallel agent patterns for faster development:
 | Documentation | Context7    | Sequential |
 | UI/Frontend   | Magic       | Context7   |
 | Testing       | Playwright  | Sequential |
+| E2E Testing   | Playwright  | -          |
 | Refactoring   | Serena      | Sequential |
+| Task Tracking | Serena      | -          |
 
 ### Server Selection Matrix
 
@@ -212,6 +218,8 @@ implementation: context7 + [language-specific]
 testing: playwright (E2E) + sequential (planning)
 documentation: context7 + sequential
 refactoring: serena + sequential
+task-tracking: serena (memories) + sequential (planning)
+e2e-testing: playwright (browser) + sequential (test design)
 ```
 
 ---
@@ -299,6 +307,56 @@ refactoring: serena + sequential
 5. **Iterate** on personas and workflows
 
 **Documentation**: See individual workflow files for detailed instructions.
+
+---
+
+## Production Learnings
+
+### From Pocket Portals (2025-2026)
+
+Key patterns discovered through real-world agentic development:
+
+#### Task Management
+
+| Learning | Implementation |
+|----------|----------------|
+| **Single source of truth** | `tasks.md` as canonical state file |
+| **Session logging** | Date-stamped session logs with artifacts |
+| **Priority matrix** | 🔴 Critical → 🟠 High → 🟡 Medium → 🟢 Low |
+| **Handoff protocol** | Context recovery via tasks.md + git status |
+
+#### E2E Testing Patterns
+
+| Pattern | Usage |
+|---------|-------|
+| **Smoke tests** | P0 critical path (homepage, login, core feature) |
+| **Mobile-first** | 390x844 viewport, bottom sheets, touch targets |
+| **Theme testing** | Visual consistency across theme variations |
+| **SSE/Streaming** | Wait patterns for async content |
+
+#### Quality Gates
+
+| Gate | Threshold | Notes |
+|------|-----------|-------|
+| Test Coverage | ≥70% | 75% achieved in production |
+| Python Tests | Pass | 444+ tests |
+| JS Tests | Pass | 415+ tests, 96% coverage |
+| Lint/Types | Zero errors | Pre-commit enforced |
+
+#### XP Practices
+
+- **TDD Cycle**: Red → Green → Refactor (strictly followed)
+- **Small Commits**: Every 15-30 minutes
+- **Continuous Integration**: Pre-commit hooks + GitHub Actions
+- **Collective Ownership**: Tasks assigned to phases, not people
+
+#### Agentic Workflow Phases
+
+1. **Design (Architect)**: Create `docs/design/*.md`
+2. **Implementation (Developer)**: TDD with quality gates
+3. **Validation (QA)**: Full test suite + coverage check
+
+See `workflows/task-management.md` and `workflows/playwright-e2e.md` for detailed patterns.
 
 ---
 
