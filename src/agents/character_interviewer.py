@@ -1,13 +1,17 @@
 """Character Interviewer agent - conducts dynamic character creation interviews."""
 
-import json
 import logging
 import random
-import re
+import time
 from typing import Any
 
 from crewai import LLM, Agent, Task
 
+from src.agents.schemas import (
+    AdventureHooksResponse,
+    InterviewResponse,
+    StarterChoicesResponse,
+)
 from src.config.loader import load_agent_config, load_task_config
 from src.settings import settings
 
@@ -48,56 +52,87 @@ class CharacterInterviewerAgent:
     def generate_starter_choices(self) -> list[str]:
         """Generate initial character concept choices for a new player.
 
+        Uses CrewAI's output_pydantic for structured LLM output, significantly
+        reducing JSON parse failures compared to manual parsing.
+
         Returns:
             List of 3 character concept strings
         """
+        start_time = time.perf_counter()
+        used_fallback = False
+
         logger.info("generate_starter_choices: Starting dynamic generation")
         try:
             task_config = load_task_config("generate_starter_choices")
-            logger.debug(
-                "generate_starter_choices: Loaded task config: %s",
-                task_config.description[:100],
-            )
 
             task = Task(
                 description=task_config.description,
                 expected_output=task_config.expected_output,
                 agent=self.agent,
+                output_pydantic=StarterChoicesResponse,
             )
 
             logger.info("generate_starter_choices: Executing LLM task...")
             result = task.execute_sync()
-            logger.info("generate_starter_choices: Raw LLM result: %s", result)
 
-            parsed = self._parse_json_response(str(result))
-            logger.info("generate_starter_choices: Parsed result: %s", parsed)
+            # Handle Pydantic structured output
+            if hasattr(result, "pydantic") and result.pydantic:
+                pydantic_result = result.pydantic
+                if isinstance(pydantic_result, StarterChoicesResponse):
+                    all_choices = pydantic_result.choices
+                else:
+                    # Unexpected type - try to extract choices
+                    logger.warning(
+                        "generate_starter_choices: Unexpected pydantic type: %s",
+                        type(pydantic_result),
+                    )
+                    used_fallback = True
+                    all_choices = self.DEFAULT_STARTER_CHOICES
+            elif isinstance(result, StarterChoicesResponse):
+                all_choices = result.choices
+            else:
+                # Fallback to raw parsing if structured output failed
+                logger.warning(
+                    "generate_starter_choices: No pydantic output, using fallback"
+                )
+                used_fallback = True
+                all_choices = self.DEFAULT_STARTER_CHOICES
 
-            if parsed and "choices" in parsed and len(parsed["choices"]) >= 3:
-                all_choices = parsed["choices"]
+            if not used_fallback and len(all_choices) >= 3:
                 random.shuffle(all_choices)
                 selected = all_choices[:3]
+
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
                 logger.info(
-                    "generate_starter_choices: SUCCESS - shuffled %d, returning: %s",
-                    len(all_choices),
-                    selected,
+                    "generate_starter_choices: SUCCESS",
+                    extra={
+                        "total_choices": len(all_choices),
+                        "selected": selected,
+                        "used_fallback": False,
+                        "elapsed_ms": round(elapsed_ms, 2),
+                    },
                 )
                 return selected
-            else:
-                logger.warning(
-                    "generate_starter_choices: Invalid parsed result, using fallback"
-                )
 
         except Exception as e:
             logger.exception("generate_starter_choices: Exception occurred: %s", str(e))
+            used_fallback = True
 
-        logger.info("generate_starter_choices: Using DEFAULT_STARTER_CHOICES fallback")
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(
+            "generate_starter_choices: Using fallback",
+            extra={
+                "used_fallback": True,
+                "elapsed_ms": round(elapsed_ms, 2),
+            },
+        )
         return self.DEFAULT_STARTER_CHOICES
 
     def generate_adventure_hooks(self, character_info: str) -> list[str]:
         """Generate adventure hooks tailored to the character.
 
-        Called after character creation to provide contextually relevant
-        adventure options based on the character's race, class, and background.
+        Uses CrewAI's output_pydantic for structured LLM output, significantly
+        reducing JSON parse failures compared to manual parsing.
 
         Args:
             character_info: Formatted string with character details
@@ -106,6 +141,7 @@ class CharacterInterviewerAgent:
         Returns:
             List of 3 adventure hook strings tailored to the character
         """
+        start_time = time.perf_counter()
         # Fallback adventure hooks if LLM fails
         default_hooks = [
             "A hooded figure beckons you to a shadowy corner",
@@ -115,30 +151,67 @@ class CharacterInterviewerAgent:
 
         try:
             task_config = load_task_config("generate_adventure_hooks")
-
             description = task_config.description.format(character_info=character_info)
 
             task = Task(
                 description=description,
                 expected_output=task_config.expected_output,
                 agent=self.agent,
+                output_pydantic=AdventureHooksResponse,
             )
 
             result = task.execute_sync()
-            parsed = self._parse_json_response(str(result))
 
-            if parsed and "choices" in parsed and len(parsed["choices"]) >= 3:
-                return parsed["choices"][:3]
+            # Handle Pydantic structured output
+            if hasattr(result, "pydantic") and result.pydantic:
+                pydantic_result = result.pydantic
+                if isinstance(pydantic_result, AdventureHooksResponse):
+                    elapsed_ms = (time.perf_counter() - start_time) * 1000
+                    logger.info(
+                        "generate_adventure_hooks: SUCCESS",
+                        extra={
+                            "hooks": pydantic_result.choices,
+                            "used_fallback": False,
+                            "elapsed_ms": round(elapsed_ms, 2),
+                        },
+                    )
+                    return pydantic_result.choices[:3]
+            elif isinstance(result, AdventureHooksResponse):
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                logger.info(
+                    "generate_adventure_hooks: SUCCESS",
+                    extra={
+                        "hooks": result.choices,
+                        "used_fallback": False,
+                        "elapsed_ms": round(elapsed_ms, 2),
+                    },
+                )
+                return result.choices[:3]
 
-        except Exception:
-            pass
+            logger.warning(
+                "generate_adventure_hooks: No pydantic output, using fallback"
+            )
 
+        except Exception as e:
+            logger.exception("generate_adventure_hooks: Exception occurred: %s", str(e))
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(
+            "generate_adventure_hooks: Using fallback",
+            extra={
+                "used_fallback": True,
+                "elapsed_ms": round(elapsed_ms, 2),
+            },
+        )
         return default_hooks
 
     def interview_turn(
         self, turn_number: int, conversation_history: str
     ) -> dict[str, Any]:
         """Conduct one turn of the character interview.
+
+        Uses CrewAI's output_pydantic for structured LLM output, significantly
+        reducing JSON parse failures compared to manual parsing.
 
         Args:
             turn_number: Current turn (1-5)
@@ -147,6 +220,8 @@ class CharacterInterviewerAgent:
         Returns:
             Dict with 'narrative' and 'choices' keys
         """
+        start_time = time.perf_counter()
+
         try:
             task_config = load_task_config("interview_character")
 
@@ -160,60 +235,73 @@ class CharacterInterviewerAgent:
                 description=description,
                 expected_output=task_config.expected_output,
                 agent=self.agent,
+                output_pydantic=InterviewResponse,
             )
 
             result = task.execute_sync()
-            parsed = self._parse_json_response(str(result))
 
-            if parsed and "narrative" in parsed and "choices" in parsed:
+            # Handle Pydantic structured output
+            if hasattr(result, "pydantic") and result.pydantic:
+                pydantic_result = result.pydantic
+                if isinstance(pydantic_result, InterviewResponse):
+                    elapsed_ms = (time.perf_counter() - start_time) * 1000
+                    logger.info(
+                        "interview_turn: SUCCESS",
+                        extra={
+                            "turn": turn_number,
+                            "narrative_length": len(pydantic_result.narrative),
+                            "choices": pydantic_result.choices,
+                            "used_fallback": False,
+                            "elapsed_ms": round(elapsed_ms, 2),
+                        },
+                    )
+                    return {
+                        "narrative": pydantic_result.narrative,
+                        "choices": pydantic_result.choices[:3],
+                    }
+            elif isinstance(result, InterviewResponse):
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                logger.info(
+                    "interview_turn: SUCCESS",
+                    extra={
+                        "turn": turn_number,
+                        "narrative_length": len(result.narrative),
+                        "choices": result.choices,
+                        "used_fallback": False,
+                        "elapsed_ms": round(elapsed_ms, 2),
+                    },
+                )
                 return {
-                    "narrative": parsed["narrative"],
-                    "choices": parsed["choices"][:3]
-                    if len(parsed["choices"]) >= 3
-                    else self._get_fallback_choices(turn_number),
+                    "narrative": result.narrative,
+                    "choices": result.choices[:3],
                 }
 
-        except Exception:
-            pass
+            logger.warning(
+                "interview_turn: No pydantic output, using fallback",
+                extra={"turn": turn_number},
+            )
+
+        except Exception as e:
+            logger.exception(
+                "interview_turn: Exception occurred: %s",
+                str(e),
+                extra={"turn": turn_number},
+            )
 
         # Fallback response
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(
+            "interview_turn: Using fallback",
+            extra={
+                "turn": turn_number,
+                "used_fallback": True,
+                "elapsed_ms": round(elapsed_ms, 2),
+            },
+        )
         return {
             "narrative": self._get_fallback_narrative(turn_number),
             "choices": self._get_fallback_choices(turn_number),
         }
-
-    def _parse_json_response(self, response: str) -> dict | None:
-        """Parse JSON from LLM response, handling various formats.
-
-        Args:
-            response: Raw LLM response string
-
-        Returns:
-            Parsed dict or None if parsing fails
-        """
-        # Try direct JSON parse first
-        try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            pass
-
-        # Try to find JSON in response (may be wrapped in text)
-        json_match = re.search(r'\{[^{}]*"narrative"[^{}]*\}', response, re.DOTALL)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-
-        # Try to find JSON with choices only
-        json_match = re.search(r'\{[^{}]*"choices"[^{}]*\}', response, re.DOTALL)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-
-        return None
 
     def _get_fallback_narrative(self, turn_number: int) -> str:
         """Get fallback narrative for a given turn."""

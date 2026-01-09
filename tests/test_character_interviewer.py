@@ -153,34 +153,10 @@ class TestCharacterInterviewerAgent:
         assert "choices" in result
         assert len(result["choices"]) == 3
 
-    def test_parse_json_response_handles_wrapped_json(self) -> None:
-        """Test that _parse_json_response can extract JSON from text."""
-        interviewer = CharacterInterviewerAgent()
-
-        # Test with JSON wrapped in text
-        response = 'Here is my response: {"narrative": "Hello", "choices": ["a", "b", "c"]} end'
-        result = interviewer._parse_json_response(response)
-
-        assert result is not None
-        assert result["narrative"] == "Hello"
-        assert result["choices"] == ["a", "b", "c"]
-
-    def test_parse_json_response_handles_direct_json(self) -> None:
-        """Test that _parse_json_response handles direct JSON."""
-        interviewer = CharacterInterviewerAgent()
-
-        response = '{"narrative": "Test", "choices": ["x", "y", "z"]}'
-        result = interviewer._parse_json_response(response)
-
-        assert result is not None
-        assert result["narrative"] == "Test"
-
-    def test_parse_json_response_returns_none_for_invalid(self) -> None:
-        """Test that _parse_json_response returns None for invalid input."""
-        interviewer = CharacterInterviewerAgent()
-
-        result = interviewer._parse_json_response("No JSON here at all")
-        assert result is None
+    # Note: _parse_json_response tests removed - we now use Pydantic
+    # structured output (output_pydantic) instead of manual JSON parsing.
+    # See src/agents/schemas.py for the Pydantic models.
+    # See tests/test_schemas.py for validation tests.
 
     def test_get_fallback_narrative_for_each_turn(self) -> None:
         """Test that fallback narratives exist for all turns."""
