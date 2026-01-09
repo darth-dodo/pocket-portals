@@ -11,6 +11,7 @@ Technical documentation for the multi-agent AI adventure system.
 | [Blueprint](guides/BLUEPRINT.md) | Comprehensive implementation guide |
 | [Crews & Flows](guides/CREWS-AND-FLOWS.md) | CrewAI patterns and agent orchestration |
 | [Quest System](design/quest-system.md) | Quest design and selection flow |
+| [Adventure Moments](design/2026-01-09-adventure-moments.md) | Narrator memory and story persistence |
 | [E2E Testing](playwright-e2e-suite.md) | Playwright test scenarios |
 
 ## Documentation Structure
@@ -40,6 +41,7 @@ docs/
 │   ├── choice-system.md        # Choice mechanics
 │   ├── conversation-context.md # Context management
 │   ├── mobile-ux-improvement-plan.md  # Mobile UX design
+│   ├── 2026-01-09-adventure-moments.md  # Narrator memory system
 │   └── 2025-12-*.md            # Design documents
 │
 ├── e2e-screenshots/            # Playwright test screenshots
@@ -96,7 +98,7 @@ graph TD
 
 ## Project Status
 
-- **Backend**: 408 Python tests passing (pytest)
+- **Backend**: 466 Python tests passing (pytest)
 - **Frontend**: 415 Vitest + jsdom tests
 - **Coverage**: 77% overall
 - **Pre-commit hooks** enforced (ruff, mypy)
@@ -105,4 +107,4 @@ graph TD
 
 ---
 
-*Updated January 2, 2026*
+*Updated January 9, 2026*
