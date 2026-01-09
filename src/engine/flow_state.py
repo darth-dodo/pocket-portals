@@ -7,6 +7,25 @@ the multi-agent orchestration system.
 from pydantic import BaseModel, Field
 
 
+class DetectedMoment(BaseModel):
+    """Moment data detected during agent execution.
+
+    Lightweight container for moment information extracted from Keeper responses
+    that will be persisted as AdventureMoment by the route layer.
+
+    Attributes:
+        type: Category of moment (combat_victory, discovery, critical_success, etc.)
+        summary: Brief description of what happened (5-10 words)
+        significance: Weight for epilogue inclusion (0.0-1.0)
+    """
+
+    type: str = Field(description="Moment type (combat_victory, discovery, etc.)")
+    summary: str = Field(description="Brief summary of the moment")
+    significance: float = Field(
+        default=0.5, ge=0.0, le=1.0, description="Significance weight"
+    )
+
+
 class ConversationFlowState(BaseModel):
     """State container for conversation flow orchestration.
 
@@ -79,6 +98,11 @@ class ConversationFlowState(BaseModel):
         description="List of available choice options for user selection",
     )
 
+    detected_moment: DetectedMoment | None = Field(
+        default=None,
+        description="Significant moment detected during Keeper execution, if any",
+    )
+
     class Config:
         """Pydantic model configuration."""
 
@@ -99,5 +123,6 @@ class ConversationFlowState(BaseModel):
                 "error": None,
                 "narrative": "You step cautiously into the darkness...",
                 "choices": ["Continue forward", "Light a torch", "Turn back"],
+                "detected_moment": None,
             }
         }

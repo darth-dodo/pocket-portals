@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.agents.keeper import KeeperResponse
 from src.engine.flow import ConversationFlow
 from src.engine.flow_state import ConversationFlowState
 
@@ -13,14 +14,17 @@ def mock_agents() -> tuple[MagicMock, MagicMock, MagicMock]:
     """Create mock agent instances.
 
     Note: We explicitly delete respond_with_choices from the narrator mock
-    so the flow falls back to using respond() instead. This keeps tests
-    simpler and focused on flow orchestration rather than structured output.
+    and resolve_action_with_moments from the keeper mock so the flow falls
+    back to using respond() instead. This keeps tests simpler and focused
+    on flow orchestration rather than structured output.
     """
     narrator = MagicMock()
     keeper = MagicMock()
     jester = MagicMock()
     # Delete respond_with_choices so hasattr returns False and flow uses respond()
     del narrator.respond_with_choices
+    # Delete resolve_action_with_moments so hasattr returns False and flow uses respond()
+    del keeper.resolve_action_with_moments
     return narrator, keeper, jester
 
 
@@ -198,3 +202,85 @@ def test_flow_state_contains_all_responses(
     assert "keeper" in final_state.responses
     assert final_state.responses["narrator"] == "Narrator response."
     assert final_state.responses["keeper"] == "Keeper response."
+
+
+def test_flow_extracts_moment_from_keeper_response() -> None:
+    """Test flow extracts moment data when keeper uses resolve_action_with_moments."""
+    narrator = MagicMock()
+    keeper = MagicMock()
+    jester = MagicMock()
+
+    # Delete respond_with_choices from narrator
+    del narrator.respond_with_choices
+
+    # Configure keeper to use resolve_action_with_moments
+    keeper.resolve_action_with_moments.return_value = KeeperResponse(
+        resolution="Natural 20! Critical hit for 12 damage.",
+        moment_type="critical_success",
+        moment_summary="Landed critical hit on the goblin chief",
+        moment_significance=0.9,
+    )
+
+    narrator.respond.return_value = "You strike with precision!"
+
+    flow = ConversationFlow(narrator, keeper, jester)
+
+    initial_state = ConversationFlowState(
+        session_id="test-session",
+        action="I attack the goblin chief",
+        context="Combat is underway.",
+        phase="exploration",
+        agents_to_invoke=["narrator", "keeper"],
+    )
+
+    final_state = flow.kickoff(inputs=initial_state.model_dump())
+
+    # Verify resolve_action_with_moments was called
+    keeper.resolve_action_with_moments.assert_called_once()
+
+    # Verify moment was extracted
+    assert final_state.detected_moment is not None
+    assert final_state.detected_moment.type == "critical_success"
+    assert (
+        final_state.detected_moment.summary == "Landed critical hit on the goblin chief"
+    )
+    assert final_state.detected_moment.significance == 0.9
+
+    # Verify resolution text is in responses
+    assert final_state.responses["keeper"] == "Natural 20! Critical hit for 12 damage."
+
+
+def test_flow_no_moment_when_keeper_returns_routine_action() -> None:
+    """Test flow does not set detected_moment for routine actions."""
+    narrator = MagicMock()
+    keeper = MagicMock()
+    jester = MagicMock()
+
+    del narrator.respond_with_choices
+
+    # Keeper returns routine action without significant moment
+    keeper.resolve_action_with_moments.return_value = KeeperResponse(
+        resolution="DC 12. Rolled 15. Success.",
+        moment_type=None,
+        moment_summary=None,
+        moment_significance=0.3,
+    )
+
+    narrator.respond.return_value = "You search the room carefully."
+
+    flow = ConversationFlow(narrator, keeper, jester)
+
+    initial_state = ConversationFlowState(
+        session_id="test-session",
+        action="I search the room",
+        phase="exploration",
+        agents_to_invoke=["narrator", "keeper"],
+    )
+
+    final_state = flow.kickoff(inputs=initial_state.model_dump())
+
+    # Verify no moment was detected
+    assert final_state.detected_moment is None
+
+    # Verify resolution is still in responses
+    assert final_state.responses["keeper"] == "DC 12. Rolled 15. Success."

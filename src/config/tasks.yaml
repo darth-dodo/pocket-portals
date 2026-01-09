@@ -63,6 +63,34 @@ resolve_action:
   expected_output: "Brief mechanical resolution with numbers (under 10 words)"
   agent: keeper
 
+resolve_action_with_moments:
+  description: |
+    The player attempts: "{action}"
+    Difficulty: {difficulty} or higher to succeed
+    Context: {context}
+
+    PART 1 - MECHANICAL RESOLUTION:
+    Determine if a roll is needed. State target, then outcome.
+    Terse. Numbers first. Under 10 words.
+
+    PART 2 - MOMENT DETECTION:
+    Is this a SIGNIFICANT story moment? Consider:
+    - Combat victory/defeat (enemy HP reaches 0, or player falls)
+    - Critical success (natural 20, exceptional outcome)
+    - Critical failure (natural 1, dramatic failure)
+    - Discovery (major revelation, hidden truth uncovered)
+    - Achievement (goal completed, objective reached)
+    - Turning point (story shifts, allegiance changes)
+
+    If SIGNIFICANT:
+    - Set moment_type to one of: combat_victory, combat_defeat, critical_success, critical_failure, discovery, achievement, turning_point
+    - Write a brief 5-10 word moment_summary
+    - Set moment_significance: 0.0 (routine) to 1.0 (climactic)
+
+    If ROUTINE: leave moment fields as null/default.
+  expected_output: "Mechanical resolution with optional moment detection"
+  agent: keeper
+
 add_commentary:
   description: |
     Current situation: "{situation}"

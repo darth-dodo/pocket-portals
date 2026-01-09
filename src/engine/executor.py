@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.engine.flow import ConversationFlow
-from src.engine.flow_state import ConversationFlowState
+from src.engine.flow_state import ConversationFlowState, DetectedMoment
 from src.engine.router import RoutingDecision
 
 
@@ -34,11 +34,13 @@ class TurnResult:
         responses: List of all agent responses in execution order
         narrative: Combined narrative text from all agents
         choices: Available player choices for next action
+        detected_moment: Optional significant moment detected during execution
     """
 
     responses: list[AgentResponse]
     narrative: str
     choices: list[str]
+    detected_moment: DetectedMoment | None = None
 
 
 class TurnExecutor:
@@ -116,6 +118,7 @@ class TurnExecutor:
             responses=responses,
             narrative=final_state.narrative,
             choices=final_state.choices,
+            detected_moment=final_state.detected_moment,
         )
 
     async def execute_async(
@@ -150,6 +153,7 @@ class TurnExecutor:
             responses=responses,
             narrative=final_state.narrative,
             choices=final_state.choices,
+            detected_moment=final_state.detected_moment,
         )
 
     def _build_responses(self, state: ConversationFlowState) -> list[AgentResponse]:

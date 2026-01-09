@@ -1,12 +1,45 @@
 """Keeper agent - handles game mechanics without slowing the story."""
 
 from crewai import LLM, Agent, Task
+from pydantic import BaseModel, Field
 
 from src.config.loader import load_agent_config, load_task_config
 from src.engine.combat_manager import CombatManager
 from src.settings import settings
 from src.state.character import CharacterSheet
 from src.state.models import Combatant, CombatState
+
+
+class KeeperResponse(BaseModel):
+    """Structured response from Keeper with optional moment detection.
+
+    Uses CrewAI's output_pydantic for structured LLM output, matching
+    the pattern established by NarratorResponse.
+    """
+
+    resolution: str = Field(
+        description="Numbers-first mechanical resolution. Under 10 words. "
+        "Example: '14. Hits. 6 damage.' or 'DC 15. Rolled 12. Fails.'"
+    )
+    moment_type: str | None = Field(
+        default=None,
+        description="If this is a SIGNIFICANT moment, the type: "
+        "'combat_victory', 'combat_defeat', 'critical_success', "
+        "'critical_failure', 'discovery', 'achievement', 'turning_point'. "
+        "None if routine action.",
+    )
+    moment_summary: str | None = Field(
+        default=None,
+        description="If significant, a brief 5-10 word summary of what happened. "
+        "Example: 'Defeated the goblin chief in single combat'",
+    )
+    moment_significance: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="How significant is this moment? 0.0=routine, 1.0=climactic. "
+        "Combat victories ~0.8, discoveries ~0.7, critical hits ~0.9",
+    )
 
 
 class KeeperAgent:
@@ -81,6 +114,60 @@ class KeeperAgent:
 
         result = task.execute_sync()
         return str(result)
+
+    def resolve_action_with_moments(
+        self, action: str, context: str = "", difficulty: int = 12
+    ) -> KeeperResponse:
+        """Resolve action AND detect if it's a significant moment.
+
+        Uses structured Pydantic output for reliable moment extraction.
+
+        Args:
+            action: Player's attempted action
+            context: Story context for moment detection
+            difficulty: DC target for the roll
+
+        Returns:
+            KeeperResponse with resolution and optional moment metadata
+        """
+        task_config = load_task_config("resolve_action_with_moments")
+        description = task_config.description.format(
+            action=action,
+            difficulty=difficulty,
+            context=context,
+        )
+
+        task = Task(
+            description=description,
+            expected_output=task_config.expected_output,
+            agent=self.agent,
+            output_pydantic=KeeperResponse,
+        )
+
+        result = task.execute_sync()
+
+        # Handle both Pydantic model and raw result
+        if hasattr(result, "pydantic") and result.pydantic:
+            pydantic_result = result.pydantic
+            if isinstance(pydantic_result, KeeperResponse):
+                return pydantic_result
+            # Fallback if pydantic result is wrong type
+            return KeeperResponse(
+                resolution=str(pydantic_result),
+                moment_type=None,
+                moment_summary=None,
+                moment_significance=0.5,
+            )
+        elif isinstance(result, KeeperResponse):
+            return result
+        else:
+            # Fallback: return default response with raw resolution
+            return KeeperResponse(
+                resolution=str(result),
+                moment_type=None,
+                moment_summary=None,
+                moment_significance=0.5,
+            )
 
     def format_initiative_result(self, results: list[dict]) -> str:
         """Format initiative results for display.

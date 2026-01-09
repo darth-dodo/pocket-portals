@@ -25,7 +25,7 @@ from src.api.models import (
 from src.api.rate_limiting import require_rate_limit
 from src.engine.pacing import check_closure_triggers
 from src.state import CharacterClass, CharacterRace, CharacterSheet, GamePhase
-from src.state.models import Quest, QuestObjective
+from src.state.models import AdventureMoment, Quest, QuestObjective
 
 router = APIRouter(tags=["adventure"])
 
@@ -408,6 +408,24 @@ async def process_action(
 
     # Store exchange in session (auto-limits to 20)
     await sm.add_exchange(state.session_id, action, result.narrative)
+
+    # Extract and store significant moment if detected
+    if result.detected_moment:
+        # Refresh state to get current adventure_turn after increment
+        current_state = await sm.get_or_create_session(state.session_id)
+        moment = AdventureMoment(
+            turn=current_state.adventure_turn,
+            type=result.detected_moment.type,
+            summary=result.detected_moment.summary,
+            significance=result.detected_moment.significance,
+        )
+        await sm.add_adventure_moment(state.session_id, moment)
+        logger.info(
+            "Adventure moment recorded: %s - %s (significance: %.2f)",
+            moment.type,
+            moment.summary,
+            moment.significance,
+        )
 
     # Get the narrative from turn executor result
     narrative = result.narrative

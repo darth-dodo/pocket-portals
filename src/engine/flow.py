@@ -9,7 +9,7 @@ from typing import Any
 
 from crewai.flow.flow import Flow, listen, router, start
 
-from src.engine.flow_state import ConversationFlowState
+from src.engine.flow_state import ConversationFlowState, DetectedMoment
 from src.engine.router import AgentRouter, RoutingDecision
 from src.state.models import GamePhase
 
@@ -116,6 +116,22 @@ class ConversationFlow(Flow[ConversationFlowState]):
                     content = response.narrative
                     # Store choices from narrator's structured response
                     self.state.choices = response.choices
+                # Keeper uses resolve_action_with_moments for moment detection
+                elif agent_name == "keeper" and hasattr(
+                    agent, "resolve_action_with_moments"
+                ):
+                    keeper_response = agent.resolve_action_with_moments(
+                        action=self.state.action,
+                        context=accumulated_context,
+                    )
+                    content = keeper_response.resolution
+                    # Extract moment if significant (has type and summary)
+                    if keeper_response.moment_type and keeper_response.moment_summary:
+                        self.state.detected_moment = DetectedMoment(
+                            type=keeper_response.moment_type,
+                            summary=keeper_response.moment_summary,
+                            significance=keeper_response.moment_significance,
+                        )
                 else:
                     content = agent.respond(
                         action=self.state.action,
