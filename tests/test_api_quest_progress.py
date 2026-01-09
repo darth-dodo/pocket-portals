@@ -147,6 +147,7 @@ class TestProcessActionQuestProgress:
             mock_result = MagicMock()
             mock_result.narrative = "You search through the ancient ruins..."
             mock_result.choices = ["Look deeper", "Return", "Rest"]
+            mock_result.detected_moment = None  # No moment detected
             mock_turn_executor.execute_async = AsyncMock(return_value=mock_result)
 
             # Setup closure check to not trigger epilogue
@@ -224,6 +225,7 @@ class TestProcessActionQuestProgress:
                 "You found the ancient artifact hidden in the ruins!"
             )
             mock_result.choices = ["Examine it", "Leave", "Continue"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()
@@ -300,6 +302,7 @@ class TestProcessActionQuestProgress:
             mock_result = MagicMock()
             mock_result.narrative = "You hand the artifact to the grateful elder."
             mock_result.choices = ["Continue", "Rest", "Explore"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()
@@ -365,6 +368,7 @@ class TestProcessActionQuestProgress:
             mock_result = MagicMock()
             mock_result.narrative = "You survey your surroundings carefully."
             mock_result.choices = ["Continue", "Wait", "Leave"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()
@@ -719,6 +723,7 @@ class TestQuestProgressEdgeCases:
             mock_result = MagicMock()
             mock_result.narrative = "You explore carefully."
             mock_result.choices = ["Continue", "Wait", "Leave"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()
@@ -772,6 +777,7 @@ class TestQuestProgressEdgeCases:
             mock_result = MagicMock()
             mock_result.narrative = "The adventure continues..."
             mock_result.choices = ["Go on", "Rest", "Return"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()
@@ -859,6 +865,7 @@ class TestQuestProgressEdgeCases:
             mock_result = MagicMock()
             mock_result.narrative = "You found the legendary equipment!"
             mock_result.choices = ["Equip items", "Continue", "Search more"]
+            mock_result.detected_moment = None  # No moment detected
             mock_executor.execute_async = AsyncMock(return_value=mock_result)
 
             mock_closure_status = MagicMock()

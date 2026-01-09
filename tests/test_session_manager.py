@@ -769,3 +769,146 @@ class TestSessionManagerChoicesAndAgents:
         updated = await manager.get_session(session_id)
         assert updated is not None
         assert updated.turns_since_jester == 1  # Incremented again
+
+
+class TestSessionManagerAdventureMoments:
+    """Test suite for SessionManager adventure moment management."""
+
+    @pytest.mark.asyncio
+    async def test_add_adventure_moment_stores_moment(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that add_adventure_moment stores the moment in session."""
+        from src.state.models import AdventureMoment
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Initially no moments
+        assert len(session.adventure_moments) == 0
+
+        # Add a moment
+        moment = AdventureMoment(
+            turn=5,
+            type="combat_victory",
+            summary="Defeated the cave goblin",
+            significance=0.8,
+        )
+        await manager.add_adventure_moment(session_id, moment)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert len(updated.adventure_moments) == 1
+        assert updated.adventure_moments[0].turn == 5
+        assert updated.adventure_moments[0].type == "combat_victory"
+
+    @pytest.mark.asyncio
+    async def test_add_adventure_moment_caps_at_max(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that add_adventure_moment caps at MAX_ADVENTURE_MOMENTS."""
+        from src.state.models import AdventureMoment
+        from src.state.session_manager import MAX_ADVENTURE_MOMENTS
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Add more moments than the max
+        for i in range(MAX_ADVENTURE_MOMENTS + 5):
+            moment = AdventureMoment(
+                turn=i,
+                type="discovery",
+                summary=f"Moment {i}",
+                significance=0.5,  # All same significance
+            )
+            await manager.add_adventure_moment(session_id, moment)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert len(updated.adventure_moments) == MAX_ADVENTURE_MOMENTS
+
+    @pytest.mark.asyncio
+    async def test_add_adventure_moment_keeps_highest_significance(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that capping keeps moments with highest significance."""
+        from src.state.models import AdventureMoment
+        from src.state.session_manager import MAX_ADVENTURE_MOMENTS
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Add moments with varying significance
+        # First add MAX moments with low significance
+        for i in range(MAX_ADVENTURE_MOMENTS):
+            moment = AdventureMoment(
+                turn=i,
+                type="discovery",
+                summary=f"Low significance {i}",
+                significance=0.3,
+            )
+            await manager.add_adventure_moment(session_id, moment)
+
+        # Now add a high-significance moment
+        high_moment = AdventureMoment(
+            turn=100,
+            type="combat_victory",
+            summary="High significance event",
+            significance=0.95,
+        )
+        await manager.add_adventure_moment(session_id, high_moment)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+        assert len(updated.adventure_moments) == MAX_ADVENTURE_MOMENTS
+
+        # The high significance moment should be kept
+        summaries = [m.summary for m in updated.adventure_moments]
+        assert "High significance event" in summaries
+
+    @pytest.mark.asyncio
+    async def test_add_adventure_moment_handles_invalid_session(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that add_adventure_moment handles invalid session gracefully."""
+        from src.state.models import AdventureMoment
+
+        moment = AdventureMoment(
+            turn=1, type="discovery", summary="Test", significance=0.5
+        )
+
+        # Should not raise error for non-existent session
+        await manager.add_adventure_moment("invalid-session-id", moment)
+
+    @pytest.mark.asyncio
+    async def test_add_multiple_moments_maintains_order_by_significance(
+        self, manager: SessionManager
+    ) -> None:
+        """Test that moments are sorted by significance after capping."""
+        from src.state.models import AdventureMoment
+        from src.state.session_manager import MAX_ADVENTURE_MOMENTS
+
+        session = await manager.create_session()
+        session_id = session.session_id
+
+        # Add many moments with varying significance
+        for i in range(MAX_ADVENTURE_MOMENTS + 3):
+            significance = 0.1 + (i * 0.05)  # Increasing significance
+            moment = AdventureMoment(
+                turn=i,
+                type="achievement",
+                summary=f"Moment sig={significance:.2f}",
+                significance=min(significance, 1.0),
+            )
+            await manager.add_adventure_moment(session_id, moment)
+
+        updated = await manager.get_session(session_id)
+        assert updated is not None
+
+        # After capping, moments should be the ones with highest significance
+        # The first 3 moments (lowest significance) should have been removed
+        assert len(updated.adventure_moments) == MAX_ADVENTURE_MOMENTS
+
+        # Verify the lowest significance moments were removed
+        significances = [m.significance for m in updated.adventure_moments]
+        assert all(s >= 0.25 for s in significances)  # Low significance ones removed

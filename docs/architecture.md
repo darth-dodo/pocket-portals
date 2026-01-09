@@ -324,7 +324,119 @@ class Settings(BaseSettings):
 
 ---
 
-## 1.4 API Layer
+## 1.4 Adventure Moments (Narrator Memory)
+
+The narrator can forget early story details because `conversation_history` is truncated to 20 turns. Adventure Moments provide persistent story memory by capturing significant events throughout the adventure.
+
+### Problem: Context Window Limitation
+
+```
+Turn 21: Turns 1-10 permanently deleted
+Turn 30: Quest introduction lost (turns 1-20 gone)
+Turn 50: Only turns 31-50 remain - 60% of story forgotten
+```
+
+**What gets forgotten:**
+- NPC names and dialogue from early game
+- Quest introduction and objectives
+- World-building details (locations, factions)
+- Character backstory context from creation
+
+### Solution: KeeperResponse with Moment Detection
+
+The Keeper agent returns structured moment metadata alongside mechanical resolution using Pydantic `output_pydantic`:
+
+```mermaid
+flowchart TD
+    subgraph "Turn Execution"
+        A[Player Action] --> B[Keeper.resolve_action_with_moments]
+        B --> C{Significant<br/>Moment?}
+        C -->|Yes| D[Extract moment data]
+        C -->|No| E[Continue normally]
+        D --> F[sm.add_adventure_moment]
+        F --> G[GameState.adventure_moments<br/>max 15, by significance]
+
+        E & G --> H[build_context<br/>include_moments=True]
+        H --> I["[STORY SO FAR]<br/>Top 5 moments"]
+        H --> J[Pacing hint]
+        H --> K[Character info]
+        H --> L[conversation_history<br/>last 20 turns]
+
+        I & J & K & L --> M[Narrator Agent]
+        M --> N[Remembers key events]
+    end
+
+    style I fill:#51cf66,color:#fff
+    style N fill:#51cf66,color:#fff
+```
+
+### KeeperResponse Model (`src/agents/keeper.py`)
+
+```python
+class KeeperResponse(BaseModel):
+    """Structured response with optional moment detection."""
+    resolution: str = Field(
+        description="Numbers-first mechanical resolution. Under 10 words."
+    )
+    moment_type: str | None = Field(
+        default=None,
+        description="Significant moment type: 'combat_victory', 'discovery', etc."
+    )
+    moment_summary: str | None = Field(
+        default=None,
+        description="Brief 5-10 word summary of what happened."
+    )
+    moment_significance: float = Field(
+        default=0.5, ge=0.0, le=1.0,
+        description="How significant: 0.0=routine, 1.0=climactic"
+    )
+```
+
+### Moment Types
+
+| Type | Description | Typical Significance |
+|------|-------------|---------------------|
+| `combat_victory` | Player defeats enemy | 0.8 |
+| `combat_defeat` | Player falls in battle | 0.9 |
+| `critical_success` | Exceptional roll/outcome | 0.9 |
+| `critical_failure` | Dramatic failure | 0.8 |
+| `discovery` | Major revelation | 0.7 |
+| `achievement` | Goal/objective completed | 0.8 |
+| `turning_point` | Significant story shift | 0.85 |
+
+### Storage and Selection
+
+**Storage Limits:**
+- Maximum 15 moments stored in `GameState.adventure_moments`
+- When cap exceeded, lowest significance moments are removed
+
+**Context Selection:**
+- Top 5 most significant moments included in narrator context
+- Selected moments sorted chronologically for narrative coherence
+
+### Context Output Example
+
+After turn 20+, narrator context includes:
+```
+[STORY SO FAR]
+- Turn 5 (combat_victory): Defeated the cave goblin after fierce battle
+- Turn 12 (discovery): Uncovered the secret passage behind the waterfall
+- Turn 18 (achievement): Retrieved the ancient artifact from the temple
+```
+
+### Related Files
+
+| File | Purpose |
+|------|---------|
+| `src/agents/keeper.py` | `KeeperResponse` model, `resolve_action_with_moments()` |
+| `src/engine/moments.py` | `format_moments_for_context()`, `build_moment_from_keeper()` |
+| `src/state/session_manager.py` | `add_adventure_moment()` with capping logic |
+| `src/api/dependencies.py` | `build_context()` with `include_moments` parameter |
+| `docs/design/2026-01-09-adventure-moments.md` | Full design document |
+
+---
+
+## 1.5 API Layer
 
 FastAPI-based API with SSE streaming support for real-time narrative delivery.
 

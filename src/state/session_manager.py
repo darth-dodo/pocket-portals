@@ -19,6 +19,8 @@ from src.state.models import (
 if TYPE_CHECKING:
     from src.state.character import CharacterSheet
 
+MAX_ADVENTURE_MOMENTS = 15
+
 
 class SessionManager:
     """Manages game sessions using a pluggable async backend."""
@@ -406,6 +408,7 @@ class SessionManager:
 
         Moments are tracked throughout the adventure to enable personalized
         epilogue generation that references the player's specific journey.
+        Caps at MAX_ADVENTURE_MOMENTS, keeping highest significance moments.
 
         Args:
             session_id: Session identifier
@@ -414,6 +417,14 @@ class SessionManager:
         state = await self._backend.get(session_id)
         if state:
             state.adventure_moments.append(moment)
+
+            # Cap at max moments, keeping highest significance
+            if len(state.adventure_moments) > MAX_ADVENTURE_MOMENTS:
+                state.adventure_moments.sort(key=lambda m: m.significance, reverse=True)
+                state.adventure_moments = state.adventure_moments[
+                    :MAX_ADVENTURE_MOMENTS
+                ]
+
             await self._backend.update(session_id, state)
 
     async def trigger_epilogue(self, session_id: str, reason: str) -> GameState | None:

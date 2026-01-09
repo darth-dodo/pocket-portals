@@ -14,14 +14,17 @@ def mock_agents() -> tuple[MagicMock, MagicMock, MagicMock]:
     """Create mock agent instances.
 
     Note: We explicitly delete respond_with_choices from the narrator mock
-    so the executor falls back to using respond() instead. This keeps tests
-    simpler and focused on execution flow rather than structured output.
+    and resolve_action_with_moments from the keeper mock so the executor
+    falls back to using respond() instead. This keeps tests simpler and
+    focused on execution flow rather than structured output.
     """
     narrator = MagicMock()
     keeper = MagicMock()
     jester = MagicMock()
     # Delete respond_with_choices so hasattr returns False and executor uses respond()
     del narrator.respond_with_choices
+    # Delete resolve_action_with_moments so hasattr returns False and executor uses respond()
+    del keeper.resolve_action_with_moments
     return narrator, keeper, jester
 
 

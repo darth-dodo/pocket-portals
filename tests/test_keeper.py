@@ -270,3 +270,120 @@ class TestKeeperCombat:
         current = keeper.get_current_turn_combatant(combat_state)
         assert current is not None
         assert current.id == combat_state.turn_order[0]
+
+
+class TestKeeperResolveActionWithMoments:
+    """Test suite for KeeperAgent.resolve_action_with_moments method."""
+
+    @pytest.fixture
+    def keeper(self) -> KeeperAgent:
+        """Create a KeeperAgent instance for testing."""
+        return KeeperAgent()
+
+    @patch("src.agents.keeper.Task")
+    def test_returns_keeper_response_instance(
+        self, mock_task: MagicMock, keeper: KeeperAgent
+    ) -> None:
+        """Should return a KeeperResponse instance."""
+        from src.agents.keeper import KeeperResponse
+
+        # Mock the task execution to return a KeeperResponse
+        mock_result = MagicMock()
+        mock_result.pydantic = KeeperResponse(
+            resolution="14. Hits. 6 damage.",
+            moment_type=None,
+            moment_summary=None,
+            moment_significance=0.5,
+        )
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = mock_result
+        mock_task.return_value = mock_task_instance
+
+        result = keeper.resolve_action_with_moments(
+            action="swing sword at goblin",
+            context="In combat with a goblin",
+        )
+
+        assert isinstance(result, KeeperResponse)
+        assert result.resolution == "14. Hits. 6 damage."
+
+    @patch("src.agents.keeper.Task")
+    def test_includes_moment_data_for_significant_action(
+        self, mock_task: MagicMock, keeper: KeeperAgent
+    ) -> None:
+        """Should include moment data when action is significant."""
+        from src.agents.keeper import KeeperResponse
+
+        mock_result = MagicMock()
+        mock_result.pydantic = KeeperResponse(
+            resolution="Natural 20! Critical hit!",
+            moment_type="critical_success",
+            moment_summary="Landed a devastating critical hit",
+            moment_significance=0.9,
+        )
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = mock_result
+        mock_task.return_value = mock_task_instance
+
+        result = keeper.resolve_action_with_moments(
+            action="attack the dragon",
+            context="Fighting the final boss",
+        )
+
+        assert result.moment_type == "critical_success"
+        assert result.moment_summary == "Landed a devastating critical hit"
+        assert result.moment_significance == 0.9
+
+    @patch("src.agents.keeper.Task")
+    def test_routine_action_has_no_moment(
+        self, mock_task: MagicMock, keeper: KeeperAgent
+    ) -> None:
+        """Should return None moment fields for routine actions."""
+        from src.agents.keeper import KeeperResponse
+
+        mock_result = MagicMock()
+        mock_result.pydantic = KeeperResponse(
+            resolution="DC 10. Rolled 12. Succeeds.",
+            moment_type=None,
+            moment_summary=None,
+            moment_significance=0.5,
+        )
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = mock_result
+        mock_task.return_value = mock_task_instance
+
+        result = keeper.resolve_action_with_moments(
+            action="open the door",
+            context="Standing in front of an unlocked door",
+        )
+
+        assert result.moment_type is None
+        assert result.moment_summary is None
+        assert result.moment_significance == 0.5
+
+    @patch("src.agents.keeper.Task")
+    def test_handles_raw_result_fallback(
+        self, mock_task: MagicMock, keeper: KeeperAgent
+    ) -> None:
+        """Should handle fallback when pydantic result not available."""
+        from src.agents.keeper import KeeperResponse
+
+        # Mock result without pydantic attribute - use return_value for __str__
+        mock_result = MagicMock()
+        mock_result.pydantic = None
+        mock_result.configure_mock(
+            **{"__str__.return_value": "DC 12. Rolled 8. Fails."}
+        )
+        mock_task_instance = MagicMock()
+        mock_task_instance.execute_sync.return_value = mock_result
+        mock_task.return_value = mock_task_instance
+
+        result = keeper.resolve_action_with_moments(
+            action="pick the lock",
+            context="Trying to open a locked chest",
+        )
+
+        assert isinstance(result, KeeperResponse)
+        # Should have created a default response
+        assert result.moment_type is None
+        assert result.moment_significance == 0.5

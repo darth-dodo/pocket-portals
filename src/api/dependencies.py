@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import Request
 
+from src.engine.moments import format_moments_for_context
 from src.engine.pacing import build_pacing_context, format_pacing_hint
 from src.state import GameState, SessionManager
 
@@ -40,6 +41,7 @@ def build_context(
     character_description: str = "",
     state: GameState | None = None,
     include_pacing: bool = True,
+    include_moments: bool = False,
 ) -> str:
     """Format conversation history and character info for LLM context.
 
@@ -47,8 +49,9 @@ def build_context(
         history: List of conversation exchanges
         character_sheet: Optional CharacterSheet with structured character data
         character_description: Optional text description of character
-        state: Optional GameState for pacing context
+        state: Optional GameState for pacing and moments context
         include_pacing: Whether to include pacing hints (default True)
+        include_moments: Whether to include story moments (default False)
 
     Returns:
         Formatted context string for LLM
@@ -61,6 +64,13 @@ def build_context(
         pacing_hint = format_pacing_hint(pacing_context)
         lines.append(pacing_hint)
         lines.append("")
+
+    # Include adventure moments (story so far) if enabled
+    if include_moments and state and state.adventure_moments:
+        moments_text = format_moments_for_context(state.adventure_moments)
+        if moments_text:
+            lines.append(moments_text)
+            lines.append("")
 
     # Include character information for continuity
     if character_sheet:
