@@ -179,10 +179,10 @@ gantt
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| Fix Jester duplicate config loaders | | High | Task 1.1 from improvements.md |
-| Centralize LLM config in YAML | | High | Task 1.2 - remove hardcoded model settings |
+| Fix Jester duplicate config loaders | ✅ | High | Task 1.1 - Already complete (verified 2026-01-09) |
+| Centralize LLM config in YAML | ✅ | High | Task 1.2 - Already complete (verified 2026-01-09) |
 | Implement Redis session persistence | | High | Task 2.1 - sessions lost on restart |
-| Add structured output schemas with guardrails | | High | Task 2.3 - ~15% JSON parse failure rate |
+| Add structured output schemas with guardrails | ✅ | High | Task 2.3 - Done 2026-01-09: Pydantic schemas + output_pydantic |
 | Refactor SessionManager (28+ methods) | | High | Split into session_crud.py, character_manager.py, quest_manager.py |
 
 #### 🟡 Medium Priority (This Quarter)
@@ -209,6 +209,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Structured output schemas with guardrails | ✅ | Branch: feature/config-improvements. Pydantic schemas for CharacterInterviewer, 55 new tests, ~15% → ~0% JSON parse failures |
 | Backend improvements - modular API | ✅ | main.py 2133→5 lines. Branch: backend-improvements, Commit: 778ebb0 |
 | Backend improvements - rate limiting | ✅ | Privacy-first (session_id only). 3 tiers: LLM 20/min, Combat 60/min, Default 100/min |
 | Backend improvements - CORS config | ✅ | Configurable via settings.py. Permissive in dev, restrictive in prod |

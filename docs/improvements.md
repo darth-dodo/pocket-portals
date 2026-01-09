@@ -23,9 +23,12 @@ This document contains detailed, actionable tasks for improving the pocket-porta
 **Priority**: 🔴 Critical
 **Effort**: Small (30 min)
 **Files**: `src/agents/jester.py`
+**Status**: ✅ COMPLETE (verified 2026-01-09 - already implemented)
 
 **Problem**:
 `jester.py` defines its own `load_agent_config()` and `load_task_config()` functions (lines 10-22) instead of using the centralized loader from `src/config/loader.py`.
+
+**Resolution**: Upon inspection, jester.py already uses `from src.config.loader import load_agent_config, load_task_config`. This task was already complete.
 
 **Implementation Steps**:
 - [ ] Remove duplicate `load_agent_config()` function from `jester.py`
@@ -61,9 +64,15 @@ python -c "from src.agents.jester import JesterAgent; j = JesterAgent(); print(j
 **Priority**: 🔴 Critical
 **Effort**: Medium (2 hours)
 **Files**: `src/config/agents.yaml`, `src/config/loader.py`
+**Status**: ✅ COMPLETE (verified 2026-01-09 - already implemented)
 
 **Problem**:
 LLM settings (model, temperature, max_tokens) are hardcoded in each agent file, making it difficult to change models or tune parameters without code changes.
+
+**Resolution**: Upon inspection, this was already implemented:
+- `src/config/loader.py` has `LLMConfig` Pydantic model with defaults
+- `src/config/agents.yaml` has `defaults.llm` section and per-agent overrides
+- All agents use `config.llm.model`, `config.llm.temperature`, `config.llm.max_tokens`
 
 **Implementation Steps**:
 
@@ -557,9 +566,17 @@ def test_timing_logged(caplog):
 **Priority**: 🟠 High
 **Effort**: Medium (2-3 hours)
 **Files**: `src/agents/schemas.py` (new), `src/agents/character_interviewer.py`
+**Status**: ✅ COMPLETE (2026-01-09)
 
 **Problem**:
 Manual JSON parsing in `character_interviewer.py` is error-prone. Uses regex fallbacks and has ~15% failure rate.
+
+**Resolution**: Implemented Pydantic schemas with CrewAI's output_pydantic feature:
+- Created `src/agents/schemas.py` with InterviewResponse, StarterChoicesResponse, AdventureHooksResponse
+- Updated CharacterInterviewerAgent to use output_pydantic instead of manual JSON parsing
+- Removed deprecated `_parse_json_response()` method
+- Added 55 comprehensive tests in `tests/test_schemas.py`
+- Branch: feature/config-improvements, Commit: e28e80c
 
 **Implementation Steps**:
 
@@ -1112,14 +1129,14 @@ def test_health_status_critical():
 ## Summary Checklist
 
 ### Phase 1 (Critical)
-- [ ] Task 1.1: Fix jester.py duplicate loaders
-- [ ] Task 1.2: Add LLM config to YAML
-- [ ] Task 1.3: Update agents to use config-based LLM
+- [x] Task 1.1: Fix jester.py duplicate loaders ✅ (already complete)
+- [x] Task 1.2: Add LLM config to YAML ✅ (already complete)
+- [x] Task 1.3: Update agents to use config-based LLM ✅ (already complete)
 
 ### Phase 2 (Production)
 - [ ] Task 2.1: Implement @persist with Redis
 - [ ] Task 2.2: Add execution hooks
-- [ ] Task 2.3: Add structured output schemas
+- [x] Task 2.3: Add structured output schemas ✅ (2026-01-09)
 
 ### Phase 3 (Quality)
 - [ ] Task 3.1: Enable memory system
