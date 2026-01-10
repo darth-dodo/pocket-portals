@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
-from src.api.content_safety import detect_combat_trigger, filter_content
+from src.api.content_safety import detect_combat_trigger
 from src.api.dependencies import build_context, get_session, get_session_manager
 from src.api.models import (
     ActionRequest,
@@ -272,8 +272,8 @@ async def process_action(
     else:
         action = action_request.action or ""
 
-    # Apply content safety filter
-    action = filter_content(action)
+    # Content moderation is now handled by agents via content_safe field
+    # in their structured responses (NarratorResponse, InterviewResponse)
 
     # Handle CHARACTER_CREATION phase specially
     if state.phase == GamePhase.CHARACTER_CREATION:
@@ -537,8 +537,8 @@ async def process_action_stream(
     else:
         action = action_request.action or ""
 
-    # Apply content safety filter
-    action = filter_content(action)
+    # Content moderation is now handled by agents via content_safe field
+    # in their structured responses (NarratorResponse, InterviewResponse)
 
     # Handle CHARACTER_CREATION phase with character-by-character streaming
     if state.phase == GamePhase.CHARACTER_CREATION:

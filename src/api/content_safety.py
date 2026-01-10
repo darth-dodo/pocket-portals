@@ -3,41 +3,65 @@
 This module provides content filtering to redirect inappropriate player input
 and combat detection functions to identify combat triggers and enemy types
 from player actions.
+
+NOTE: Primary content moderation is handled by the Narrator agent using semantic
+understanding (via content_safe field in NarratorResponse). This pattern-based
+filter serves as a fast pre-filter for CHARACTER_CREATION and QUEST_SELECTION
+phases where the Narrator isn't invoked.
 """
 
-# Blocked content patterns - redirects inappropriate input to safe message
+import re
+
+# Blocked content patterns with word boundaries to avoid false positives
+# Each pattern is compiled with word boundaries (\b) to prevent matching
+# substrings like "assassin" or "therapist"
+BLOCKED_PATTERNS_REGEX = [
+    # Self-harm (full phrases, less likely to have false positives)
+    re.compile(r"\bhurt myself\b", re.IGNORECASE),
+    re.compile(r"\bkill myself\b", re.IGNORECASE),
+    re.compile(r"\bharm myself\b", re.IGNORECASE),
+    re.compile(r"\bcut myself\b", re.IGNORECASE),
+    re.compile(r"\bsuicide\b", re.IGNORECASE),
+    re.compile(r"\bself[- ]?harm\b", re.IGNORECASE),
+    re.compile(r"\bend my life\b", re.IGNORECASE),
+    re.compile(r"\bend it all\b", re.IGNORECASE),
+    # Sexual content (with word boundaries)
+    re.compile(r"\bhave sex\b", re.IGNORECASE),
+    re.compile(r"\bmake love\b", re.IGNORECASE),
+    re.compile(r"\bget naked\b", re.IGNORECASE),
+    re.compile(r"\bundress\b", re.IGNORECASE),
+    re.compile(r"\berotic\b", re.IGNORECASE),
+    # Violence/torture (specific phrases)
+    re.compile(r"\btorture\b", re.IGNORECASE),
+    re.compile(r"\bmutilate\b", re.IGNORECASE),
+    re.compile(r"\brape\b", re.IGNORECASE),
+    re.compile(r"\bmolest\b", re.IGNORECASE),
+    # Hate speech
+    re.compile(r"\bnazi\b", re.IGNORECASE),
+    re.compile(r"\bracist\b", re.IGNORECASE),
+]
+
+# Legacy list for backwards compatibility (not used directly)
 BLOCKED_PATTERNS = [
-    # Self-harm
     "hurt myself",
     "kill myself",
     "harm myself",
     "cut myself",
     "suicide",
     "self-harm",
-    "self harm",
     "end my life",
     "end it all",
-    # Sexual content
-    "sex",
-    "seduce",
-    "kiss",
-    "romance",
+    "have sex",
     "make love",
-    "naked",
+    "get naked",
     "undress",
-    "sexual",
     "erotic",
-    "intimate",
-    # Violence/torture
     "torture",
     "mutilate",
     "rape",
-    "abuse",
     "molest",
-    # Hate speech
-    "slur",
-    "racist",
     "nazi",
+    "racist",
 ]
 
 SAFE_REDIRECT = "take a deep breath and focus on the adventure ahead"

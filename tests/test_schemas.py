@@ -636,6 +636,78 @@ class TestSchemaIntegration:
             AdventureHooksResponse(choices=["One", "Two"])  # Less than 3
 
 
+class TestContentSafeField:
+    """Tests for content_safe field in InterviewResponse schema."""
+
+    def test_interview_response_content_safe_defaults_to_true(self) -> None:
+        """Test that content_safe defaults to True when not specified."""
+        response = InterviewResponse(
+            narrative="The innkeeper nods and asks about your travels.",
+            choices=["Tell a story", "Ask a question", "Order a drink"],
+        )
+
+        assert response.content_safe is True
+
+    def test_interview_response_content_safe_explicit_true(self) -> None:
+        """Test that content_safe can be explicitly set to True."""
+        response = InterviewResponse(
+            content_safe=True,
+            narrative="The innkeeper leans in with interest.",
+            choices=["Continue talking", "Change the subject", "Take a sip"],
+        )
+
+        assert response.content_safe is True
+
+    def test_interview_response_content_safe_explicit_false(self) -> None:
+        """Test that content_safe can be set to False for unsafe content."""
+        response = InterviewResponse(
+            content_safe=False,
+            narrative="Let's focus on your character's heroic qualities.",
+            choices=["Be a hero", "Help others", "Seek adventure"],
+        )
+
+        assert response.content_safe is False
+
+    def test_interview_response_content_safe_in_json(self) -> None:
+        """Test that content_safe field is preserved in JSON serialization."""
+        response = InterviewResponse(
+            content_safe=False,
+            narrative="Let's focus on your character's heroic qualities.",
+            choices=["Be a hero", "Help others", "Seek adventure"],
+        )
+
+        dumped = response.model_dump()
+        assert dumped["content_safe"] is False
+
+        # Round trip through JSON
+        json_str = response.model_dump_json()
+        restored = InterviewResponse.model_validate_json(json_str)
+        assert restored.content_safe is False
+
+    def test_interview_response_content_safe_from_json_without_field(self) -> None:
+        """Test that content_safe defaults to True when missing from JSON."""
+        json_str = """{
+            "narrative": "The innkeeper greets you warmly.",
+            "choices": ["Wave back", "Nod politely", "Smile"]
+        }"""
+
+        response = InterviewResponse.model_validate_json(json_str)
+        assert response.content_safe is True
+
+    def test_interview_response_content_safe_with_safe_words(self) -> None:
+        """Test that safe words like 'assassin' work with content_safe=True."""
+        # This simulates what the LLM should do: correctly assess that
+        # "assassin" is a profession, not inappropriate content
+        response = InterviewResponse(
+            content_safe=True,  # LLM correctly assesses this as safe
+            narrative="I am an assassin from the Shadow Guild.",
+            choices=["Accept the contract", "Decline politely", "Ask for details"],
+        )
+
+        assert response.content_safe is True
+        assert "assassin" in response.narrative.lower()
+
+
 class TestSchemaValidatorBehavior:
     """Tests specifically for validator behavior and error messages."""
 

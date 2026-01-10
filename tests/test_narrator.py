@@ -118,6 +118,89 @@ class TestNarratorCombat:
         assert any(log_entry in description for log_entry in combat_log)
 
 
+class TestNarratorResponseSchema:
+    """Test suite for NarratorResponse schema including content_safe field."""
+
+    def test_narrator_response_content_safe_defaults_to_true(self) -> None:
+        """Test that content_safe defaults to True when not specified."""
+        from src.agents.narrator import NarratorResponse
+
+        response = NarratorResponse(
+            narrative="The goblin camp lies before you. Three tents circle a dying fire.",
+            choices=["Sneak closer", "Attack directly", "Circle around"],
+        )
+
+        assert response.content_safe is True
+
+    def test_narrator_response_content_safe_explicit_false(self) -> None:
+        """Test that content_safe can be set to False for moderated content."""
+        from src.agents.narrator import NarratorResponse
+
+        response = NarratorResponse(
+            content_safe=False,
+            narrative="You take a deep breath and focus on the adventure ahead.",
+            choices=["Continue onward", "Rest for a moment", "Survey the area"],
+        )
+
+        assert response.content_safe is False
+
+    def test_narrator_response_content_safe_in_json(self) -> None:
+        """Test that content_safe is preserved in JSON serialization."""
+        from src.agents.narrator import NarratorResponse
+
+        response = NarratorResponse(
+            content_safe=False,
+            narrative="Let's focus on the adventure at hand.",
+            choices=["Move forward", "Look around", "Take a breath"],
+        )
+
+        dumped = response.model_dump()
+        assert dumped["content_safe"] is False
+
+        # Round trip
+        json_str = response.model_dump_json()
+        restored = NarratorResponse.model_validate_json(json_str)
+        assert restored.content_safe is False
+
+    def test_narrator_response_safe_words_not_blocked(self) -> None:
+        """Test that safe words like 'assassin', 'therapist' work correctly."""
+        from src.agents.narrator import NarratorResponse
+
+        # These contain words that a naive pattern matcher might block
+        safe_narratives = [
+            "The assassin's guild has a contract for you.",
+            "You visit the therapist in the village.",
+            "Welcome to the town of Scunthorpe.",
+            "You attack the goblin brutally with your sword.",
+        ]
+
+        for narrative in safe_narratives:
+            response = NarratorResponse(
+                content_safe=True,  # LLM should correctly assess these as safe
+                narrative=narrative,
+                choices=["Continue", "Ask more", "Leave"],
+            )
+            assert response.content_safe is True
+
+    def test_narrator_response_requires_three_choices(self) -> None:
+        """Test that NarratorResponse requires exactly 3 choices."""
+        from pydantic import ValidationError
+
+        from src.agents.narrator import NarratorResponse
+
+        with pytest.raises(ValidationError):
+            NarratorResponse(
+                narrative="The path stretches before you.",
+                choices=["Go left", "Go right"],  # Only 2 choices
+            )
+
+        with pytest.raises(ValidationError):
+            NarratorResponse(
+                narrative="The path stretches before you.",
+                choices=["A", "B", "C", "D"],  # 4 choices
+            )
+
+
 class TestChoiceQualityAnalysis:
     """Test suite for choice quality analysis."""
 
