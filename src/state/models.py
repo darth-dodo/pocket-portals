@@ -284,6 +284,19 @@ class GameState(BaseModel):
         return v
 
     @property
+    def id(self) -> str:
+        """Get the session ID (alias for CrewAI Flow compatibility).
+
+        CrewAI Flow requires state models to have an 'id' field for
+        persistence and tracking. This property provides that interface
+        by aliasing session_id.
+
+        Returns:
+            The session identifier string.
+        """
+        return self.session_id
+
+    @property
     def has_character(self) -> bool:
         """Check if character sheet is complete.
 
