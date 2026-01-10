@@ -1137,6 +1137,7 @@ def test_health_status_critical():
 - [ ] Task 2.1: Implement @persist with Redis
 - [ ] Task 2.2: Add execution hooks
 - [x] Task 2.3: Add structured output schemas ✅ (2026-01-09)
+- [x] Task 2.4: Agent-based content moderation ✅ (2026-01-10) - Replaced pattern matching with semantic understanding via content_safe field
 
 ### Phase 3 (Quality)
 - [ ] Task 3.1: Enable memory system
