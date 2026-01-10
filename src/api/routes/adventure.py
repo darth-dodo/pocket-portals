@@ -514,6 +514,9 @@ async def process_action_stream(
     from src.api.handlers import (
         handle_character_creation as _handle_character_creation_impl,
     )
+    from src.api.handlers import (
+        handle_quest_selection as _handle_quest_selection_impl,
+    )
 
     agents = _get_agents(request)
     narrator = agents["narrator"]
@@ -616,6 +619,77 @@ async def process_action_stream(
             }
 
         return EventSourceResponse(creation_generator())
+
+    # Handle QUEST_SELECTION phase with character-by-character streaming
+    if state.phase == GamePhase.QUEST_SELECTION:
+        result = await _handle_quest_selection_impl(
+            request=request,
+            state=state,
+            action=action,
+        )
+
+        # Check if quest was just selected (phase transitioned to EXPLORATION)
+        updated_state = await sm.get_or_create_session(state.session_id)
+        quest_just_selected = (
+            updated_state.phase == GamePhase.EXPLORATION
+            and updated_state.active_quest is not None
+        )
+
+        async def quest_selection_generator() -> AsyncGenerator[dict[str, Any], None]:
+            # Signal agent starting
+            yield {
+                "event": "agent_start",
+                "data": json.dumps({"agent": "narrator"}),
+            }
+
+            # Stream narrative character by character
+            for char in result.narrative:
+                yield {
+                    "event": "agent_chunk",
+                    "data": json.dumps({"agent": "narrator", "chunk": char}),
+                }
+                await asyncio.sleep(0.02)  # 20ms delay for typewriter effect
+
+            # Signal narrative complete
+            yield {
+                "event": "agent_response",
+                "data": json.dumps({"agent": "narrator", "content": result.narrative}),
+            }
+
+            # If quest was just selected, emit game_state with active_quest
+            if quest_just_selected and updated_state.active_quest:
+                quest = updated_state.active_quest
+                quest_data = {
+                    "title": quest.title,
+                    "description": quest.description,
+                    "objectives": [
+                        {
+                            "id": obj.id,
+                            "description": obj.description,
+                            "completed": obj.is_completed,
+                        }
+                        for obj in quest.objectives
+                    ],
+                    "rewards": quest.rewards,
+                    "given_by": quest.given_by,
+                    "location_hint": quest.location_hint,
+                }
+                yield {
+                    "event": "game_state",
+                    "data": json.dumps({"active_quest": quest_data}),
+                }
+
+            # Send choices
+            yield {
+                "event": "choices",
+                "data": json.dumps({"choices": result.choices}),
+            }
+            yield {
+                "event": "complete",
+                "data": json.dumps({"session_id": result.session_id}),
+            }
+
+        return EventSourceResponse(quest_selection_generator())
 
     async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
         """Generate SSE events as agents respond."""
