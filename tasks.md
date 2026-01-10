@@ -173,7 +173,7 @@ gantt
 | Split main.py into smaller modules | ✅ | Critical | Done 2026-01-03: main.py 2133→5 lines. Created routes/, handlers/, models/, app.py, dependencies.py, constants.py, content_safety.py |
 | Add rate limiting to API | ✅ | Critical | Done 2026-01-03: Privacy-first rate limiting using session_id only (no IP tracking). 3 tiers: 20/60/100 per minute. 35 tests. |
 | Fix production CORS configuration | ✅ | Critical | Done 2026-01-03: CORS now configurable via settings. Permissive in dev, restrictive in prod. |
-| Improve content filter (word boundaries) | | Critical |  |
+| Improve content filter (word boundaries) | ✅ | Critical | Done 2026-01-10: Replaced pattern-based filter with agent semantic moderation via content_safe field |
 
 #### 🟠 High Priority (Next Sprint)
 
@@ -209,6 +209,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Agent-based content moderation | ✅ | Branch: feature/agent-content-filter. Replaced pattern-based filter with LLM semantic understanding via content_safe field. Zero additional LLM calls. |
 | Structured output schemas with guardrails | ✅ | Branch: feature/config-improvements. Pydantic schemas for CharacterInterviewer, 55 new tests, ~15% → ~0% JSON parse failures |
 | Backend improvements - modular API | ✅ | main.py 2133→5 lines. Branch: backend-improvements, Commit: 778ebb0 |
 | Backend improvements - rate limiting | ✅ | Privacy-first (session_id only). 3 tiers: LLM 20/min, Combat 60/min, Default 100/min |
@@ -414,13 +415,13 @@ gantt
 - `src/api/main.py` - Added content safety filtering, integrated CharacterInterviewerAgent
 - `tests/test_api.py` - Added tests for character creation flow
 
-**Content Safety Implementation**:
-| Category | Blocked Patterns | Safe Redirect |
-|----------|------------------|---------------|
-| Self-harm | hurt myself, kill myself, suicide, self-harm, etc. | "take a deep breath and focus on the adventure ahead" |
-| Sexual | sex, seduce, kiss, romance, naked, sexual, erotic, etc. | Same redirect |
-| Violence | torture, mutilate, rape, abuse, molest | Same redirect |
-| Hate speech | slur, racist, nazi | Same redirect |
+**Content Safety Implementation** (Updated 2026-01-10):
+| Approach | Implementation | Notes |
+|----------|---------------|-------|
+| Agent Semantic Moderation | `content_safe` field in NarratorResponse and InterviewResponse | LLM uses semantic understanding instead of pattern matching |
+| Safe Words | "assassin", "therapist", "Scunthorpe" | No longer incorrectly blocked |
+| Blocked Content | Self-harm, explicit sexual, graphic torture, hate speech | Agent writes gentle redirect narrative |
+| Zero Additional Calls | Moderation happens within existing agent LLM calls | No performance overhead |
 
 **LLM Configuration**:
 | Agent | Model | Temperature | Max Tokens | Rationale |
@@ -436,6 +437,47 @@ gantt
 ---
 
 ## Task History Archive
+
+### Session Log: 2026-01-10
+
+**Session Focus**: Content Filter Improvement - Replace Pattern Matching with Agent Semantic Moderation
+
+**Key Decisions**:
+1. Moved content moderation from pattern-based filtering to LLM semantic understanding
+2. Added `content_safe` boolean field to NarratorResponse and InterviewResponse schemas
+3. Removed `filter_content` calls from adventure API endpoints entirely
+4. Zero additional LLM calls - moderation happens within existing agent calls
+5. Added CONTENT MODERATION instructions to narrator and character_interviewer agents
+
+**Branch**: `feature/agent-content-filter`
+**Commit**: `322e06c`
+
+**Problem Solved**:
+- The "Scunthorpe problem" - innocent words like "assassin" were incorrectly blocked due to substring matching
+- Pattern-based filtering had false positives: "therapist" → "the**rapist**", "assassin" → "**ass**assin"
+
+**Implementation Details**:
+- `content_safe: bool` field defaults to True
+- When LLM detects genuinely inappropriate content, sets `content_safe=false` and writes a gentle redirect
+- Agent YAML configs include explicit SAFE examples ("assassin", "therapist", "Scunthorpe") and BLOCK examples
+- Logging added for content moderation blocks
+
+**Artifacts Modified**:
+- `src/agents/narrator.py` - Added content_safe field to NarratorResponse, added logging
+- `src/agents/schemas.py` - Added content_safe field to InterviewResponse
+- `src/config/agents.yaml` - Added CONTENT MODERATION sections to narrator and character_interviewer
+- `src/api/routes/adventure.py` - Removed filter_content calls
+- `src/api/content_safety.py` - Updated with regex word boundaries (fallback)
+- `tests/test_narrator.py` - Added TestNarratorResponseSchema with 5 new tests
+- `tests/test_schemas.py` - Added TestContentSafeField with 6 new tests
+
+**Quality Gates Passed**:
+- 529 Python tests passing
+- 76% test coverage
+- All linting/type checks passing
+- Pre-commit hooks passing
+
+---
 
 ### Session Log: 2026-01-03
 
@@ -723,7 +765,7 @@ src/api/
 - **XP Practices**: TDD, small commits, CI, quality gates enforced
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
-- **Content Safety**: Pattern-based filtering with safe redirects
+- **Content Safety**: Agent semantic moderation via content_safe field (replaced pattern matching)
 - **Frontend**: Modern CSS (ES6 modules), haptic feedback, iOS safe areas, bottom sheet
 - **API Structure**: Modular (routes/, handlers/, models/), app factory pattern
 - **Rate Limiting**: Privacy-first (session_id only), 3 tiers (20/60/100 per min)

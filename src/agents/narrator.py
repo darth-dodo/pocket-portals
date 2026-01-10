@@ -70,13 +70,24 @@ class NarratorResponse(BaseModel):
     """Structured response from the narrator agent.
 
     Contains both the narrative description and suggested player choices,
-    enabling a single LLM call for both outputs.
+    enabling a single LLM call for both outputs. Also includes content
+    safety assessment to avoid word-boundary issues with pattern matching.
     """
 
+    content_safe: bool = Field(
+        default=True,
+        description="Set to false ONLY if the player's input contains genuinely "
+        "inappropriate content: self-harm, explicit sexual content, graphic torture, "
+        "or hate speech. Use good judgment - 'assassin', 'Scunthorpe', 'therapist' "
+        "are safe words. Fantasy violence like 'attack the goblin' is allowed. "
+        "When in doubt, it's safe.",
+    )
     narrative: str = Field(
         description="A 2-4 sentence description of what happens in response to the "
         "player's action. Use second person, sensory details, and end with "
-        "atmosphere or tension - NOT action suggestions."
+        "atmosphere or tension - NOT action suggestions. If content_safe is false, "
+        "write a gentle redirection like 'You take a deep breath and focus on the "
+        "adventure ahead. The path before you beckons with promise.'"
     )
     choices: list[str] = Field(
         description="Exactly 3 short action choices (max 6 words each) that DIRECTLY "
@@ -198,6 +209,17 @@ class NarratorAgent:
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         quality = _analyze_choice_quality(response.choices)
 
+        # Log content moderation if blocked
+        if not response.content_safe:
+            logger.warning(
+                "content_moderation_blocked",
+                extra={
+                    "action": action[:100],  # Truncate for logging
+                    "blocked_by": "narrator_agent",
+                    "elapsed_ms": round(elapsed_ms, 2),
+                },
+            )
+
         logger.info(
             "narrator_response_generated",
             extra={
@@ -207,6 +229,7 @@ class NarratorAgent:
                 "choice_quality_score": quality.quality_score,
                 "generic_count": quality.generic_count,
                 "contextual_count": quality.contextual_count,
+                "content_safe": response.content_safe,
                 "used_fallback": used_fallback,
                 "elapsed_ms": round(elapsed_ms, 2),
             },

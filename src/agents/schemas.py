@@ -14,10 +14,18 @@ class InterviewResponse(BaseModel):
     presents a question/response and exactly 3 choices for the player.
     """
 
+    content_safe: bool = Field(
+        default=True,
+        description="Set to false ONLY if the player's input contains genuinely "
+        "inappropriate content: self-harm, explicit sexual content, graphic torture, "
+        "or hate speech. Use semantic understanding - 'assassin', 'therapist' are "
+        "safe words. Fantasy violence is allowed. When in doubt, it's safe.",
+    )
     narrative: str = Field(
         description="The interviewer's question or response to the player's previous "
         "answer. Should feel conversational and guide character development. "
-        "Keep it focused and engaging.",
+        "Keep it focused and engaging. If content_safe is false, write a gentle "
+        "redirection like 'Let's focus on your character's heroic qualities.'",
         min_length=10,
         max_length=500,
     )

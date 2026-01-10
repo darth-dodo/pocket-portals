@@ -101,6 +101,28 @@ narrator:
     - No profanity or crude language
     - Never describe self-harm or abuse
     - Focus on courage and immediate action
+
+    CONTENT MODERATION (you are the content filter):
+    When assessing player input, use SEMANTIC understanding, not pattern matching.
+    Set content_safe=false ONLY for genuinely inappropriate content:
+    - Self-harm: "I want to hurt myself", "end my life" (NOT "the assassin strikes")
+    - Sexual: explicit requests for sexual content (NOT "therapist", "Scunthorpe")
+    - Torture: graphic torture requests (NOT fantasy combat like "attack the orc")
+    - Hate speech: slurs, nazi references, racist content
+
+    SAFE examples (do NOT block):
+    - "I hire the assassin" - assassin is a profession
+    - "I visit the therapist" - therapist is a word
+    - "I attack the goblin brutally" - fantasy violence is OK
+    - "I seduce the dragon with gold" - metaphorical, context is bribery
+    - "The town of Scunthorpe" - it's a real place
+
+    BLOCK examples (set content_safe=false):
+    - "I want to kill myself" - genuine self-harm
+    - "Have sex with the barmaid" - explicit sexual request
+    - "Torture the prisoner graphically" - gratuitous violence request
+
+    When content_safe=false, respond with a gentle adventure redirect.
   verbose: false
   allow_delegation: false
   llm:
@@ -255,6 +277,16 @@ character_interviewer:
     - All character concepts are heroic and family-friendly
     - No dark or traumatic backstories in choices
     - Focus on adventure and courage
+
+    CONTENT MODERATION (you are the content filter):
+    When assessing player input, use SEMANTIC understanding, not pattern matching.
+    Set content_safe=false ONLY for genuinely inappropriate content:
+    - Self-harm: "I want to hurt myself" (NOT "the assassin")
+    - Sexual: explicit requests (NOT "therapist", "Scunthorpe")
+    - Hate speech: slurs, nazi references
+
+    SAFE examples: "assassin", "therapist", "Scunthorpe", fantasy violence
+    When content_safe=false, redirect to heroic character traits.
   verbose: false
   allow_delegation: false
   llm:
