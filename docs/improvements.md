@@ -1153,9 +1153,9 @@ def test_health_status_critical():
 
 | Metric | Before | After | Target |
 |--------|--------|-------|--------|
-| Config duplication | 4 files | 1 file | ✓ |
+| Config duplication | 4 files | 1 file | ✅ Done |
 | Session persistence | 0% | 100% | ✓ |
-| JSON parse success | ~85% | 99%+ | ✓ |
+| JSON parse success | ~85% | 99%+ | ✅ Done |
 | LLM call visibility | 0% | 100% | ✓ |
 | Agent memory | None | Enabled | ✓ |
 | Tool integration | 0 | 3+ | ✓ |

@@ -162,7 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Quest data SSE event for active quest display | ⏳ | Character sheet shows "No active quest" after selection |
+| Quest data SSE event for active quest display | ✅ | Fixed obj.completed → obj.is_completed bug in SSE handler. 12 tests added. Branch: fix/quest-sse-active-quest |
 
 ### Up Next - Priority Tasks (from Codebase Analysis 2026-01-03)
 
@@ -231,6 +231,8 @@ gantt
 | Combat mechanics implementation | ✅ | D&D 5e-inspired combat: DiceRoller, CombatState, 5 enemy types, initiative, attack/defend/flee, batched narrator summary |
 | Dynamic character creation with CharacterInterviewerAgent | ✅ | LLM-powered interview with 5-turn flow |
 | Content safety filtering system | ✅ | Pattern-based filter with safe redirects, blocks inappropriate content |
+| Structured output schemas for agents | ✅ | Pydantic schemas with CrewAI output_pydantic for CharacterInterviewerAgent |
+| Quest SSE game_state event fix | ✅ | Fixed attribute bug (obj.completed → obj.is_completed), 12 tests |
 
 ---
 
