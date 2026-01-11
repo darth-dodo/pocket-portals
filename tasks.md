@@ -162,7 +162,7 @@ gantt
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Quest data SSE event for active quest display | ⏳ | Character sheet shows "No active quest" after selection |
+| Quest data SSE event for active quest display | ✅ | Fixed 2026-01-10 |
 
 ### Up Next - Priority Tasks (from Codebase Analysis 2026-01-03)
 
@@ -181,9 +181,9 @@ gantt
 |------|--------|----------|-------|
 | Fix Jester duplicate config loaders | ✅ | High | Task 1.1 - Already complete (verified 2026-01-09) |
 | Centralize LLM config in YAML | ✅ | High | Task 1.2 - Already complete (verified 2026-01-09) |
-| Implement Redis session persistence | | High | Task 2.1 - sessions lost on restart |
+| Implement CrewAI Flow-based session persistence | ✅ | High | Done 2026-01-10: GameSessionFlow with `_save()` pattern, InMemoryFlowPersistence. Branch: feature/crewai-flow-persistence |
 | Add structured output schemas with guardrails | ✅ | High | Task 2.3 - Done 2026-01-09: Pydantic schemas + output_pydantic |
-| Refactor SessionManager (28+ methods) | | High | Split into session_crud.py, character_manager.py, quest_manager.py |
+| Refactor SessionManager (28+ methods) | ✅ | High | Done 2026-01-10: Replaced with GameSessionService (modular async methods) |
 
 #### 🟡 Medium Priority (This Quarter)
 
@@ -437,6 +437,54 @@ gantt
 ---
 
 ## Task History Archive
+
+### Session Log: 2026-01-10 (Afternoon)
+
+**Session Focus**: CrewAI Flow-Based Session Persistence
+
+**Key Decisions**:
+1. Used CrewAI's native `Flow[GameState]` pattern instead of Protocol-based backends
+2. Implemented `_save()` helper pattern for automatic persistence after mutations
+3. Created `InMemoryFlowPersistence` implementing CrewAI's `FlowPersistence` interface
+4. Created `GameSessionService` async wrapper for FastAPI route integration
+5. Flow reconstruction pattern: load state → create Flow with state (no kickoff) → mutate → save
+
+**Branch**: `feature/crewai-flow-persistence`
+**PR**: Created from main
+
+**Problem Solved**:
+- Session state management with proper CrewAI Flow integration
+- Type-safe state handling via `Flow[GameState]` generic
+- Automatic persistence pattern prevents state loss
+
+**Implementation Details**:
+- `GameSessionFlow` extends `Flow[GameState]` with `@start()` decorated initialize method
+- `_save()` helper calls `persistence.save_state()` and returns `self.state` for chaining
+- `InMemoryFlowPersistence` stores states in a dict keyed by session_id
+- `GameSessionService` provides async static methods matching existing SessionManager API
+- 55 tests for GameSessionService, comprehensive test coverage
+
+**Artifacts Created**:
+- `src/engine/game_session.py` - GameSessionFlow class
+- `src/engine/game_session_service.py` - Async service wrapper
+- `src/engine/flow_persistence.py` - InMemoryFlowPersistence class
+- `tests/test_game_session_flow.py` - Flow tests
+- `tests/test_game_session_service.py` - Service tests (55 tests)
+- `docs/design/2026-01-10-crewai-flow-persistence.md` - Design document
+
+**Documentation Updated**:
+- `docs/architecture.md` - Section 1.3 updated with GameSessionFlow pattern
+- `docs/design/2025-12-25-crewai-state-management.md` - Added deprecation notice
+- `docs/design/2025-12-26-distributed-session-management.md` - Added superseded notice
+- `docs/playwright-e2e-suite.md` - Added session persistence test patterns
+- `.agentic-framework/workflows/playwright-e2e.md` - Added Pattern 6 and 7
+
+**Quality Gates Passed**:
+- All tests passing
+- Type checks passing
+- Linting passing
+
+---
 
 ### Session Log: 2026-01-10
 
@@ -757,14 +805,15 @@ src/api/
 
 ### Project State
 - **Current Phase**: Phase 9 Polish - character sheet UI and export features
-- **Python Test Coverage**: 75% (444 tests)
+- **Python Test Coverage**: 75%+ (500+ tests)
 - **JavaScript Test Coverage**: 96.49% (415 tests across 8 test files)
-- **E2E Testing**: Playwright MCP with 8 documented scenarios
+- **E2E Testing**: Playwright MCP with 20 documented scenarios
 - **CI/CD**: GitHub Actions with lint + test jobs (Python and JavaScript)
 - **Pre-commit**: ruff, mypy, formatting hooks installed
 - **XP Practices**: TDD, small commits, CI, quality gates enforced
 - **Deployment**: Render.com (main branch)
 - **Architecture**: ADR 001 documents agent service pattern
+- **Session Management**: CrewAI Flow-based with GameSessionFlow and InMemoryFlowPersistence
 - **Content Safety**: Agent semantic moderation via content_safe field (replaced pattern matching)
 - **Frontend**: Modern CSS (ES6 modules), haptic feedback, iOS safe areas, bottom sheet
 - **API Structure**: Modular (routes/, handlers/, models/), app factory pattern
@@ -827,6 +876,9 @@ src/api/
 - `src/engine/executor.py` - TurnExecutor for agent orchestration
 - `src/engine/pacing.py` - PacingContext, ClosureStatus, 50-turn arc management
 - `src/engine/flow.py` - ConversationFlow with CrewAI Flow decorators
+- `src/engine/game_session.py` - GameSessionFlow with `_save()` persistence pattern
+- `src/engine/game_session_service.py` - Async service wrapper for session operations
+- `src/engine/flow_persistence.py` - InMemoryFlowPersistence for CrewAI Flow state
 - `src/api/main.py` - Entry point (5 lines), imports app from app.py
 - `src/api/app.py` - App factory with lifespan, CORS middleware
 - `src/api/rate_limiting.py` - Privacy-first rate limiter (session_id only)

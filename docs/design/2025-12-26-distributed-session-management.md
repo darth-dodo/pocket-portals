@@ -1,8 +1,31 @@
 # Distributed Session Management
 
-**Status:** Completed
+**Status:** Superseded (Protocol approach replaced by CrewAI Flow pattern)
 **Implementation Date:** 2025-12-26
+**Updated:** 2026-01-10
 **Related Design Document:** [CrewAI State Management](../design/2025-12-25-crewai-state-management.md)
+
+---
+
+> **📝 UPDATE (2026-01-10)**
+>
+> The Protocol-based backend approach documented here has been **superseded** by the
+> CrewAI Flow-based persistence pattern. The new implementation provides better
+> integration with CrewAI's native Flow state management.
+>
+> **Current Implementation:**
+> - `src/engine/game_session.py` - GameSessionFlow using `Flow[GameState]`
+> - `src/engine/game_session_service.py` - Async service wrapper for FastAPI
+> - `src/engine/flow_persistence.py` - InMemoryFlowPersistence (implements CrewAI FlowPersistence)
+>
+> **Key Pattern Change:**
+> - Old: `SessionBackend.get(id)` → `state` → modify → `SessionBackend.update(id, state)`
+> - New: `persistence.load_state(id)` → `Flow(state=..., persistence=...)` → modify → `flow._save()`
+>
+> See [2026-01-10-crewai-flow-persistence.md](2026-01-10-crewai-flow-persistence.md) for the current design.
+>
+> The Protocol-based backends (`InMemoryBackend`, `RedisBackend`) remain in the codebase
+> for reference but are not the active session management mechanism.
 
 ---
 

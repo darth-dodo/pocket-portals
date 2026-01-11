@@ -1,10 +1,32 @@
 # CrewAI State Management Refactor Design
 
 **Date:** 2025-12-25
-**Status:** Partially Implemented (Session Backends Complete)
+**Status:** ⚠️ SUPERSEDED
 **Related Requirements:** Session Persistence, Scalability, Agent Memory
 **Dependencies:** CrewAI 0.95+, Redis 7.0+, Pydantic 2.0+
 **Implementation Reference:** [Distributed Session Management](../coordination/distributed-session-management.md)
+
+---
+
+> **⚠️ DEPRECATION NOTICE (2026-01-10)**
+>
+> This design document has been **superseded** by the CrewAI Flow-based persistence implementation.
+>
+> **New Implementation:**
+> - Design Doc: [2026-01-10-crewai-flow-persistence.md](2026-01-10-crewai-flow-persistence.md)
+> - Core Files:
+>   - `src/engine/game_session.py` - GameSessionFlow with `_save()` pattern
+>   - `src/engine/game_session_service.py` - Async service wrapper
+>   - `src/engine/flow_persistence.py` - InMemoryFlowPersistence
+>
+> **Key Differences from This Design:**
+> - Uses CrewAI's native `Flow[GameState]` instead of Protocol-based backends
+> - Uses `FlowPersistence` interface instead of custom `SessionBackend` protocol
+> - Flow reconstruction pattern instead of direct backend access
+> - `_save()` helper for automatic persistence after mutations
+>
+> The SessionBackend Protocol and backend implementations described below remain
+> available but are not the primary session management approach going forward.
 
 ---
 

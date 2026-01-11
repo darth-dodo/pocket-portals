@@ -102,14 +102,14 @@ make dev
 | **API** | FastAPI with SSE streaming (modular architecture) |
 | **AI** | CrewAI + Anthropic Claude |
 | **Frontend** | Vanilla JS + Modern CSS |
-| **State** | Redis (prod) / Memory (dev) |
+| **State** | CrewAI Flow with persistence (InMemory/Redis) |
 | **Security** | Rate limiting + configurable CORS |
 
 ### Codebase Health
 
 | Metric | Value |
 |--------|-------|
-| **Python Tests** | 444 passing |
+| **Python Tests** | 500+ passing |
 | **JS Tests** | 415 passing |
 | **Coverage** | 77% |
 | **Type Checking** | Strict mypy |
