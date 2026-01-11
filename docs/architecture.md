@@ -222,71 +222,134 @@ Pre-defined enemy stat blocks for common encounters:
 
 ## 1.3 Session Backend Architecture
 
-The session management system uses a Protocol-based design, enabling swappable backends for different deployment environments.
+The session management system uses CrewAI's Flow pattern with pluggable persistence, enabling type-safe state management with automatic persistence after each operation.
 
-### SessionBackend Protocol (`src/state/backends/base.py`)
+### GameSessionFlow (`src/engine/game_session.py`)
 
-Defines the interface all session backends must implement:
+The core session management uses CrewAI's `Flow[GameState]` pattern for type-safe state handling:
 
 ```python
-@runtime_checkable
-class SessionBackend(Protocol):
-    """Protocol defining session storage operations."""
+from crewai.flow.flow import Flow, start
 
-    async def create(self, session_id: str, state: GameState) -> None: ...
-    async def get(self, session_id: str) -> GameState | None: ...
-    async def update(self, session_id: str, state: GameState) -> None: ...
-    async def delete(self, session_id: str) -> bool: ...
-    async def exists(self, session_id: str) -> bool: ...
+class GameSessionFlow(Flow[GameState]):
+    """CrewAI Flow for game session with automatic persistence."""
+
+    def _save(self) -> GameState:
+        """Helper that persists state and returns it for chaining."""
+        self.persistence.save_state(
+            flow_uuid=self.state.session_id,
+            state=self.state.model_dump(),
+        )
+        return self.state
+
+    @start()
+    def initialize(self) -> GameState:
+        if not self.state.session_id:
+            self.state.session_id = str(uuid.uuid4())
+        return self._save()
 ```
 
-### InMemoryBackend (`src/state/backends/memory.py`)
+**Key Pattern: `_save()` Helper**
+- Each state-mutating method calls `_save()` to persist immediately
+- Returns `self.state` for method chaining
+- Ensures state is never lost between operations
+- Works with any `FlowPersistence` implementation
 
-Dictionary-based storage for development and testing.
+### InMemoryFlowPersistence (`src/engine/flow_persistence.py`)
+
+Implements CrewAI's `FlowPersistence` interface for development/testing:
+
+```python
+from crewai.flow.persistence import FlowPersistence
+
+class InMemoryFlowPersistence(FlowPersistence):
+    """In-memory persistence for CrewAI Flows."""
+
+    def __init__(self) -> None:
+        self._states: dict[str, dict[str, Any]] = {}
+
+    def save_state(self, flow_uuid: str, state: dict[str, Any]) -> None:
+        self._states[flow_uuid] = state
+
+    def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
+        return self._states.get(flow_uuid)
+```
 
 **Characteristics:**
 - Zero external dependencies
 - Fast reads/writes (O(1) dictionary operations)
-- No persistence across process restarts
-- Single-process only
+- Compatible with CrewAI Flow reconstruction pattern
+- Singleton instance shared across requests
 
-**Use Cases:**
-- Local development
-- Unit and integration testing
-- Single-process deployments where persistence is not required
+### GameSessionService (`src/engine/game_session_service.py`)
 
-```python
-from src.state.backends.memory import InMemoryBackend
-
-backend = InMemoryBackend()
-await backend.create("session-123", initial_state)
-state = await backend.get("session-123")
-```
-
-### RedisBackend (`src/state/backends/redis.py`)
-
-Redis-backed storage for production deployments.
-
-**Characteristics:**
-- TTL-based automatic session expiration (default: 24 hours)
-- High-performance distributed access
-- Persistence across restarts
-- Multi-process and multi-server compatible
-
-**Key Features:**
-- Key prefix namespacing: `pocket_portals:session:{session_id}`
-- Automatic TTL refresh on update
-- JSON serialization via Pydantic `model_dump_json()`
+Async service wrapper for FastAPI route integration:
 
 ```python
-from src.state.backends.redis import RedisBackend
+class GameSessionService:
+    """Async service for game session management via GameSessionFlow."""
 
-backend = RedisBackend(
-    redis_url="redis://localhost:6379/0",
-    ttl=86400  # 24 hours
-)
-await backend.create("session-123", initial_state)
+    @staticmethod
+    async def create_session() -> GameState:
+        """Create new session with persistence."""
+        flow = GameSessionFlow()
+        flow.kickoff()
+        return flow.state
+
+    @staticmethod
+    async def get_session(session_id: str) -> GameState | None:
+        """Reconstruct flow from persisted state."""
+        state_dict = _persistence.load_state(session_id)
+        if state_dict is None:
+            return None
+        return GameState.model_validate(state_dict)
+
+    @staticmethod
+    async def set_phase(session_id: str, phase: GamePhase) -> None:
+        """Update game phase with persistence."""
+        state = await GameSessionService.get_session(session_id)
+        if state is None:
+            raise ValueError(f"Session {session_id} not found")
+        flow = GameSessionFlow(state=state, persistence=_persistence)
+        flow.state.phase = phase
+        flow._save()
 ```
+
+**Flow Reconstruction Pattern:**
+- Load state from persistence via `load_state(session_id)`
+- Create new Flow instance with loaded state (no `kickoff_async()`)
+- Mutate state directly, then call `_save()`
+- Avoids re-running initialization logic for existing sessions
+
+### Architecture Diagram
+
+```
+┌──────────────────┐     ┌───────────────────────────────────────┐
+│   FastAPI        │────▶│        GameSessionService             │
+│   Routes         │     │   (async wrapper for routes)          │
+└──────────────────┘     └───────────────────────────────────────┘
+                                          │
+                                          ▼
+                         ┌───────────────────────────────────────┐
+                         │          GameSessionFlow              │
+                         │   Flow[GameState] with _save()        │
+                         │                                       │
+                         │  ┌─────────────────────────────────┐  │
+                         │  │           GameState             │  │
+                         │  │   (Pydantic model, type-safe)   │  │
+                         │  └─────────────────────────────────┘  │
+                         │                 │                     │
+                         │                 ▼                     │
+                         │  ┌─────────────────────────────────┐  │
+                         │  │    InMemoryFlowPersistence      │  │
+                         │  │   (CrewAI FlowPersistence)      │  │
+                         │  └─────────────────────────────────┘  │
+                         └───────────────────────────────────────┘
+```
+
+### SessionBackend Protocol (Legacy)
+
+For reference, the previous Protocol-based backend system is documented in [2025-12-26-distributed-session-management.md](coordination/distributed-session-management.md). The new Flow-based approach supersedes it with better CrewAI integration.
 
 ### Configuration via pydantic-settings (`src/config/settings.py`)
 
@@ -294,7 +357,7 @@ Environment-driven configuration for backend selection:
 
 ```python
 class Settings(BaseSettings):
-    # Redis Configuration
+    # Redis Configuration (for future distributed deployments)
     redis_url: str = "redis://localhost:6379/0"
     redis_session_ttl: int = 86400  # 24 hours
 
@@ -317,10 +380,10 @@ class Settings(BaseSettings):
 
 | Environment | Recommended Backend | Reason |
 |-------------|---------------------|--------|
-| Development | InMemoryBackend | Zero setup, fast iteration |
-| Testing | InMemoryBackend | Isolated, deterministic |
-| Production (single server) | RedisBackend | Persistence, TTL expiration |
-| Production (multi-server) | RedisBackend | Distributed session sharing |
+| Development | InMemoryFlowPersistence | Zero setup, CrewAI Flow integration |
+| Testing | InMemoryFlowPersistence | Isolated, deterministic, fast |
+| Production (single server) | InMemoryFlowPersistence | Sufficient for single-process |
+| Production (multi-server) | RedisFlowPersistence (future) | Distributed session sharing |
 
 ---
 

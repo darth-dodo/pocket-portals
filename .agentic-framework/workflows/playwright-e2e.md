@@ -215,6 +215,67 @@ The Playwright MCP server provides browser automation capabilities:
 4. `browser_snapshot()`
 ```
 
+### Pattern 6: Session State Persistence Testing
+
+```markdown
+**Purpose**: Verify state persists correctly across multiple interactions.
+
+**Steps**:
+1. Start new session and note session ID
+2. Perform sequence of state-mutating actions
+3. After each action, verify state is consistent
+4. Check session ID remains constant
+5. Verify turn counter increments correctly
+6. Confirm conversation history accumulates
+
+**Implementation**:
+1. `browser_navigate(url)`
+2. `browser_snapshot()` → note session ID in header
+3. `browser_click(action_button, ref)`
+4. `browser_wait_for(time=3)` → allow response
+5. `browser_snapshot()` → verify state changed
+6. Repeat steps 3-5 for multiple turns
+7. Verify session ID unchanged, turn counter incremented
+
+**Key Verifications**:
+- Session ID format: UUID (36 characters)
+- Turn counter increments: 1 → 2 → 3...
+- Character sheet persists after creation
+- Conversation history shows all exchanges
+- Active quest displayed after selection
+```
+
+### Pattern 7: Full Game Flow Testing
+
+```markdown
+**Purpose**: Validate complete user journey from start to extended gameplay.
+
+**Phases**:
+1. **Homepage** → Verify landing page loads
+2. **Character Creation** → 5 turns of interview
+3. **Quest Selection** → Choose from 3 options
+4. **Exploration** → Multiple turns with choices + custom input
+
+**Implementation**:
+1. `browser_navigate(url)`
+2. `browser_click("Begin Quest", ref)`
+3. For turns 2-5: `browser_click(choice_button, ref)` + wait
+4. Verify character sheet appears
+5. `browser_click(quest_option, ref)` + wait
+6. `browser_type(custom_input, ref, text="Custom action")`
+7. `browser_click("Act", ref)` + wait
+8. Verify narrative response
+9. Continue for additional turns
+
+**Expected Console Messages**:
+```
+Pocket Portals initialized
+Routing: {agents: [...], reason: ...}
+Received choices: [...]
+updateChoices called with: [...]
+```
+```
+
 ---
 
 ## Mobile Testing Patterns
@@ -443,6 +504,14 @@ exit $RESULT
 12. Character Sheet Display Test
 13. Character Sheet Collapse Test
 14. Character Sheet Theme Integration Test
+
+### Session & State Tests (P1)
+15. Full Game Flow Test (Session Persistence)
+16. Custom Action Input Flow Test
+17. Session State Persistence Test
+18. Multi-Turn Exploration Test
+19. New Game Reset Test
+20. API Health and Session Creation Test
 ```
 
 ### Test Dependencies
@@ -460,6 +529,16 @@ graph TD
 
     J[Mobile Responsive] --> K[Bottom Sheet]
     K --> L[Character Sheet Mobile]
+
+    %% Session & State Tests
+    A --> M[Full Game Flow]
+    M --> N[Session Persistence]
+    M --> O[Multi-Turn Exploration]
+    E --> P[Custom Action Flow]
+    M --> Q[New Game Reset]
+
+    %% API Tests
+    R[API Health] --> M
 ```
 
 ---
