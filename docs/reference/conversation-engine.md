@@ -441,8 +441,8 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Model configuration (update versions as needed)
-SONNET_MODEL = "anthropic/claude-sonnet"  # Narrative agents
-HAIKU_MODEL = "anthropic/claude-haiku"    # Mechanics agents
+SONNET_MODEL = "anthropic/claude-sonnet-4-6"  # Narrative agents
+HAIKU_MODEL = "anthropic/claude-haiku-4-5"    # Mechanics agents
 
 
 @CrewBase

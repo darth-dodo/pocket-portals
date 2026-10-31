@@ -63,7 +63,7 @@ flowchart TB
     end
 
     subgraph External["Anthropic Claude API"]
-        Claude["Claude 3.5 Haiku"]
+        Claude["Claude Haiku 4.5"]
     end
 
     Browser -->|SSE/HTTP| API
@@ -1335,13 +1335,14 @@ class TokenBudget:
 
 | Task | Model | Why |
 |------|-------|-----|
-| All agents | Claude 3.5 Haiku | Fast, cost-effective, consistent quality |
-| Narrative generation | claude-3-5-haiku-20241022 | Optimized for speed and storytelling |
-| Character creation | claude-3-5-haiku-20241022 | Interactive dialogue with low latency |
-| Mechanics validation | claude-3-5-haiku-20241022 | Quick dice rolls and rule checks |
-| Jester commentary | claude-3-5-haiku-20241022 | Rapid witty interjections |
+| Default (all agents) | Claude Haiku 4.5 | Fast, cost-effective, consistent quality |
+| Narrative generation | claude-haiku-4-5 | Optimized for speed and storytelling |
+| Character creation | claude-haiku-4-5 | Interactive dialogue with low latency |
+| Mechanics validation | claude-haiku-4-5 | Quick dice rolls and rule checks |
+| Jester commentary | claude-haiku-4-5 | Rapid witty interjections |
+| Epilogue | claude-sonnet-4-6 | Higher quality for the closing summary |
 
-**Note**: Current implementation uses Claude 3.5 Haiku (claude-3-5-haiku-20241022) for all agents to optimize for response speed and cost efficiency while maintaining narrative quality.
+**Note**: Agents default to Claude Haiku 4.5 (`anthropic/claude-haiku-4-5`) for response speed and cost efficiency; the epilogue agent overrides this with Claude Sonnet 4.6 (`anthropic/claude-sonnet-4-6`). Sampling parameters (`temperature`, `top_p`, `top_k`) are not set because current Anthropic models and API versions reject them; tone is controlled through agent prompts.
 
 ---
 

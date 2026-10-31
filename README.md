@@ -122,7 +122,7 @@ make dev
 flowchart LR
     Player[Player Action] --> Router[Agent Router]
     Router --> Agents[AI Agents]
-    Agents --> Claude[Claude 3.5 Haiku]
+    Agents --> Claude[Claude Haiku 4.5]
     Agents --> Story[Narrative + Choices]
     Story --> Player
 ```

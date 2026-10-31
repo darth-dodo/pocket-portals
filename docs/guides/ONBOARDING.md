@@ -126,7 +126,7 @@ tests/               # Python test suite (296+ tests, 70%+ coverage)
 | **Quest Designer** | Generate contextual quests |
 | **Epilogue** | Adventure conclusions |
 
-All agents use **Claude 3.5 Haiku** for cost efficiency.
+Agents default to **Claude Haiku 4.5** (`anthropic/claude-haiku-4-5`) for cost efficiency; the epilogue uses **Claude Sonnet 4.6** (`anthropic/claude-sonnet-4-6`). No sampling parameters (`temperature`, `top_p`, `top_k`) are set because current Anthropic models reject them.
 
 ### Adventure Pacing (50-Turn System)
 

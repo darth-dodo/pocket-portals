@@ -84,7 +84,7 @@ flowchart TB
     end
 
     subgraph External["☁️ External"]
-        Claude["Anthropic Claude<br/>Haiku 3.5"]
+        Claude["Anthropic Claude<br/>Haiku 4.5"]
     end
 
     Browser --> Main
@@ -556,13 +556,13 @@ How YAML configuration drives agent behavior at runtime.
 ```mermaid
 flowchart TB
     subgraph Config["agents.yaml Configuration"]
-        Defaults["defaults:<br/>  model: claude-3-5-haiku<br/>  temperature: 0.7<br/>  max_tokens: 1024"]
+        Defaults["defaults:<br/>  model: claude-haiku-4-5<br/>  max_tokens: 1024"]
 
-        NarratorCfg["narrator:<br/>  role: 'Narrator'<br/>  goal: 'Create tight, punchy scenes'<br/>  backstory: '40-80 words...'<br/>  temperature: 0.7<br/>  memory: true"]
+        NarratorCfg["narrator:<br/>  role: 'Narrator'<br/>  goal: 'Create tight, punchy scenes'<br/>  backstory: '40-80 words...'<br/>  max_tokens: 1024<br/>  memory: true"]
 
-        KeeperCfg["keeper:<br/>  role: 'Game Keeper'<br/>  goal: 'Handle mechanics'<br/>  backstory: '<10 words...'<br/>  temperature: 0.3<br/>  memory: false"]
+        KeeperCfg["keeper:<br/>  role: 'Game Keeper'<br/>  goal: 'Handle mechanics'<br/>  backstory: '<10 words...'<br/>  max_tokens: 256<br/>  memory: false"]
 
-        JesterCfg["jester:<br/>  role: 'The Jester'<br/>  goal: 'Add complications'<br/>  backstory: 'Meta-commentary...'<br/>  temperature: 0.8<br/>  memory: false"]
+        JesterCfg["jester:<br/>  role: 'The Jester'<br/>  goal: 'Add complications'<br/>  backstory: 'Meta-commentary...'<br/>  max_tokens: 256<br/>  memory: false"]
     end
 
     subgraph Loader["Config Loader"]
@@ -573,7 +573,7 @@ flowchart TB
     subgraph AgentInit["Agent Initialization"]
         NAgent["NarratorAgent.__init__()"]
         NAgent --> LoadCfg["config = load_agent_config('narrator')"]
-        LoadCfg --> CreateLLM["LLM(<br/>  model=config.llm.model,<br/>  temperature=config.llm.temperature<br/>)"]
+        LoadCfg --> CreateLLM["LLM(<br/>  model=config.llm.model,<br/>  max_tokens=config.llm.max_tokens<br/>)"]
         CreateLLM --> CreateAgent["Agent(<br/>  role=config.role,<br/>  goal=config.goal,<br/>  backstory=config.backstory,<br/>  llm=llm<br/>)"]
     end
 

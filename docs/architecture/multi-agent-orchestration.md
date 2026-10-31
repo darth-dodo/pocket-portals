@@ -436,7 +436,8 @@ class AgentInvoker:
 - Session-based state management for character persistence
 
 **Model Configuration**:
-- All agents use Claude 3.5 Haiku (claude-3-5-haiku-20241022)
+- Agents default to Claude Haiku 4.5 (claude-haiku-4-5); the epilogue uses Claude Sonnet 4.6 (claude-sonnet-4-6)
+- No sampling parameters (temperature, top_p, top_k) are sent; current Anthropic models reject them
 - Optimized for response speed and cost efficiency
 - Consistent quality across all agent types
 

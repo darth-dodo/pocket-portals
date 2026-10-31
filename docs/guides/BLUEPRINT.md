@@ -175,8 +175,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # LLM defaults
-    default_model: str = "anthropic/claude-3-5-haiku-20241022"
-    default_temperature: float = 0.7
+    default_model: str = "anthropic/claude-haiku-4-5"
     default_max_tokens: int = 1024
 
     class Config:
@@ -200,8 +199,7 @@ def get_settings() -> Settings:
 
 defaults:
   llm:
-    model: "anthropic/claude-3-5-haiku-20241022"
-    temperature: 0.7
+    model: "anthropic/claude-haiku-4-5"
     max_tokens: 1024
 
 primary_agent:
@@ -225,7 +223,6 @@ primary_agent:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.7
     max_tokens: 1024
   memory: true
 
@@ -242,7 +239,6 @@ specialist_agent:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.3  # Lower for more deterministic output
     max_tokens: 256
   memory: false
 ```
@@ -262,8 +258,7 @@ from pydantic import BaseModel
 
 class LLMConfig(BaseModel):
     """LLM configuration."""
-    model: str = "anthropic/claude-3-5-haiku-20241022"
-    temperature: float = 0.7
+    model: str = "anthropic/claude-haiku-4-5"
     max_tokens: int = 1024
 
 
@@ -569,7 +564,6 @@ class PrimaryAgent:
         self.llm = LLM(
             model=config.llm.model,
             api_key=settings.anthropic_api_key,
-            temperature=config.llm.temperature,
             max_tokens=config.llm.max_tokens,
         )
 
@@ -1289,13 +1283,13 @@ def create_content_filter(
 AGENT_CONFIGS = {
     # High-quality output needed - use capable model
     "creative_agent": {
-        "model": "claude-3-5-sonnet",
+        "model": "anthropic/claude-sonnet-4-6",
         "max_tokens": 1024,
     },
 
     # Simple tasks - use fast/cheap model
     "classifier_agent": {
-        "model": "claude-3-5-haiku",  # Cheaper, faster
+        "model": "anthropic/claude-haiku-4-5",  # Cheaper, faster
         "max_tokens": 256,
     },
 }
@@ -2129,18 +2123,18 @@ narrator:
    ```
    - Clear boundaries prevent agents stepping on each other
 
-5. **Temperature Tuning**
+5. **Tone Through Prompts, Not Sampling Params**
    ```yaml
    narrator:
      llm:
-       temperature: 0.7  # Creative, varied responses
+       max_tokens: 1024  # Room for creative, varied responses
 
    keeper:
      llm:
-       temperature: 0.3  # More deterministic, consistent
+       max_tokens: 256  # Short, structured output
    ```
-   - High temp (0.7-1.0): Creative content
-   - Low temp (0.1-0.4): Structured/mechanical output
+   - Current Anthropic models and API versions reject `temperature`, `top_p` and `top_k`, so do not set them
+   - Steer creativity vs. determinism with the role, backstory and task wording, plus `max_tokens`
 
 ### Task Template Patterns
 

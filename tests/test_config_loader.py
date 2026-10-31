@@ -2,8 +2,17 @@
 
 import pytest
 
+from src.agents.character_builder import CharacterBuilderAgent
+from src.agents.character_interviewer import CharacterInterviewerAgent
+from src.agents.epilogue import EpilogueAgent
+from src.agents.innkeeper import InnkeeperAgent
+from src.agents.jester import JesterAgent
+from src.agents.keeper import KeeperAgent
+from src.agents.narrator import NarratorAgent
+from src.agents.quest_designer import QuestDesignerAgent
 from src.config.loader import (
     LLMConfig,
+    _load_yaml,
     clear_config_cache,
     load_agent_config,
 )
@@ -22,20 +31,17 @@ class TestLLMConfig:
         """Test that LLMConfig has sensible defaults."""
         config = LLMConfig()
 
-        assert config.model == "anthropic/claude-3-5-haiku-20241022"
-        assert config.temperature == 0.7
+        assert config.model == "anthropic/claude-haiku-4-5"
         assert config.max_tokens == 1024
 
     def test_custom_values(self) -> None:
         """Test that LLMConfig accepts custom values."""
         config = LLMConfig(
-            model="anthropic/claude-3-opus-20240229",
-            temperature=0.3,
+            model="anthropic/claude-sonnet-4-6",
             max_tokens=256,
         )
 
-        assert config.model == "anthropic/claude-3-opus-20240229"
-        assert config.temperature == 0.3
+        assert config.model == "anthropic/claude-sonnet-4-6"
         assert config.max_tokens == 256
 
 
@@ -46,15 +52,15 @@ class TestAgentConfig:
         """Test that agent config loads LLM with defaults."""
         config = load_agent_config("narrator")
 
-        assert config.llm.model == "anthropic/claude-3-5-haiku-20241022"
+        assert config.llm.model == "anthropic/claude-haiku-4-5"
         assert isinstance(config.llm, LLMConfig)
 
-    def test_llm_config_overrides_temperature(self) -> None:
-        """Test that agent-specific temperature overrides default."""
-        config = load_agent_config("keeper")
+    def test_llm_config_overrides_model(self) -> None:
+        """Test that agent-specific model overrides default."""
+        config = load_agent_config("epilogue")
 
-        # Keeper has temperature: 0.3 in YAML
-        assert config.llm.temperature == 0.3
+        # Epilogue uses Sonnet in YAML
+        assert config.llm.model == "anthropic/claude-sonnet-4-6"
 
     def test_llm_config_overrides_max_tokens(self) -> None:
         """Test that agent-specific max_tokens overrides default."""
@@ -63,19 +69,10 @@ class TestAgentConfig:
         # Keeper has max_tokens: 256 in YAML
         assert config.llm.max_tokens == 256
 
-    def test_jester_has_high_temperature(self) -> None:
-        """Test that Jester has playful temperature setting."""
-        config = load_agent_config("jester")
-
-        # Jester has temperature: 0.8 for creativity
-        assert config.llm.temperature == 0.8
-
-    def test_character_interviewer_has_creative_settings(self) -> None:
-        """Test that CharacterInterviewer has creative LLM settings."""
+    def test_character_interviewer_has_own_settings(self) -> None:
+        """Test that CharacterInterviewer has its own LLM settings."""
         config = load_agent_config("character_interviewer")
 
-        # Character interviewer uses high temperature
-        assert config.llm.temperature == 0.8
         assert config.llm.max_tokens == 512
 
     def test_memory_field_exists(self) -> None:
@@ -101,7 +98,7 @@ class TestConfigCaching:
 
         # Should return equivalent configs
         assert config1.role == config2.role
-        assert config1.llm.temperature == config2.llm.temperature
+        assert config1.llm.max_tokens == config2.llm.max_tokens
 
     def test_clear_cache_works(self) -> None:
         """Test that cache can be cleared."""
@@ -114,3 +111,75 @@ class TestConfigCaching:
         # Should still work after clearing
         config = load_agent_config("narrator")
         assert config.role == "Narrator"
+
+
+AGENT_CLASSES = [
+    CharacterBuilderAgent,
+    CharacterInterviewerAgent,
+    EpilogueAgent,
+    InnkeeperAgent,
+    JesterAgent,
+    KeeperAgent,
+    NarratorAgent,
+    QuestDesignerAgent,
+]
+
+RETIRED_MODELS = (
+    "claude-3-5-haiku-20241022",
+    "claude-sonnet-4-20250514",
+)
+
+
+class TestAgentLLMSamplingParams:
+    """Tests that agents build LLMs the current Anthropic API accepts.
+
+    Anthropic rejects temperature, top_p and top_k on current models and
+    API versions, so no agent may send them.
+    """
+
+    def test_llm_config_has_no_sampling_fields(self) -> None:
+        """LLMConfig must not expose sampling knobs."""
+        fields = set(LLMConfig.model_fields)
+
+        assert "temperature" not in fields
+        assert "top_p" not in fields
+        assert "top_k" not in fields
+
+    def test_agents_yaml_has_no_sampling_params(self) -> None:
+        """No agent in agents.yaml may configure sampling params."""
+        agents = _load_yaml("agents.yaml")
+
+        for name, data in agents.items():
+            llm = data.get("llm", {})
+            for param in ("temperature", "top_p", "top_k"):
+                assert param not in llm, f"{name} sets {param}"
+
+    def test_agents_yaml_uses_no_retired_models(self) -> None:
+        """No agent in agents.yaml may reference a retired model ID."""
+        agents = _load_yaml("agents.yaml")
+
+        for name, data in agents.items():
+            model = data.get("llm", {}).get("model", "")
+            assert not model.endswith(RETIRED_MODELS), f"{name} uses {model}"
+
+    @pytest.mark.parametrize("agent_cls", AGENT_CLASSES)
+    def test_agent_llm_built_without_sampling_params(self, agent_cls: type) -> None:
+        """Each agent's LLM is built without temperature or top_p."""
+        agent = agent_cls()
+
+        assert agent.llm.temperature is None
+        assert getattr(agent.llm, "top_p", None) is None
+        assert not agent.llm.model.endswith(RETIRED_MODELS)
+
+    @pytest.mark.parametrize("agent_cls", AGENT_CLASSES)
+    def test_agent_request_params_omit_sampling_params(self, agent_cls: type) -> None:
+        """The Anthropic request payload carries no sampling params."""
+        agent = agent_cls()
+
+        params = agent.llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "hi"}]
+        )
+
+        assert "temperature" not in params
+        assert "top_p" not in params
+        assert "top_k" not in params

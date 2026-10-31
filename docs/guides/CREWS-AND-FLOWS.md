@@ -109,7 +109,7 @@ Flows provide all of these through decorators like `@start()`, `@listen()`, and 
        │                    │                    │                    ▼
        │                    │                    │            ┌──────────────┐
        │                    │                    └──────────► │   Claude     │
-       │                    │                                 │   Sonnet 4   │
+       │                    │                                 │  Haiku 4.5   │
        │                    ▼                                 └──────────────┘
        │           ┌──────────────┐
        └────────── │   Agent      │
@@ -901,7 +901,7 @@ async def execute_agents_parallel(self):
 ```python
 # Future: LLM streaming
 llm = LLM(
-    model="anthropic/claude-sonnet-4-20250514",
+    model="anthropic/claude-sonnet-4-6",
     stream=True,
 )
 

@@ -10,7 +10,7 @@ Solo D&D adventure generator using multi-agent AI. Uses CrewAI agents powered by
 - **Runtime**: Python 3.12
 - **API Framework**: FastAPI
 - **Agent Orchestration**: CrewAI
-- **LLM Provider**: Anthropic Claude (claude-sonnet-4-20250514)
+- **LLM Provider**: Anthropic Claude (claude-haiku-4-5 default, claude-sonnet-4-6 for the epilogue)
 - **Package Manager**: uv (with pip compatibility)
 - **Build System**: hatchling
 - **Testing**: pytest, pytest-cov, pytest-asyncio
