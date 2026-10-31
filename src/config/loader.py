@@ -10,8 +10,7 @@ from pydantic import BaseModel, Field
 class LLMConfig(BaseModel):
     """LLM configuration for an agent."""
 
-    model: str = "anthropic/claude-3-5-haiku-20241022"
-    temperature: float = 0.7
+    model: str = "anthropic/claude-haiku-4-5"
     max_tokens: int = 1024
 
 

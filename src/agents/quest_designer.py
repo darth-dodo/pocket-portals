@@ -54,7 +54,6 @@ class QuestDesignerAgent:
         self.llm = LLM(
             model=config.llm.model,
             api_key=settings.anthropic_api_key,
-            temperature=config.llm.temperature,
             max_tokens=config.llm.max_tokens,
         )
 

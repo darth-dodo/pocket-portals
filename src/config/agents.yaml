@@ -17,8 +17,7 @@
 # Default LLM configuration (can be overridden per agent)
 defaults:
   llm:
-    model: "anthropic/claude-3-5-haiku-20241022"
-    temperature: 0.7
+    model: "anthropic/claude-haiku-4-5"
     max_tokens: 1024
 
 narrator:
@@ -126,7 +125,6 @@ narrator:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.7
     max_tokens: 1024
   memory: true
 
@@ -164,7 +162,6 @@ keeper:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.3
     max_tokens: 256
   memory: false
 
@@ -203,7 +200,6 @@ jester:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.8
     max_tokens: 256
   memory: false
 
@@ -235,7 +231,6 @@ innkeeper_theron:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.6
     max_tokens: 512
   memory: false
 
@@ -290,7 +285,6 @@ character_interviewer:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.8
     max_tokens: 512
   memory: false
 
@@ -348,7 +342,6 @@ quest_designer:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.75
     max_tokens: 800
   memory: false
 
@@ -393,8 +386,7 @@ epilogue:
   verbose: false
   allow_delegation: false
   llm:
-    model: "anthropic/claude-sonnet-4-20250514"
-    temperature: 0.7
+    model: "anthropic/claude-sonnet-4-6"
     max_tokens: 512
   memory: false
 
@@ -443,6 +435,5 @@ character_builder:
   verbose: false
   allow_delegation: false
   llm:
-    temperature: 0.5
     max_tokens: 512
   memory: false

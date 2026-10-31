@@ -16,7 +16,7 @@ This crash course documents everything learned from the **Pocket Portals spike**
 ├─────────────────────────────────────────────────────────────────┤
 │  Frontend: NES.css retro UI with vanilla JavaScript            │
 │  Backend: FastAPI with session management                       │
-│  AI Agent: NarratorAgent using CrewAI + Claude Sonnet 4        │
+│  AI Agent: NarratorAgent using CrewAI + Claude Haiku 4.5       │
 │  Config: YAML-based agent and task definitions                  │
 │  Deployment: Docker + Render.com ready                          │
 └─────────────────────────────────────────────────────────────────┘
@@ -63,7 +63,7 @@ This crash course documents everything learned from the **Pocket Portals spike**
 ┌──────────────┐     HTTP      ┌──────────────┐     CrewAI     ┌──────────────┐
 │              │ ────────────► │              │ ─────────────► │              │
 │   Browser    │               │   FastAPI    │                │   Claude     │
-│   (NES.css)  │ ◄──────────── │   Backend    │ ◄───────────── │   Sonnet 4   │
+│   (NES.css)  │ ◄──────────── │   Backend    │ ◄───────────── │  Haiku 4.5   │
 │              │     JSON      │              │    Narrative   │              │
 └──────────────┘               └──────────────┘                └──────────────┘
                                       │
@@ -298,9 +298,8 @@ class NarratorAgent:
 
         # CrewAI's native LLM class
         self.llm = LLM(
-            model="anthropic/claude-sonnet-4-20250514",
+            model="anthropic/claude-sonnet-4-6",
             api_key=settings.anthropic_api_key,
-            temperature=0.7,
             max_tokens=1024,
         )
 
@@ -1036,9 +1035,8 @@ CREW_VERBOSE=true
 from crewai import LLM, Agent, Task
 
 llm = LLM(
-    model="anthropic/claude-sonnet-4-20250514",
+    model="anthropic/claude-sonnet-4-6",
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    temperature=0.7,
 )
 
 agent = Agent(

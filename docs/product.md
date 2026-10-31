@@ -136,7 +136,7 @@ Pocket Portals delivers the magic of a skilled Dungeon Master on demand — pers
 |-------|------------|--------|
 | Language | Python 3.12 | ✅ |
 | Agent Framework | CrewAI | ✅ |
-| LLM Provider | Anthropic Claude 3.5 Haiku | ✅ |
+| LLM Provider | Anthropic Claude Haiku 4.5 | ✅ |
 | Backend | FastAPI | ✅ |
 | Frontend | Vanilla HTML/CSS/JavaScript (ES6 Modules) | ✅ |
 | Styling | Custom CSS + RPG Awesome icons + Press Start 2P font | ✅ |
